@@ -6,7 +6,8 @@ on:
   pull_request:
     branches: [ release/*, hotfix/* ]
 env:
-  flutter_version: "1.23.0-18.1.pre"
+  flutter_beta_version: "1.23.0-18.1.pre"
+  flutter_stable_version: "1.22.3"
   java_version: "12.x"
 
 jobs:
@@ -32,12 +33,11 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /opt/hostedtoolcache/flutter
-          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_version }}
+          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_stable_version }}
 
       - uses: subosito/flutter-action@v1
         with:
-          # channel: stable
-          flutter-version: ${{ env.flutter_version }}
+          flutter-version: ${{ env.flutter_stable_version }}
       - run: flutter upgrade
       - run: flutter pub get
 
