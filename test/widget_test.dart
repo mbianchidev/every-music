@@ -12,7 +12,7 @@ import 'package:everymusic/main.dart';
 
 void main() {
    //TODO nothing to test right now
-  /*
+   /*
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(MyApp());
@@ -20,4 +20,9 @@ void main() {
 
   });
   */
+
+  test("this is a sample test", () {
+    expect(1 + 1, 2);
+  });
+
 }
