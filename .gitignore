@@ -44,3 +44,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android Studio garbage here
+/android/.project
+/android/.settings/
+/android/app/.classpath
+/android/app/.project
+/android/app/.settings/
