@@ -2,9 +2,9 @@ name: Every-music Dart CI
 
 on:
   push:
-    branches: [ master, release/*, hotfix/* ]
+    branches: [ master, release/*, hotfix/*, feature/* ]
   pull_request:
-    branches: [ feature/* ]
+    branches: [ release/*, hotfix/* ]
 
 jobs:
   
@@ -24,17 +24,21 @@ jobs:
         with:
           flutter-version: '1.9.1+hotfix.6'
       - run: flutter upgrade
+        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
       - run: flutter pub get
+        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
 
       # TODO: please implement me, see: https://github.com/marketplace/actions/sonarcloud-scan
       #- name: SonarCloud Scan
       #  uses: SonarSource/sonarcloud-github-action@v1.4
+      #  if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
+      #  run: TODO
 
       - name: Tests
         run: flutter test
 
       - name: Build APK
-        if: ${{ github.ref == 'refs/heads/release/*'}}
+        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
         run: flutter build apk
 
       - name: The job has succeeded
