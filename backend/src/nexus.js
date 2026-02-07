@@ -43,7 +43,7 @@ nexus.addHook('onRequest', async (request, reply) => {
 });
 
 nexus.addHook('onResponse', async (request, reply) => {
-  const responseTime = reply.getResponseTime();
+  const responseTime = reply.elapsedTime;
   request.log.info(
     `[${request.requestNumber}] ${request.method} ${request.url} - ${reply.statusCode} (${responseTime.toFixed(2)}ms)`
   );
