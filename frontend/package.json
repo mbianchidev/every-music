@@ -1,0 +1,24 @@
+{
+  "name": "everymusic-web-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "begin": "vite --port 3000 --host",
+    "dev": "npm run begin",
+    "start": "npm run begin",
+    "compile": "vite build",
+    "build": "npm run compile",
+    "serve": "vite preview",
+    "preview": "npm run serve",
+    "check": "echo 'Frontend ready'"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.11"
+  }
+}

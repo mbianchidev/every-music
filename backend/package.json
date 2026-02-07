@@ -1,0 +1,27 @@
+{
+  "name": "everymusic-nexus",
+  "version": "1.0.0",
+  "description": "Nexus API - Every.music orchestration layer",
+  "type": "module",
+  "main": "src/nexus.js",
+  "scripts": {
+    "launch": "node src/nexus.js",
+    "watch": "node --watch src/nexus.js",
+    "bootstrap": "node scripts/bootstrap-realm.js",
+    "populate": "node scripts/populate-realm.js"
+  },
+  "keywords": ["music", "nexus", "api"],
+  "author": "Every.music",
+  "license": "MIT",
+  "dependencies": {
+    "fastify": "^4.26.0",
+    "@fastify/cors": "^9.0.1",
+    "pg": "^8.11.3",
+    "bcrypt": "^5.1.1",
+    "nanoid": "^5.0.5",
+    "google-auth-library": "^9.6.3",
+    "nodemailer": "^6.9.9",
+    "dotenv": "^16.4.1",
+    "pino": "^8.19.0"
+  }
+}

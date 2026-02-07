@@ -1,0 +1,75 @@
+version: '3.9'
+
+services:
+  realm-db:
+    image: postgres:16-alpine
+    container_name: everymusic-realm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: everymusic_realm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - realm_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seeds/instruments.sql:/docker-entrypoint-initdb.d/02-instruments.sql
+      - ./database/seeds/genres.sql:/docker-entrypoint-initdb.d/03-genres.sql
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d everymusic_realm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nexus-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: everymusic-nexus
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      REALM_ENV: ${REALM_ENV:-production}
+      NEXUS_PORT: 8080
+      NEXUS_HOST: 0.0.0.0
+      REALM_CONNECTION: postgresql://postgres:postgres@realm-db:5432/everymusic_realm
+      REALM_POOL_MIN: ${REALM_POOL_MIN:-2}
+      REALM_POOL_MAX: ${REALM_POOL_MAX:-10}
+      CIPHER_PRIMARY_KEY: ${CIPHER_PRIMARY_KEY:?CIPHER_PRIMARY_KEY is required}
+      CIPHER_REFRESH_KEY: ${CIPHER_REFRESH_KEY:?CIPHER_REFRESH_KEY is required}
+      TOKEN_LIFESPAN_HOURS: ${TOKEN_LIFESPAN_HOURS:-168}
+      REFRESH_LIFESPAN_HOURS: ${REFRESH_LIFESPAN_HOURS:-720}
+      GOOGLE_IDENTITY_KEY: ${GOOGLE_IDENTITY_KEY:-}
+      GOOGLE_IDENTITY_LOCK: ${GOOGLE_IDENTITY_LOCK:-}
+      MAIL_GATEWAY: ${MAIL_GATEWAY:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_IDENTITY: ${MAIL_IDENTITY:-}
+      MAIL_CREDENTIAL: ${MAIL_CREDENTIAL:-}
+      MAIL_SENDER_ALIAS: ${MAIL_SENDER_ALIAS:-Every.music <noreply@everymusic.com>}
+      PORTAL_ORIGIN: ${PORTAL_ORIGIN:-http://localhost:3000}
+      RATE_WINDOW_MS: ${RATE_WINDOW_MS:-900000}
+      RATE_THRESHOLD: ${RATE_THRESHOLD:-150}
+      UPLOAD_BYTE_LIMIT: ${UPLOAD_BYTE_LIMIT:-5242880}
+    depends_on:
+      realm-db:
+        condition: service_healthy
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/pulse', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  realm_data:
+    driver: local
+
+networks:
+  nexus-network:
+    driver: bridge
