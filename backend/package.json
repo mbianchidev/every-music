@@ -6,9 +6,11 @@
   "main": "src/nexus.js",
   "scripts": {
     "launch": "node src/nexus.js",
+    "start": "node src/nexus.js",
     "watch": "node --watch src/nexus.js",
     "bootstrap": "node scripts/bootstrap-realm.js",
-    "populate": "node scripts/populate-realm.js"
+    "populate": "node scripts/populate-realm.js",
+    "verify": "node --check src/nexus.js && echo 'Backend validation passed'"
   },
   "keywords": [
     "music",
