@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Every.music dark theme with Neo-Brutalist accents -->
+    <style name="Theme.app" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/everymusic_hotpink</item>
+        <item name="colorPrimaryVariant">@color/everymusic_cyan</item>
+        <item name="colorOnPrimary">@color/everymusic_light</item>
+        <item name="colorSecondary">@color/everymusic_cyan</item>
+        <item name="colorSecondaryVariant">@color/everymusic_lime</item>
+        <item name="colorOnSecondary">@color/everymusic_dark</item>
+        <item name="android:colorBackground">@color/everymusic_dark</item>
+        <item name="colorSurface">@color/everymusic_surface</item>
+        <item name="colorOnSurface">@color/everymusic_light</item>
+        <item name="android:statusBarColor">@color/everymusic_dark</item>
+        <item name="android:navigationBarColor">@color/everymusic_surface</item>
+    </style>
+</resources>
