@@ -11,13 +11,17 @@
     "build": "npm run compile",
     "serve": "vite preview",
     "preview": "npm run serve",
-    "check": "echo 'Frontend ready'"
+    "check": "echo 'Frontend ready'",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.0",
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^6.0.11"
   }
