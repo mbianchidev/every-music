@@ -1,20 +1,34 @@
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Backend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
     schedule:
       interval: "weekly"
     groups:
-      all-dependencies:
+      backend-dependencies:
         applies-to: version-updates
         patterns:
           - "*"
-  - package-ecosystem: "cargo" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
     schedule:
       interval: "weekly"
     groups:
-      all-dependencies:
+      frontend-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+  
+  # Tauri (Rust) dependencies
+  - package-ecosystem: "cargo"
+    directory: "/frontend/src-tauri"
+    schedule:
+      interval: "weekly"
+    groups:
+      tauri-dependencies:
         applies-to: version-updates
         patterns:
           - "*"
