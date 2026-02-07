@@ -1,76 +1,188 @@
-name: Every-music Dart CI
+name: Every.music CI/CD
 
 on:
   push:
-    branches: [ master, release/*, hotfix/*, feature/* ]
+    branches: [ master, main, release/*, hotfix/*, feature/* ]
   pull_request:
-    branches: [ release/*, hotfix/* ]
+    branches: [ master, main, release/*, hotfix/* ]
+
 env:
-  flutter_beta_version: "1.23.0-18.1.pre"
-  flutter_stable_version: "1.22.3"
-  java_version: "12.x"
+  NODE_VERSION: '22'
+  RUST_VERSION: 'stable'
 
 jobs:
-  
-  build:
-
+  backend-validation:
+    name: Backend API Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 8
-
+    timeout-minutes: 10
+    
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Prepare repository and tools
-        run: echo Setting up build...
-
-      ### Environment setup ###
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          java-version: ${{ env.java_version }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-      # caching dependencies
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v2
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run backend validation
+        working-directory: ./backend
+        run: npm run verify
+
+  frontend-validation:
+    name: Frontend Build & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: /opt/hostedtoolcache/flutter
-          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_stable_version }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - uses: subosito/flutter-action@v1
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run compile
+
+      - name: Verify build output
+        working-directory: ./frontend
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Build failed - dist folder not created"
+            exit 1
+          fi
+          echo "Frontend compiled successfully"
+
+  docker-builds:
+    name: Docker Container Builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend-validation, frontend-validation]
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend container
+        working-directory: ./backend
+        run: docker build -t everymusic-nexus:latest .
+
+      - name: Build frontend container
+        working-directory: ./frontend
+        run: docker build -t everymusic-web:latest .
+
+      - name: Verify containers
+        run: |
+          echo "Backend image built: $(docker images everymusic-nexus:latest --format '{{.Size}}')"
+          echo "Frontend image built: $(docker images everymusic-web:latest --format '{{.Size}}')"
+
+  tauri-desktop-build:
+    name: Desktop App Build (Tauri)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    needs: [frontend-validation]
+    if: github.ref == 'refs/heads/release/*'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          flutter-version: ${{ env.flutter_stable_version }}
-      - run: flutter upgrade
-      - run: flutter pub get
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      ### Code quality ###
-      # TODO: please implement me, see: https://github.com/marketplace/actions/sonarcloud-scan
-      #- name: SonarCloud Scan
-      #  uses: SonarSource/sonarcloud-github-action@v1.4
-      #  if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
-      #  run: TODO
-      
-      ### Tests ###
-      - name: Tests
-        run: flutter test
-      
-      ### Builds ###
-      - name: Build Android
-        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
-        run: flutter build apk
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
 
-      - name: Build iOS
-        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
-        run: flutter build ios --release --no-codesign
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - name: Build Web
-        if: ${{ github.ref == 'refs/heads/release/*' || github.ref == 'refs/heads/hotfix/*' }}
-        run: flutter build web
-      
-      ### Finals ###
-      - name: The job has succeeded
-        if: ${{ success() }}
-        run: echo Build successfully executed.
-      - name: The job has failed
-        if: ${{ failure() }}
-        run: echo Build failed.
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
 
-      # TODO maybe add a clear folder here?
+      - name: Build Tauri desktop app
+        working-directory: ./frontend
+        run: npm run desktop:build
+
+  integration-verification:
+    name: Full Stack Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend-validation, frontend-validation]
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Start backend with test database
+        working-directory: ./backend
+        env:
+          REALM_CONNECTION: postgresql://testuser:testpass@localhost:5432/testdb
+          CIPHER_PRIMARY_KEY: test-cipher-primary-key-at-least-32-chars-long
+          CIPHER_REFRESH_KEY: test-cipher-refresh-key-for-ci-testing
+          NEXUS_PORT: 8080
+          REALM_ENV: test
+        run: |
+          npm ci
+          npm start &
+          sleep 10
+          curl -f http://localhost:8080/pulse || exit 1
+          echo "Backend health check passed"
+
+      - name: Verify API endpoints
+        run: |
+          curl -f http://localhost:8080/pulse
+          echo "Integration verification complete"
