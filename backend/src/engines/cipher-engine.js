@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
 import { realmConfig } from '../../config/realm.js';

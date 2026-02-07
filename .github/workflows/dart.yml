@@ -170,20 +170,19 @@ jobs:
       - name: Start backend with test database
         working-directory: ./backend
         env:
-          REALM_HOST: localhost
-          REALM_PORT: 5432
-          REALM_NAME: testdb
-          REALM_USER: testuser
-          REALM_SECRET: testpass
+          REALM_CONNECTION: postgresql://testuser:testpass@localhost:5432/testdb
+          CIPHER_PRIMARY_KEY: test-cipher-primary-key-at-least-32-chars-long
+          CIPHER_REFRESH_KEY: test-cipher-refresh-key-for-ci-testing
           NEXUS_PORT: 8080
+          REALM_ENV: test
         run: |
           npm ci
           npm start &
           sleep 10
-          curl -f http://localhost:8080/health || exit 1
+          curl -f http://localhost:8080/pulse || exit 1
           echo "Backend health check passed"
 
       - name: Verify API endpoints
         run: |
-          curl -f http://localhost:8080/health
+          curl -f http://localhost:8080/pulse
           echo "Integration verification complete"
