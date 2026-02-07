@@ -19,7 +19,12 @@ frontend/src-tauri/gen/android/build/
 frontend/src-tauri/gen/android/local.properties
 frontend/src-tauri/gen/android/.tauri/
 frontend/src-tauri/gen/android/tauri.settings.gradle
-frontend/src-tauri/gen/apple/
+# iOS generated project (build artifacts only, source tracked)
+frontend/src-tauri/gen/apple/build/
+frontend/src-tauri/gen/apple/Externals/
+frontend/src-tauri/gen/apple/Pods/
+frontend/src-tauri/gen/apple/*.xcodeproj/xcuserdata/
+frontend/src-tauri/gen/apple/*.xcworkspace/xcuserdata/
 
 # Database
 *.sql.backup
