@@ -48,7 +48,14 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.verifyEmail(request, reply);
   });
 
-  fastify.post('/refresh-token', async (request, reply) => {
+  fastify.post('/refresh-token', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.refreshAccessToken(request, reply);
   });
 
