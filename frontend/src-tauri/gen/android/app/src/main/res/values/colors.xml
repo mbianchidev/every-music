@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Every.music Neo-Brutalist palette -->
+    <color name="everymusic_hotpink">#FFFF006E</color>
+    <color name="everymusic_cyan">#FF00F5FF</color>
+    <color name="everymusic_lime">#FFCCFF00</color>
+    <color name="everymusic_dark">#FF0A0A0A</color>
+    <color name="everymusic_surface">#FF2B2B2B</color>
+    <color name="everymusic_light">#FFF8F8F8</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

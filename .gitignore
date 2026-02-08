@@ -10,9 +10,21 @@ frontend/dist/
 frontend/.env.local
 frontend/*.log
 
-# Tauri Desktop
+# Tauri Desktop & Mobile
 frontend/src-tauri/target/
 frontend/src-tauri/WixTools/
+frontend/src-tauri/gen/android/.gradle/
+frontend/src-tauri/gen/android/app/build/
+frontend/src-tauri/gen/android/build/
+frontend/src-tauri/gen/android/local.properties
+frontend/src-tauri/gen/android/.tauri/
+frontend/src-tauri/gen/android/tauri.settings.gradle
+# iOS generated project (build artifacts only, source tracked)
+frontend/src-tauri/gen/apple/build/
+frontend/src-tauri/gen/apple/Externals/
+frontend/src-tauri/gen/apple/Pods/
+frontend/src-tauri/gen/apple/*.xcodeproj/xcuserdata/
+frontend/src-tauri/gen/apple/*.xcworkspace/xcuserdata/
 
 # Database
 *.sql.backup

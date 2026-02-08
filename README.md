@@ -45,6 +45,13 @@ This project has been completely rebuilt from the ground up with modern technolo
 - Native performance with web technologies
 - Located in: `./frontend/src-tauri/`
 
+**Mobile Apps**
+- **Tauri v2** - Cross-platform mobile via the same codebase
+- Android (SDK 24+ / Android 7.0+) and iOS support
+- Edge-to-edge rendering with safe area insets
+- Mobile-optimized touch targets and responsive layout
+- Guide: `./frontend/MOBILE.md`
+
 **Database**
 - **PostgreSQL 16** - Production-grade database
 - Complete schema for MVP features
@@ -122,6 +129,22 @@ cd frontend
 npm run desktop        # Development mode
 npm run desktop:build  # Production build
 ```
+
+**5. Build Mobile Apps (Optional)**
+
+```bash
+cd frontend
+
+# Android (requires Android Studio + NDK)
+npm run android        # Run on device/emulator
+npm run android:build  # Production APK/AAB
+
+# iOS (requires macOS + Xcode)
+npm run ios            # Run on simulator
+npm run ios:build      # Production IPA
+```
+
+See `frontend/MOBILE.md` for detailed mobile setup instructions.
 
 ---
 
@@ -274,6 +297,18 @@ cd frontend
 npm run desktop          # Run Tauri in dev mode
 npm run desktop:build    # Build desktop app
 ```
+
+### Mobile Development
+
+```bash
+cd frontend
+npm run android          # Run on Android device/emulator
+npm run android:build    # Build Android APK/AAB
+npm run ios              # Run on iOS simulator (macOS only)
+npm run ios:build        # Build iOS IPA (macOS only)
+```
+
+For full mobile setup details, see [`frontend/MOBILE.md`](frontend/MOBILE.md).
 
 ---
 
