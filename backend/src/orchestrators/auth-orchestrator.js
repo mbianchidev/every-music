@@ -33,7 +33,14 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.loginWithEmail(request, reply);
   });
 
-  fastify.post('/login/google', async (request, reply) => {
+  fastify.post('/login/google', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.loginWithGoogle(request, reply);
   });
 
