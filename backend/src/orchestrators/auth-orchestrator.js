@@ -6,7 +6,7 @@ export async function authOrchestrator(fastify, options) {
   await fastify.register(rateLimit, {
     max: 10,
     timeWindow: '15 minutes',
-    cache: 10000,
+    cache: 10000, // Maximum number of unique clients (IPs) to track
     skipOnError: false
   });
   // Apply stricter rate limiting to registration endpoint

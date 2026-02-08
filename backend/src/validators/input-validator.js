@@ -11,18 +11,18 @@ export class InputValidator {
       return { valid: false, message: 'Invalid email format' };
     }
     
-    const localSegment = atParts[0];
-    const domainSegment = atParts[1];
+    const localPart = atParts[0];
+    const domainPart = atParts[1];
     
     // Check for whitespace (avoid regex)
-    if (localSegment.includes(' ') || domainSegment.includes(' ') || 
-        localSegment.includes('\t') || domainSegment.includes('\t') ||
-        localSegment.includes('\n') || domainSegment.includes('\n')) {
+    if (localPart.includes(' ') || domainPart.includes(' ') || 
+        localPart.includes('\t') || domainPart.includes('\t') ||
+        localPart.includes('\n') || domainPart.includes('\n')) {
       return { valid: false, message: 'Invalid email format' };
     }
     
     // Domain must contain at least one dot
-    const domainParts = domainSegment.split('.');
+    const domainParts = domainPart.split('.');
     if (domainParts.length < 2 || domainParts.some(part => !part)) {
       return { valid: false, message: 'Invalid email format' };
     }
