@@ -15,6 +15,8 @@ jobs:
     name: Backend API Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
@@ -39,6 +41,8 @@ jobs:
     name: Frontend Build & Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
@@ -74,6 +78,8 @@ jobs:
     timeout-minutes: 15
     needs: [backend-validation, frontend-validation]
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
@@ -101,6 +107,8 @@ jobs:
     timeout-minutes: 20
     needs: [frontend-validation]
     if: github.ref == 'refs/heads/release/*'
+    permissions:
+      contents: read
     
     strategy:
       fail-fast: false
@@ -179,6 +187,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [backend-validation, frontend-validation]
+    permissions:
+      contents: read
     
     services:
       postgres:

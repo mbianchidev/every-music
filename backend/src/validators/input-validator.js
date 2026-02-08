@@ -1,9 +1,32 @@
 export class InputValidator {
   static validateEmail(email) {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailPattern.test(email)) {
+    // Non-ReDoS email validation using split-based approach
+    if (!email || typeof email !== 'string' || email.length > 320 || email.length < 3) {
       return { valid: false, message: 'Invalid email format' };
     }
+    
+    // Split by @ and validate structure
+    const atParts = email.split('@');
+    if (atParts.length !== 2 || !atParts[0] || !atParts[1]) {
+      return { valid: false, message: 'Invalid email format' };
+    }
+    
+    const localPart = atParts[0];
+    const domainPart = atParts[1];
+    
+    // Check for whitespace (avoid regex)
+    if (localPart.includes(' ') || domainPart.includes(' ') || 
+        localPart.includes('\t') || domainPart.includes('\t') ||
+        localPart.includes('\n') || domainPart.includes('\n')) {
+      return { valid: false, message: 'Invalid email format' };
+    }
+    
+    // Domain must contain at least one dot
+    const domainParts = domainPart.split('.');
+    if (domainParts.length < 2 || domainParts.some(part => !part)) {
+      return { valid: false, message: 'Invalid email format' };
+    }
+    
     return { valid: true };
   }
 
