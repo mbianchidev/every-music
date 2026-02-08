@@ -1,11 +1,35 @@
 import { authenticationConductor } from '../conductors/authentication-conductor.js';
+import rateLimit from '@fastify/rate-limit';
 
 export async function authOrchestrator(fastify, options) {
-  fastify.post('/register', async (request, reply) => {
+  // Register rate limiting for auth routes
+  await fastify.register(rateLimit, {
+    max: 10,
+    timeWindow: '15 minutes',
+    cache: 10000,
+    skipOnError: false
+  });
+  // Apply stricter rate limiting to registration endpoint
+  fastify.post('/register', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 hour'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.registerWithEmail(request, reply);
   });
 
-  fastify.post('/login', async (request, reply) => {
+  // Apply stricter rate limiting to login endpoint
+  fastify.post('/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.loginWithEmail(request, reply);
   });
 
@@ -21,11 +45,25 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.refreshAccessToken(request, reply);
   });
 
-  fastify.post('/password-reset/initiate', async (request, reply) => {
+  fastify.post('/password-reset/initiate', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 hour'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.initiatePasswordReset(request, reply);
   });
 
-  fastify.post('/password-reset/complete', async (request, reply) => {
+  fastify.post('/password-reset/complete', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 hour'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.completePasswordReset(request, reply);
   });
 
