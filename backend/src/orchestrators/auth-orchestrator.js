@@ -44,7 +44,14 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.loginWithGoogle(request, reply);
   });
 
-  fastify.get('/verify-email', async (request, reply) => {
+  fastify.get('/verify-email', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.verifyEmail(request, reply);
   });
 
@@ -81,7 +88,14 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.completePasswordReset(request, reply);
   });
 
-  fastify.post('/logout', async (request, reply) => {
+  fastify.post('/logout', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     return authenticationConductor.logout(request, reply);
   });
 }
