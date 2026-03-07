@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { realmConfig, validateRealmConfig } from '../config/realm.js';
 import { realmConnector } from './repositories/realm-connector.js';
 import { mailDispatcher } from './engines/mail-dispatcher.js';
@@ -34,6 +35,13 @@ await nexus.register(cors, {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-nexus-request-id'],
+});
+
+await nexus.register(rateLimit, {
+  max: 100,
+  timeWindow: '15 minutes',
+  cache: 10000,
+  skipOnError: false,
 });
 
 let requestCounter = 0;
