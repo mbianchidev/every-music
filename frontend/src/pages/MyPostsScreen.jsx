@@ -2,65 +2,97 @@ import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import Navigation from '../components/Navigation.jsx';
 import Spinner from '../components/Spinner.jsx';
+import AnnouncementCard from '../components/AnnouncementCard.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import ErrorState from '../components/ErrorState.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 class MyPostsScreen extends Component {
   constructor(props) {
     super(props);
-    this.state = { posts: [], loading: true };
+    this.state = {
+      posts: [],
+      loading: true,
+      error: '',
+      deletingId: null,
+    };
   }
-  
+
   componentDidMount() {
     this.loadPosts();
   }
-  
+
   loadPosts = async () => {
+    this.setState({ loading: true, error: '' });
     try {
-      const resp = await conduit.transmit('/announcements/me', { auth: true });
-      this.setState({ posts: resp.announcements || [], loading: false });
-    } catch {
-      this.setState({ loading: false });
+      const response = await conduit.transmit('/announcements/me', { auth: true });
+      this.setState({ posts: response.announcements || [], loading: false });
+    } catch (error) {
+      this.setState({ error: error.message, loading: false });
     }
   };
-  
+
   handleDelete = async (id) => {
-    if (!window.confirm('Delete this announcement?')) return;
-    
+    if (!window.confirm('Delete this announcement permanently?')) return;
+
+    this.setState({ deletingId: id, error: '' });
     try {
       await conduit.transmit(`/announcements/${id}`, { method: 'DELETE', auth: true });
-      this.setState({ posts: this.state.posts.filter(p => p.id !== id) });
-    } catch {}
+      this.setState((state) => ({
+        posts: state.posts.filter((post) => post.id !== id),
+        deletingId: null,
+      }));
+    } catch (error) {
+      this.setState({ error: error.message, deletingId: null });
+    }
   };
-  
+
+  renderContent() {
+    const { posts, loading, error, deletingId } = this.state;
+
+    if (loading) return <Spinner label="Loading your announcements" />;
+    if (error && posts.length === 0) {
+      return <ErrorState message={error} onRetry={this.loadPosts} />;
+    }
+    if (posts.length === 0) {
+      return (
+        <EmptyState
+          title="No announcements yet"
+          message="Publish what you are looking for."
+          actionLabel="CREATE ANNOUNCEMENT"
+          actionHash="#create"
+        />
+      );
+    }
+
+    return (
+      <div className="grid">
+        {posts.map((post) => (
+          <AnnouncementCard
+            key={post.id}
+            post={post}
+            actions={(
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => this.handleDelete(post.id)}
+                disabled={deletingId === post.id}
+              >
+                {deletingId === post.id ? 'DELETING…' : 'DELETE'}
+              </button>
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
+
   render() {
-    const { posts, loading } = this.state;
-    
     return (
       <div className="container">
-        <div style={{ padding: '2rem 0', borderBottom: '4px solid #F8F8F8', marginBottom: '2rem' }}>
-          <h1 className="heading-lg">MY ANNOUNCEMENTS</h1>
-        </div>
-        
-        {loading ? <Spinner /> : posts.length === 0 ? (
-          <EmptyState title="No announcements yet!" message="Create your first announcement" actionLabel="CREATE ANNOUNCEMENT" actionHash="#create" />
-        ) : (
-          <div className="grid">
-            {posts.map(post => (
-              <div key={post.id} className="card">
-                <h3 className="heading-md">{post.title}</h3>
-                <p style={{ opacity: 0.8, marginBottom: '1rem' }}>{post.description}</p>
-                
-                <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '1rem' }}>
-                  <span>📍 {post.location?.city || 'Remote'}</span>
-                  {post.isRemote && <span style={{ marginLeft: '0.5rem' }}>🌐 Remote</span>}
-                </div>
-                
-                <button className="btn btn-primary" onClick={() => this.handleDelete(post.id)}>🗑️ DELETE</button>
-              </div>
-            ))}
-          </div>
-        )}
-        
+        <PageHeader eyebrow="Your calls" title="MY ANNOUNCEMENTS" subtitle="Manage the opportunities you published." />
+        {this.state.error && this.state.posts.length > 0 && <div className="error" role="alert">{this.state.error}</div>}
+        {this.renderContent()}
         <Navigation active="my-posts" />
       </div>
     );

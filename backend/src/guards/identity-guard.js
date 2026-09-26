@@ -1,70 +1,58 @@
-export async function identityGuard(request, reply) {
+import { cipherEngine } from '../engines/cipher-engine.js';
+import { identityRepository } from '../repositories/identity-repository.js';
+
+function unauthorized(reply, code = 'INVALID_TOKEN') {
+  return reply.code(401).send({
+    success: false,
+    error: {
+      code,
+      message: 'Authentication is required',
+    },
+  });
+}
+
+async function resolveIdentity(request) {
   const authHeader = request.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.code(401).send({
-      success: false,
-      error: {
-        code: 'MISSING_CREDENTIALS',
-        message: 'Authentication required - missing or invalid token',
-      },
-    });
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
   }
 
-  const token = authHeader.substring(7);
-  
+  const payload = cipherEngine.verifyAccessToken(authHeader.slice(7));
+  if (!payload) {
+    return null;
+  }
+
+  const identity = await identityRepository.findById(payload.sub);
+  if (!identity?.is_active) {
+    return null;
+  }
+
+  return {
+    userId: identity.id,
+    email: identity.email,
+  };
+}
+
+export async function identityGuard(request, reply) {
   try {
-    const { cipherEngine } = await import('../engines/cipher-engine.js');
-    const payload = cipherEngine.verifyPayloadToken(token);
-    
-    if (!payload || payload.typ !== 'access') {
-      return reply.code(401).send({
-        success: false,
-        error: {
-          code: 'INVALID_TOKEN',
-          message: 'Token is invalid or expired',
-        },
-      });
+    const identity = await resolveIdentity(request);
+    if (!identity) {
+      return unauthorized(reply);
     }
 
-    request.authenticatedUser = {
-      userId: payload.sub,
-      email: payload.email,
-    };
-  } catch (err) {
-    return reply.code(401).send({
-      success: false,
-      error: {
-        code: 'TOKEN_VERIFICATION_FAILED',
-        message: 'Failed to verify authentication token',
-      },
-    });
+    request.authenticatedUser = identity;
+  } catch (error) {
+    request.log.error({ err: error }, 'Authentication lookup failed');
+    return unauthorized(reply, 'TOKEN_VERIFICATION_FAILED');
   }
 }
 
-export async function optionalIdentityGuard(request, reply) {
-  const authHeader = request.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    request.authenticatedUser = null;
-    return;
-  }
-
-  const token = authHeader.substring(7);
-  
+export async function optionalIdentityGuard(request) {
   try {
-    const { cipherEngine } = await import('../engines/cipher-engine.js');
-    const payload = cipherEngine.verifyPayloadToken(token);
-    
-    if (payload && payload.typ === 'access') {
-      request.authenticatedUser = {
-        userId: payload.sub,
-        email: payload.email,
-      };
-    } else {
-      request.authenticatedUser = null;
-    }
-  } catch {
+    request.authenticatedUser = await resolveIdentity(request);
+  } catch (error) {
+    request.log.warn({ err: error }, 'Optional authentication lookup failed');
     request.authenticatedUser = null;
   }
 }

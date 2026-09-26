@@ -1,28 +1,60 @@
 import { identityRepository } from '../repositories/identity-repository.js';
 import { musicianRepository } from '../repositories/musician-repository.js';
+import { realmConnector } from '../repositories/realm-connector.js';
 import { cipherEngine } from '../engines/cipher-engine.js';
 import { mailDispatcher } from '../engines/mail-dispatcher.js';
 import { googleIdentityBridge } from '../engines/google-identity-bridge.js';
 import { InputValidator } from '../validators/input-validator.js';
 
-export class AuthenticationConductor {
-  async registerWithEmail(request, reply) {
-    const { email, password } = request.body;
+function sendValidationError(reply, details) {
+  return reply.code(400).send({
+    success: false,
+    error: {
+      code: 'VALIDATION_ERROR',
+      message: 'Invalid input data',
+      details,
+    },
+  });
+}
 
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : email;
+}
+
+export class AuthenticationConductor {
+  async issueSession(identity, executor = realmConnector) {
+    const accessToken = cipherEngine.createAccessToken(identity.id, identity.email);
+    const refreshTokenData = cipherEngine.createRefreshToken(identity.id);
+
+    await identityRepository.storeRefreshToken(
+      identity.id,
+      refreshTokenData.tokenHash,
+      refreshTokenData.expiresAt,
+      executor,
+    );
+
+    return {
+      accessToken,
+      refreshToken: refreshTokenData.token,
+      user: {
+        userId: identity.id,
+        email: identity.email,
+        emailVerified: identity.email_verified,
+      },
+    };
+  }
+
+  async registerWithEmail(request, reply) {
+    const body = request.body ?? {};
+    const email = normalizeEmail(body.email);
+    const { password } = body;
     const validations = InputValidator.gatherValidationErrors(
       InputValidator.validateEmail(email),
-      InputValidator.validatePassword(password)
+      InputValidator.validatePassword(password),
     );
 
     if (validations) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid input data',
-          details: validations,
-        },
-      });
+      return sendValidationError(reply, validations);
     }
 
     try {
@@ -39,16 +71,21 @@ export class AuthenticationConductor {
 
       const passwordHash = await cipherEngine.hashPassword(password);
       const verificationToken = cipherEngine.generateToken(48);
-
-      const newIdentity = await identityRepository.createEmailIdentity(
+      const verificationTokenHash = cipherEngine.hashToken(verificationToken);
+      const newIdentity = await realmConnector.transaction(async (executor) => {
+        const identity = await identityRepository.createEmailIdentity(
+          email,
+          passwordHash,
+          verificationTokenHash,
+          executor,
+        );
+        await musicianRepository.createProfile(identity.id, {}, executor);
+        return identity;
+      });
+      const verificationEmailSent = await mailDispatcher.dispatchVerification(
         email,
-        passwordHash,
-        verificationToken
+        verificationToken,
       );
-
-      await mailDispatcher.dispatchVerification(email, verificationToken);
-
-      await musicianRepository.createProfile(newIdentity.id, {});
 
       return reply.code(201).send({
         success: true,
@@ -56,11 +93,14 @@ export class AuthenticationConductor {
           userId: newIdentity.id,
           email: newIdentity.email,
           emailVerified: newIdentity.email_verified,
-          message: 'Registration successful. Please check your email to verify your account.',
+          verificationEmailSent,
+          message: verificationEmailSent
+            ? 'Registration successful. Check your email to verify your account.'
+            : 'Registration successful, but verification email delivery is unavailable. Request a new verification email before signing in.',
         },
       });
-    } catch (err) {
-      request.log.error('Registration failed:', err);
+    } catch (error) {
+      request.log.error({ err: error }, 'Registration failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -71,29 +111,62 @@ export class AuthenticationConductor {
     }
   }
 
-  async loginWithEmail(request, reply) {
-    const { email, password } = request.body;
+  async resendVerification(request, reply) {
+    const email = normalizeEmail(request.body?.email);
+    const validation = InputValidator.validateEmail(email);
 
+    if (!validation.valid) {
+      return sendValidationError(reply, [validation.message]);
+    }
+
+    try {
+      const verificationToken = cipherEngine.generateToken(48);
+      const identity = await identityRepository.rotateVerificationToken(
+        email,
+        cipherEngine.hashToken(verificationToken),
+      );
+
+      if (identity) {
+        await mailDispatcher.dispatchVerification(identity.email, verificationToken);
+      }
+
+      return reply.code(200).send({
+        success: true,
+        data: {
+          message: 'If the account needs verification, a new email has been sent.',
+        },
+      });
+    } catch (error) {
+      request.log.error({ err: error }, 'Verification email resend failed');
+      return reply.code(500).send({
+        success: false,
+        error: {
+          code: 'VERIFICATION_RESEND_FAILED',
+          message: 'Failed to request a verification email',
+        },
+      });
+    }
+  }
+
+  async loginWithEmail(request, reply) {
+    const body = request.body ?? {};
+    const email = normalizeEmail(body.email);
+    const { password } = body;
     const validations = InputValidator.gatherValidationErrors(
       InputValidator.validateEmail(email),
-      InputValidator.validateRequired(password, 'Password')
+      InputValidator.validateRequired(password, 'Password'),
     );
 
     if (validations) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid input data',
-          details: validations,
-        },
-      });
+      return sendValidationError(reply, validations);
     }
 
     try {
       const identity = await identityRepository.findByEmail(email);
-      
-      if (!identity || identity.auth_provider !== 'email') {
+      const passwordMatches = identity?.auth_provider === 'email'
+        && await cipherEngine.validatePassword(password, identity.password_hash);
+
+      if (!passwordMatches) {
         return reply.code(401).send({
           success: false,
           error: {
@@ -103,22 +176,7 @@ export class AuthenticationConductor {
         });
       }
 
-      const isPasswordValid = await cipherEngine.validatePassword(
-        password,
-        identity.password_hash
-      );
-
-      if (!isPasswordValid) {
-        return reply.code(401).send({
-          success: false,
-          error: {
-            code: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password',
-          },
-        });
-      }
-
-      if (!identity.is_active) {
+      if (identity.is_active === false) {
         return reply.code(403).send({
           success: false,
           error: {
@@ -128,31 +186,24 @@ export class AuthenticationConductor {
         });
       }
 
-      await identityRepository.updateLastLogin(identity.id);
-
-      const accessToken = cipherEngine.createAccessToken(identity.id, identity.email);
-      const refreshTokenData = cipherEngine.createRefreshToken(identity.id);
-
-      await identityRepository.storeRefreshToken(
-        identity.id,
-        refreshTokenData.token,
-        refreshTokenData.expiresAt
-      );
-
-      return reply.code(200).send({
-        success: true,
-        data: {
-          accessToken,
-          refreshToken: refreshTokenData.token,
-          user: {
-            userId: identity.id,
-            email: identity.email,
-            emailVerified: identity.email_verified,
+      if (!identity.email_verified) {
+        return reply.code(403).send({
+          success: false,
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Verify your email before signing in',
           },
-        },
+        });
+      }
+
+      const session = await realmConnector.transaction(async (executor) => {
+        await identityRepository.updateLastLogin(identity.id, executor);
+        return this.issueSession(identity, executor);
       });
-    } catch (err) {
-      request.log.error('Login failed:', err);
+
+      return reply.code(200).send({ success: true, data: session });
+    } catch (error) {
+      request.log.error({ err: error }, 'Login failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -164,102 +215,93 @@ export class AuthenticationConductor {
   }
 
   async loginWithGoogle(request, reply) {
-    const { idToken } = request.body;
+    const idToken = request.body?.idToken;
 
     if (!idToken) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'MISSING_TOKEN',
-          message: 'Google ID token is required',
-        },
-      });
+      return sendValidationError(reply, ['Google ID token is required']);
     }
 
     try {
       const googleUser = await googleIdentityBridge.verifyCredential(idToken);
+      if (!googleUser.emailVerified) {
+        return reply.code(403).send({
+          success: false,
+          error: {
+            code: 'GOOGLE_EMAIL_NOT_VERIFIED',
+            message: 'Google account email is not verified',
+          },
+        });
+      }
 
       let identity = await identityRepository.findByGoogleId(googleUser.googleId);
 
       if (!identity) {
-        identity = await identityRepository.findByEmail(googleUser.email);
-        
-        if (identity && identity.auth_provider === 'email') {
+        const emailIdentity = await identityRepository.findByEmail(googleUser.email);
+        if (emailIdentity) {
           return reply.code(409).send({
             success: false,
             error: {
               code: 'EMAIL_EXISTS',
-              message: 'An account with this email already exists. Please login with email and password.',
+              message: 'An account with this email already exists. Sign in with email and password.',
             },
           });
         }
 
-        if (!identity) {
-          identity = await identityRepository.createGoogleIdentity(
+        identity = await realmConnector.transaction(async (executor) => {
+          const createdIdentity = await identityRepository.createGoogleIdentity(
             googleUser.email,
-            googleUser.googleId
+            googleUser.googleId,
+            executor,
           );
-
-          await musicianRepository.createProfile(identity.id, {
+          await musicianRepository.createProfile(createdIdentity.id, {
             firstName: googleUser.givenName,
             lastName: googleUser.familyName,
             profilePictureUrl: googleUser.picture,
-          });
-        }
+          }, executor);
+          return createdIdentity;
+        });
       }
 
-      await identityRepository.updateLastLogin(identity.id);
-
-      const accessToken = cipherEngine.createAccessToken(identity.id, identity.email);
-      const refreshTokenData = cipherEngine.createRefreshToken(identity.id);
-
-      await identityRepository.storeRefreshToken(
-        identity.id,
-        refreshTokenData.token,
-        refreshTokenData.expiresAt
-      );
-
-      return reply.code(200).send({
-        success: true,
-        data: {
-          accessToken,
-          refreshToken: refreshTokenData.token,
-          user: {
-            userId: identity.id,
-            email: identity.email,
-            emailVerified: identity.email_verified,
+      if (identity.is_active === false) {
+        return reply.code(403).send({
+          success: false,
+          error: {
+            code: 'ACCOUNT_DISABLED',
+            message: 'Your account has been disabled',
           },
-        },
+        });
+      }
+
+      const session = await realmConnector.transaction(async (executor) => {
+        await identityRepository.updateLastLogin(identity.id, executor);
+        return this.issueSession(identity, executor);
       });
-    } catch (err) {
-      request.log.error('Google login failed:', err);
-      return reply.code(500).send({
+
+      return reply.code(200).send({ success: true, data: session });
+    } catch (error) {
+      request.log.error({ err: error }, 'Google login failed');
+      return reply.code(502).send({
         success: false,
         error: {
           code: 'GOOGLE_LOGIN_FAILED',
-          message: err.message || 'Failed to authenticate with Google',
+          message: 'Failed to authenticate with Google',
         },
       });
     }
   }
 
   async verifyEmail(request, reply) {
-    const { token } = request.query;
-
+    const token = request.query?.token;
     if (!token) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'MISSING_TOKEN',
-          message: 'Verification token is required',
-        },
-      });
+      return sendValidationError(reply, ['Verification token is required']);
     }
 
     try {
-      const verifiedIdentity = await identityRepository.verifyEmailWithToken(token);
+      const identity = await identityRepository.verifyEmailWithTokenHash(
+        cipherEngine.hashToken(token),
+      );
 
-      if (!verifiedIdentity) {
+      if (!identity) {
         return reply.code(400).send({
           success: false,
           error: {
@@ -273,11 +315,11 @@ export class AuthenticationConductor {
         success: true,
         data: {
           message: 'Email verified successfully',
-          email: verifiedIdentity.email,
+          email: identity.email,
         },
       });
-    } catch (err) {
-      request.log.error('Email verification failed:', err);
+    } catch (error) {
+      request.log.error({ err: error }, 'Email verification failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -289,22 +331,14 @@ export class AuthenticationConductor {
   }
 
   async refreshAccessToken(request, reply) {
-    const { refreshToken } = request.body;
-
+    const refreshToken = request.body?.refreshToken;
     if (!refreshToken) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'MISSING_TOKEN',
-          message: 'Refresh token is required',
-        },
-      });
+      return sendValidationError(reply, ['Refresh token is required']);
     }
 
     try {
-      const tokenData = await identityRepository.findRefreshToken(refreshToken);
-
-      if (!tokenData || tokenData.revoked || new Date(tokenData.expires_at) < new Date()) {
+      const payload = cipherEngine.verifyRefreshToken(refreshToken);
+      if (!payload) {
         return reply.code(401).send({
           success: false,
           error: {
@@ -314,38 +348,90 @@ export class AuthenticationConductor {
         });
       }
 
-      const identity = await identityRepository.findById(tokenData.user_id);
+      const outcome = await realmConnector.transaction(async (executor) => {
+        const tokenData = await identityRepository.findRefreshToken(
+          cipherEngine.hashToken(refreshToken),
+          executor,
+          { forUpdate: true },
+        );
 
-      if (!identity || !identity.is_active) {
+        if (!tokenData
+          || tokenData.user_id !== payload.sub
+          || new Date(tokenData.expires_at) <= new Date()) {
+          return null;
+        }
+
+        const identity = await identityRepository.findById(tokenData.user_id, executor);
+        if (!identity?.is_active) {
+          return null;
+        }
+
+        if (tokenData.revoked) {
+          const rotatedAt = tokenData.rotated_at
+            ? new Date(tokenData.rotated_at)
+            : null;
+          const withinGrace = rotatedAt
+            && Date.now() - rotatedAt.getTime()
+              <= cipherEngine.config.cipher.rotationGraceSeconds * 1000;
+
+          if (!withinGrace
+            || !tokenData.replacement_jti
+            || !tokenData.replacement_expires_at
+            || tokenData.replacement_revoked) {
+            await identityRepository.revokeAllRefreshTokens(identity.id, executor);
+            return null;
+          }
+
+          const replacement = cipherEngine.createRefreshToken(identity.id, {
+            issuedAt: Math.floor(rotatedAt.getTime() / 1000),
+            expiresAt: Math.floor(new Date(tokenData.replacement_expires_at).getTime() / 1000),
+            jti: tokenData.replacement_jti,
+          });
+
+          if (replacement.tokenHash !== tokenData.replacement_token_hash) {
+            await identityRepository.revokeAllRefreshTokens(identity.id, executor);
+            return null;
+          }
+
+          return {
+            accessToken: cipherEngine.createAccessToken(identity.id, identity.email),
+            refreshToken: replacement.token,
+          };
+        }
+
+        const replacement = cipherEngine.createRefreshToken(identity.id);
+        await identityRepository.rotateRefreshToken(
+          tokenData.id,
+          identity.id,
+          {
+            ...replacement,
+            rotatedAt: new Date(replacement.issuedAt * 1000),
+          },
+          executor,
+        );
+
+        return {
+          accessToken: cipherEngine.createAccessToken(identity.id, identity.email),
+          refreshToken: replacement.token,
+        };
+      });
+
+      if (!outcome) {
         return reply.code(401).send({
           success: false,
           error: {
-            code: 'INVALID_USER',
-            message: 'User not found or inactive',
+            code: 'INVALID_REFRESH_TOKEN',
+            message: 'Refresh token is invalid or expired',
           },
         });
       }
 
-      await identityRepository.revokeRefreshToken(refreshToken);
-
-      const newAccessToken = cipherEngine.createAccessToken(identity.id, identity.email);
-      const newRefreshTokenData = cipherEngine.createRefreshToken(identity.id);
-
-      await identityRepository.storeRefreshToken(
-        identity.id,
-        newRefreshTokenData.token,
-        newRefreshTokenData.expiresAt
-      );
-
       return reply.code(200).send({
         success: true,
-        data: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshTokenData.token,
-        },
+        data: outcome,
       });
-    } catch (err) {
-      request.log.error('Token refresh failed:', err);
+    } catch (error) {
+      request.log.error({ err: error }, 'Token refresh failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -357,25 +443,22 @@ export class AuthenticationConductor {
   }
 
   async initiatePasswordReset(request, reply) {
-    const { email } = request.body;
-
+    const email = normalizeEmail(request.body?.email);
     const validation = InputValidator.validateEmail(email);
+
     if (!validation.valid) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: validation.message,
-        },
-      });
+      return sendValidationError(reply, [validation.message]);
     }
 
     try {
       const resetToken = cipherEngine.generateToken(48);
-      const result = await identityRepository.createPasswordResetToken(email, resetToken);
+      const identity = await identityRepository.createPasswordResetToken(
+        email,
+        cipherEngine.hashToken(resetToken),
+      );
 
-      if (result) {
-        await mailDispatcher.dispatchPasswordReset(email, resetToken);
+      if (identity) {
+        await mailDispatcher.dispatchPasswordReset(identity.email, resetToken);
       }
 
       return reply.code(200).send({
@@ -384,8 +467,8 @@ export class AuthenticationConductor {
           message: 'If the email exists, a password reset link has been sent.',
         },
       });
-    } catch (err) {
-      request.log.error('Password reset initiation failed:', err);
+    } catch (error) {
+      request.log.error({ err: error }, 'Password reset initiation failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -397,29 +480,33 @@ export class AuthenticationConductor {
   }
 
   async completePasswordReset(request, reply) {
-    const { token, newPassword } = request.body;
-
+    const body = request.body ?? {};
     const validations = InputValidator.gatherValidationErrors(
-      InputValidator.validateRequired(token, 'Token'),
-      InputValidator.validatePassword(newPassword)
+      InputValidator.validateRequired(body.token, 'Token'),
+      InputValidator.validatePassword(body.newPassword),
     );
 
     if (validations) {
-      return reply.code(400).send({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid input data',
-          details: validations,
-        },
-      });
+      return sendValidationError(reply, validations);
     }
 
     try {
-      const passwordHash = await cipherEngine.hashPassword(newPassword);
-      const result = await identityRepository.resetPasswordWithToken(token, passwordHash);
+      const passwordHash = await cipherEngine.hashPassword(body.newPassword);
+      const identity = await realmConnector.transaction(async (executor) => {
+        const updatedIdentity = await identityRepository.resetPasswordWithTokenHash(
+          cipherEngine.hashToken(body.token),
+          passwordHash,
+          executor,
+        );
 
-      if (!result) {
+        if (updatedIdentity) {
+          await identityRepository.revokeAllRefreshTokens(updatedIdentity.id, executor);
+        }
+
+        return updatedIdentity;
+      });
+
+      if (!identity) {
         return reply.code(400).send({
           success: false,
           error: {
@@ -431,12 +518,10 @@ export class AuthenticationConductor {
 
       return reply.code(200).send({
         success: true,
-        data: {
-          message: 'Password reset successfully',
-        },
+        data: { message: 'Password reset successfully' },
       });
-    } catch (err) {
-      request.log.error('Password reset completion failed:', err);
+    } catch (error) {
+      request.log.error({ err: error }, 'Password reset completion failed');
       return reply.code(500).send({
         success: false,
         error: {
@@ -448,21 +533,26 @@ export class AuthenticationConductor {
   }
 
   async logout(request, reply) {
-    const { refreshToken } = request.body;
+    const refreshToken = request.body?.refreshToken;
 
     if (refreshToken) {
       try {
-        await identityRepository.revokeRefreshToken(refreshToken);
-      } catch (err) {
-        request.log.error('Failed to revoke refresh token:', err);
+        await identityRepository.revokeRefreshToken(cipherEngine.hashToken(refreshToken));
+      } catch (error) {
+        request.log.error({ err: error }, 'Failed to revoke refresh token');
+        return reply.code(500).send({
+          success: false,
+          error: {
+            code: 'LOGOUT_FAILED',
+            message: 'Failed to end the session',
+          },
+        });
       }
     }
 
     return reply.code(200).send({
       success: true,
-      data: {
-        message: 'Logged out successfully',
-      },
+      data: { message: 'Logged out successfully' },
     });
   }
 }

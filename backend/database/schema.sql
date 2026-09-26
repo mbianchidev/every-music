@@ -11,9 +11,9 @@ CREATE TABLE users (
     auth_provider VARCHAR(50) NOT NULL DEFAULT 'email', -- 'email' or 'google'
     google_id VARCHAR(255) UNIQUE,
     email_verified BOOLEAN DEFAULT FALSE,
-    verification_token VARCHAR(255) UNIQUE,
+    verification_token_hash VARCHAR(64) UNIQUE,
     verification_token_expires TIMESTAMP,
-    reset_password_token VARCHAR(255) UNIQUE,
+    reset_password_token_hash VARCHAR(64) UNIQUE,
     reset_password_expires TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -183,10 +183,13 @@ CREATE TABLE followers (
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token VARCHAR(500) UNIQUE NOT NULL,
+    token_hash VARCHAR(64) UNIQUE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    revoked BOOLEAN DEFAULT FALSE
+    revoked BOOLEAN DEFAULT FALSE,
+    rotated_at TIMESTAMPTZ,
+    replacement_jti VARCHAR(64),
+    replaced_by UUID REFERENCES refresh_tokens(id) ON DELETE SET NULL
 );
 
 -- Indexes for performance
@@ -208,7 +211,13 @@ CREATE INDEX idx_announcement_genres ON announcement_genres(announcement_id);
 CREATE INDEX idx_followers_follower ON followers(follower_id);
 CREATE INDEX idx_followers_following ON followers(following_id);
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+CREATE INDEX idx_refresh_tokens_expiration ON refresh_tokens(expires_at) WHERE revoked = false;
+
+CREATE TABLE schema_migrations (
+    name TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- Update trigger for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()

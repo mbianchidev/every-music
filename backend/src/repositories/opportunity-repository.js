@@ -1,7 +1,7 @@
 import { realmConnector } from './realm-connector.js';
 
 export class OpportunityRepository {
-  async createAnnouncement(userId, announcementData) {
+  async createAnnouncement(userId, announcementData, executor = realmConnector) {
     const query = `
       INSERT INTO announcements (
         user_id, title, description, picture_url, city, state, country,
@@ -10,7 +10,7 @@ export class OpportunityRepository {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
-    const result = await realmConnector.execute(query, [
+    const result = await executor.execute(query, [
       userId,
       announcementData.title,
       announcementData.description,
@@ -28,7 +28,7 @@ export class OpportunityRepository {
     return result.rows[0];
   }
 
-  async findById(announcementId) {
+  async findById(announcementId, executor = realmConnector) {
     const query = `
       SELECT a.*,
              u.email as creator_email,
@@ -55,7 +55,7 @@ export class OpportunityRepository {
       WHERE a.id = $1 AND a.is_deleted = false
       GROUP BY a.id, u.email
     `;
-    const result = await realmConnector.execute(query, [announcementId]);
+    const result = await executor.execute(query, [announcementId]);
     return result.rows[0] || null;
   }
 
@@ -117,8 +117,9 @@ export class OpportunityRepository {
 
     whereConditions.push(`(a.expires_at IS NULL OR a.expires_at > NOW())`);
 
-    const limit = pagination.pageSize || 20;
-    const offset = ((pagination.page || 1) - 1) * limit;
+    const pageSize = pagination.pageSize || 20;
+    const limit = pagination.limit || pageSize;
+    const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
       SELECT a.id, a.user_id, a.title, a.description, a.picture_url,
@@ -136,7 +137,7 @@ export class OpportunityRepository {
     return result.rows;
   }
 
-  async updateAnnouncement(announcementId, userId, updateData) {
+  async updateAnnouncement(announcementId, userId, updateData, executor = realmConnector) {
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -163,7 +164,15 @@ export class OpportunityRepository {
       }
     }
 
-    if (updates.length === 0) return null;
+    if (updates.length === 0) {
+      const existing = await executor.execute(
+        `SELECT *
+         FROM announcements
+         WHERE id = $1 AND user_id = $2 AND is_deleted = false`,
+        [announcementId, userId],
+      );
+      return existing.rows[0] || null;
+    }
 
     values.push(announcementId, userId);
     const query = `
@@ -173,7 +182,7 @@ export class OpportunityRepository {
       RETURNING *
     `;
 
-    const result = await realmConnector.execute(query, values);
+    const result = await executor.execute(query, values);
     return result.rows[0] || null;
   }
 
@@ -188,13 +197,13 @@ export class OpportunityRepository {
     return result.rows[0] || null;
   }
 
-  async attachInstruments(announcementId, instrumentIds) {
-    if (!instrumentIds || instrumentIds.length === 0) return;
-
-    await realmConnector.execute(
+  async attachInstruments(announcementId, instrumentIds, executor = realmConnector) {
+    await executor.execute(
       'DELETE FROM announcement_instruments WHERE announcement_id = $1',
       [announcementId]
     );
+
+    if (!instrumentIds || instrumentIds.length === 0) return;
 
     const query = `
       INSERT INTO announcement_instruments (announcement_id, instrument_id)
@@ -203,17 +212,17 @@ export class OpportunityRepository {
     `;
 
     for (const instrumentId of instrumentIds) {
-      await realmConnector.execute(query, [announcementId, instrumentId]);
+      await executor.execute(query, [announcementId, instrumentId]);
     }
   }
 
-  async attachGenres(announcementId, genreIds) {
-    if (!genreIds || genreIds.length === 0) return;
-
-    await realmConnector.execute(
+  async attachGenres(announcementId, genreIds, executor = realmConnector) {
+    await executor.execute(
       'DELETE FROM announcement_genres WHERE announcement_id = $1',
       [announcementId]
     );
+
+    if (!genreIds || genreIds.length === 0) return;
 
     const query = `
       INSERT INTO announcement_genres (announcement_id, genre_id)
@@ -222,17 +231,17 @@ export class OpportunityRepository {
     `;
 
     for (const genreId of genreIds) {
-      await realmConnector.execute(query, [announcementId, genreId]);
+      await executor.execute(query, [announcementId, genreId]);
     }
   }
 
-  async attachLinks(announcementId, links) {
-    if (!links || links.length === 0) return;
-
-    await realmConnector.execute(
+  async attachLinks(announcementId, links, executor = realmConnector) {
+    await executor.execute(
       'DELETE FROM announcement_links WHERE announcement_id = $1',
       [announcementId]
     );
+
+    if (!links || links.length === 0) return;
 
     const query = `
       INSERT INTO announcement_links (announcement_id, link_type, url)
@@ -240,7 +249,7 @@ export class OpportunityRepository {
     `;
 
     for (const link of links) {
-      await realmConnector.execute(query, [
+      await executor.execute(query, [
         announcementId,
         link.linkType || 'other',
         link.url,
@@ -257,7 +266,7 @@ export class OpportunityRepository {
     await realmConnector.execute(query, [announcementId]);
   }
 
-  async recordReaction(announcementId, userId, reactionType) {
+  async recordReaction(announcementId, userId, reactionType, executor = realmConnector) {
     const query = `
       INSERT INTO announcement_reactions (announcement_id, user_id, reaction_type)
       VALUES ($1, $2, $3)
@@ -265,17 +274,17 @@ export class OpportunityRepository {
       DO UPDATE SET reaction_type = EXCLUDED.reaction_type
       RETURNING *
     `;
-    const result = await realmConnector.execute(query, [
+    const result = await executor.execute(query, [
       announcementId,
       userId,
       reactionType,
     ]);
     
-    await this.recalculateReactions(announcementId);
+    await this.recalculateReactions(announcementId, executor);
     return result.rows[0];
   }
 
-  async recalculateReactions(announcementId) {
+  async recalculateReactions(announcementId, executor = realmConnector) {
     const query = `
       UPDATE announcements
       SET likes_count = (
@@ -288,7 +297,7 @@ export class OpportunityRepository {
       )
       WHERE id = $1
     `;
-    await realmConnector.execute(query, [announcementId]);
+    await executor.execute(query, [announcementId]);
   }
 
   async saveAnnouncement(announcementId, userId) {
@@ -313,14 +322,18 @@ export class OpportunityRepository {
   }
 
   async getSavedAnnouncements(userId, pagination) {
-    const limit = pagination.pageSize || 20;
-    const offset = ((pagination.page || 1) - 1) * limit;
+    const pageSize = pagination.pageSize || 20;
+    const limit = pagination.limit || pageSize;
+    const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
       SELECT a.*, sa.created_at as saved_at
       FROM saved_announcements sa
       JOIN announcements a ON sa.announcement_id = a.id
-      WHERE sa.user_id = $1 AND a.is_deleted = false
+      WHERE sa.user_id = $1
+        AND a.is_deleted = false
+        AND a.is_published = true
+        AND (a.expires_at IS NULL OR a.expires_at > NOW())
       ORDER BY sa.created_at DESC
       LIMIT $2 OFFSET $3
     `;
