@@ -1,7 +1,7 @@
 import { realmConnector } from './realm-connector.js';
 
 export class MusicianRepository {
-  async findByUserId(userId) {
+  async findByUserId(userId, executor = realmConnector) {
     const query = `
       SELECT p.*, 
              array_agg(DISTINCT jsonb_build_object(
@@ -34,11 +34,11 @@ export class MusicianRepository {
       WHERE p.user_id = $1
       GROUP BY p.id
     `;
-    const result = await realmConnector.execute(query, [userId]);
+    const result = await executor.execute(query, [userId]);
     return result.rows[0] || null;
   }
 
-  async createProfile(userId, profileData) {
+  async createProfile(userId, profileData, executor = realmConnector) {
     const query = `
       INSERT INTO profiles (
         user_id, artist_name, first_name, last_name, age,
@@ -48,7 +48,7 @@ export class MusicianRepository {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *
     `;
-    const result = await realmConnector.execute(query, [
+    const result = await executor.execute(query, [
       userId,
       profileData.artistName || null,
       profileData.firstName || null,
@@ -70,7 +70,7 @@ export class MusicianRepository {
     return result.rows[0];
   }
 
-  async updateProfile(profileId, profileData) {
+  async updateProfile(profileId, profileData, executor = realmConnector) {
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -113,7 +113,7 @@ export class MusicianRepository {
       RETURNING *
     `;
 
-    const result = await realmConnector.execute(query, values);
+    const result = await executor.execute(query, values);
     return result.rows[0] || null;
   }
 
@@ -154,8 +154,9 @@ export class MusicianRepository {
       paramIndex++;
     }
 
-    const limit = pagination.pageSize || 20;
-    const offset = ((pagination.page || 1) - 1) * limit;
+    const pageSize = pagination.pageSize || 20;
+    const limit = pagination.limit || pageSize;
+    const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
       SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
@@ -172,18 +173,24 @@ export class MusicianRepository {
     return result.rows;
   }
 
-  async attachInstruments(profileId, instruments) {
+  async attachInstruments(profileId, instruments, executor = realmConnector) {
+    await executor.execute(
+      'DELETE FROM user_instruments WHERE profile_id = $1',
+      [profileId],
+    );
+
     if (!instruments || instruments.length === 0) return;
 
     const query = `
       INSERT INTO user_instruments (profile_id, instrument_id, years_experience, skill_level)
       VALUES ($1, $2, $3, $4)
-      ON CONFLICT (profile_id, instrument_id) 
-      DO UPDATE SET years_experience = EXCLUDED.years_experience, skill_level = EXCLUDED.skill_level
+      ON CONFLICT (profile_id, instrument_id)
+      DO UPDATE SET years_experience = EXCLUDED.years_experience,
+                    skill_level = EXCLUDED.skill_level
     `;
 
     for (const inst of instruments) {
-      await realmConnector.execute(query, [
+      await executor.execute(query, [
         profileId,
         inst.instrumentId,
         inst.yearsExperience || 0,
@@ -192,13 +199,13 @@ export class MusicianRepository {
     }
   }
 
-  async attachGenres(profileId, genreIds) {
-    if (!genreIds || genreIds.length === 0) return;
-
-    await realmConnector.execute(
+  async attachGenres(profileId, genreIds, executor = realmConnector) {
+    await executor.execute(
       'DELETE FROM user_genres WHERE profile_id = $1',
       [profileId]
     );
+
+    if (!genreIds || genreIds.length === 0) return;
 
     const query = `
       INSERT INTO user_genres (profile_id, genre_id)
@@ -207,7 +214,7 @@ export class MusicianRepository {
     `;
 
     for (const genreId of genreIds) {
-      await realmConnector.execute(query, [profileId, genreId]);
+      await executor.execute(query, [profileId, genreId]);
     }
   }
 

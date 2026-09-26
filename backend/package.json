@@ -7,10 +7,14 @@
   "scripts": {
     "launch": "node src/nexus.js",
     "start": "node src/nexus.js",
+    "start:production": "node scripts/start-production.js",
     "watch": "node --watch src/nexus.js",
     "bootstrap": "node scripts/bootstrap-realm.js",
+    "migrate": "node scripts/migrate-realm.js",
     "populate": "node scripts/populate-realm.js",
-    "verify": "node --check src/nexus.js && echo 'Backend validation passed'"
+    "smoke": "node scripts/smoke.js",
+    "test": "node --test",
+    "verify": "node --check src/nexus.js && node --check src/app.js && node --check scripts/migrate-realm.js && npm test"
   },
   "keywords": [
     "music",
@@ -18,7 +22,7 @@
     "api"
   ],
   "author": "Every.music",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/rate-limit": "^11.2.0",

@@ -1,193 +1,77 @@
-import 'dotenv/config';
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import rateLimit from '@fastify/rate-limit';
+import { pathToFileURL } from 'node:url';
 import { realmConfig, validateRealmConfig } from '../config/realm.js';
+import { buildNexus } from './app.js';
 import { realmConnector } from './repositories/realm-connector.js';
 import { mailDispatcher } from './engines/mail-dispatcher.js';
 import { googleIdentityBridge } from './engines/google-identity-bridge.js';
-import { authOrchestrator } from './orchestrators/auth-orchestrator.js';
-import { profileOrchestrator } from './orchestrators/profile-orchestrator.js';
-import { announcementOrchestrator } from './orchestrators/announcement-orchestrator.js';
-import { catalogOrchestrator } from './orchestrators/catalog-orchestrator.js';
 
-validateRealmConfig();
+export async function startNexus() {
+  validateRealmConfig();
 
-const nexus = Fastify({
-  logger: {
-    level: realmConfig.environment === 'production' ? 'info' : 'debug',
-    transport: realmConfig.environment !== 'production' ? {
-      target: 'pino-pretty',
-      options: {
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-        colorize: true,
-      },
-    } : undefined,
-  },
-  requestIdHeader: 'x-nexus-request-id',
-  disableRequestLogging: false,
-  trustProxy: true,
-});
+  const nexus = await buildNexus();
 
-await nexus.register(cors, {
-  origin: realmConfig.boundaries.portalOrigin,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-nexus-request-id'],
-});
-
-await nexus.register(rateLimit, {
-  max: 100,
-  timeWindow: '15 minutes',
-  cache: 10000,
-  skipOnError: false,
-});
-
-let requestCounter = 0;
-nexus.addHook('onRequest', async (request, reply) => {
-  requestCounter++;
-  request.requestNumber = requestCounter;
-});
-
-nexus.addHook('onResponse', async (request, reply) => {
-  const responseTime = reply.elapsedTime;
-  request.log.info(
-    `[${request.requestNumber}] ${request.method} ${request.url} - ${reply.statusCode} (${responseTime.toFixed(2)}ms)`
-  );
-});
-
-nexus.setErrorHandler((error, request, reply) => {
-  request.log.error(error);
-
-  if (error.validation) {
-    return reply.code(400).send({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Request validation failed',
-        details: error.validation,
-      },
-    });
-  }
-
-  if (error.statusCode === 429) {
-    return reply.code(429).send({
-      success: false,
-      error: {
-        code: 'RATE_LIMIT_EXCEEDED',
-        message: 'Too many requests, please slow down',
-      },
-    });
-  }
-
-  const statusCode = error.statusCode || 500;
-  return reply.code(statusCode).send({
-    success: false,
-    error: {
-      code: error.code || 'INTERNAL_ERROR',
-      message: realmConfig.environment === 'production' 
-        ? 'An internal error occurred' 
-        : error.message,
-    },
-  });
-});
-
-nexus.setNotFoundHandler((request, reply) => {
-  return reply.code(404).send({
-    success: false,
-    error: {
-      code: 'ROUTE_NOT_FOUND',
-      message: `Route ${request.method} ${request.url} does not exist`,
-    },
-  });
-});
-
-nexus.get('/pulse', async (request, reply) => {
   try {
-    await realmConnector.execute('SELECT 1 AS heartbeat');
-
-    return {
-      status: 'alive',
-      realm: 'connected',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: realmConfig.environment,
-    };
-  } catch (err) {
-    return reply.code(503).send({
-      status: 'degraded',
-      realm: 'disconnected',
-      timestamp: new Date().toISOString(),
-      error: err.message,
-    });
-  }
-});
-
-nexus.get('/nexus-info', async () => ({
-  nexus: 'Every.music Orchestration Layer',
-  version: '1.0.0',
-  environment: realmConfig.environment,
-  routes: {
-    authentication: '/realm/auth/*',
-    profiles: '/realm/profiles/*',
-    announcements: '/realm/announcements/*',
-    catalog: '/realm/catalog/*',
-  },
-  documentation: 'https://docs.everymusic.com/api',
-}));
-
-await nexus.register(authOrchestrator, { prefix: '/realm/auth' });
-await nexus.register(profileOrchestrator, { prefix: '/realm/profiles' });
-await nexus.register(announcementOrchestrator, { prefix: '/realm/announcements' });
-await nexus.register(catalogOrchestrator, { prefix: '/realm/catalog' });
-
-const initializeNexus = async () => {
-  try {
-    await realmConnector.establish();
-    
-    await mailDispatcher.initialize();
-    
-    googleIdentityBridge.initialize();
+    await realmConnector.establish(nexus.log);
+    await mailDispatcher.initialize(nexus.log);
+    googleIdentityBridge.initialize(nexus.log);
 
     await nexus.listen({
       port: realmConfig.nexus.port,
       host: realmConfig.nexus.host,
     });
 
-    nexus.log.info(`✓ Nexus active on ${realmConfig.nexus.host}:${realmConfig.nexus.port}`);
-    nexus.log.info(`✓ Environment: ${realmConfig.environment}`);
-    nexus.log.info(`✓ CORS origin: ${realmConfig.boundaries.portalOrigin}`);
-  } catch (err) {
-    nexus.log.error('✗ Nexus initialization failed:', err);
-    process.exit(1);
-  }
-};
-
-const shutdownNexus = async (signal) => {
-  nexus.log.info(`Received ${signal}, initiating graceful shutdown...`);
-  
-  try {
-    await nexus.close();
+    nexus.log.info({
+      host: realmConfig.nexus.host,
+      port: realmConfig.nexus.port,
+      environment: realmConfig.environment,
+      origins: realmConfig.boundaries.portalOrigins,
+    }, 'Nexus started');
+  } catch (error) {
+    nexus.log.fatal({ err: error }, 'Nexus initialization failed');
     await realmConnector.disconnect();
-    nexus.log.info('✓ Nexus shutdown complete');
-    process.exit(0);
-  } catch (err) {
-    nexus.log.error('✗ Shutdown error:', err);
-    process.exit(1);
+    throw error;
   }
-};
 
-process.on('SIGTERM', () => shutdownNexus('SIGTERM'));
-process.on('SIGINT', () => shutdownNexus('SIGINT'));
+  let shuttingDown = false;
+  const shutdown = async (signal) => {
+    if (shuttingDown) {
+      return;
+    }
 
-process.on('unhandledRejection', (reason, promise) => {
-  nexus.log.error('Unhandled rejection at:', promise, 'reason:', reason);
-});
+    shuttingDown = true;
+    nexus.log.info({ signal }, 'Graceful shutdown started');
 
-process.on('uncaughtException', (err) => {
-  nexus.log.error('Uncaught exception:', err);
-  process.exit(1);
-});
+    try {
+      await nexus.close();
+      await realmConnector.disconnect();
+      nexus.log.info('Graceful shutdown complete');
+      process.exitCode = 0;
+    } catch (error) {
+      nexus.log.error({ err: error }, 'Graceful shutdown failed');
+      process.exitCode = 1;
+    }
+  };
 
-initializeNexus();
+  process.once('SIGTERM', () => void shutdown('SIGTERM'));
+  process.once('SIGINT', () => void shutdown('SIGINT'));
+
+  process.on('unhandledRejection', (reason) => {
+    nexus.log.fatal({ err: reason }, 'Unhandled promise rejection');
+  });
+
+  process.on('uncaughtException', (error) => {
+    nexus.log.fatal({ err: error }, 'Uncaught exception');
+    void shutdown('uncaughtException');
+  });
+
+  return nexus;
+}
+
+const isEntrypoint = process.argv[1]
+  && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntrypoint) {
+  startNexus().catch(() => {
+    process.exitCode = 1;
+  });
+}

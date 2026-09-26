@@ -4,9 +4,20 @@ import { realmConfig } from '../../config/realm.js';
 class MailDispatcher {
   constructor() {
     this.transporter = null;
+    this.logger = console;
   }
 
-  async initialize() {
+  async initialize(logger = console) {
+    this.logger = logger;
+
+    if (!realmConfig.mailTransporter.gateway
+      || !realmConfig.mailTransporter.identity
+      || !realmConfig.mailTransporter.credential
+      || !realmConfig.mailTransporter.senderAlias) {
+      this.logger.warn('Mail dispatcher is not configured');
+      return false;
+    }
+
     this.transporter = nodemailer.createTransport({
       host: realmConfig.mailTransporter.gateway,
       port: realmConfig.mailTransporter.port,
@@ -19,26 +30,29 @@ class MailDispatcher {
 
     try {
       await this.transporter.verify();
-      console.log('✓ Mail dispatcher ready');
+      this.logger.info('Mail dispatcher ready');
+      return true;
     } catch (err) {
-      console.warn('⚠ Mail dispatcher unavailable:', err.message);
+      this.transporter = null;
+      this.logger.warn({ err }, 'Mail dispatcher unavailable');
+      return false;
     }
   }
 
   async dispatchVerification(recipientEmail, verificationToken) {
     if (!this.transporter) {
-      console.warn('Mail dispatcher not initialized');
+      this.logger.warn('Verification email not sent because mail is unavailable');
       return false;
     }
 
-    const verificationLink = `${realmConfig.boundaries.portalOrigin}/verify-email?token=${verificationToken}`;
+    const verificationLink = `${realmConfig.boundaries.portalOrigins[0]}/#verify-email?token=${encodeURIComponent(verificationToken)}`;
     
     const mailContent = {
       from: realmConfig.mailTransporter.senderAlias,
       to: recipientEmail,
       subject: '🎵 Verify your Every.music account',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Welcome to Every.music!</h2>
           <p>Thank you for joining our community of musicians.</p>
           <p>Please verify your email address by clicking the button below:</p>
@@ -64,7 +78,7 @@ class MailDispatcher {
       await this.transporter.sendMail(mailContent);
       return true;
     } catch (err) {
-      console.error('Failed to dispatch verification mail:', err);
+      this.logger.error({ err }, 'Failed to dispatch verification email');
       return false;
     }
   }
@@ -74,14 +88,14 @@ class MailDispatcher {
       return false;
     }
 
-    const resetLink = `${realmConfig.boundaries.portalOrigin}/reset-password?token=${resetToken}`;
+    const resetLink = `${realmConfig.boundaries.portalOrigins[0]}/#reset-password?token=${encodeURIComponent(resetToken)}`;
     
     const mailContent = {
       from: realmConfig.mailTransporter.senderAlias,
       to: recipientEmail,
       subject: '🔒 Reset your Every.music password',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Password Reset Request</h2>
           <p>We received a request to reset your password.</p>
           <p>Click the button below to set a new password:</p>
@@ -107,7 +121,7 @@ class MailDispatcher {
       await this.transporter.sendMail(mailContent);
       return true;
     } catch (err) {
-      console.error('Failed to dispatch reset mail:', err);
+      this.logger.error({ err }, 'Failed to dispatch password reset email');
       return false;
     }
   }

@@ -7,13 +7,15 @@ class RealmConnector {
   constructor() {
     this.pool = null;
     this.isConnected = false;
+    this.logger = console;
   }
 
-  async establish() {
+  async establish(logger = console) {
     if (this.isConnected) {
       return this.pool;
     }
 
+    this.logger = logger;
     this.pool = new Pool({
       connectionString: realmConfig.realm.connectionString,
       min: realmConfig.realm.pooling.minimum,
@@ -23,7 +25,7 @@ class RealmConnector {
     });
 
     this.pool.on('error', (err) => {
-      console.error('Realm pool error:', err);
+      this.logger.error({ err }, 'Realm pool error');
     });
 
     try {
@@ -31,10 +33,12 @@ class RealmConnector {
       await connection.query('SELECT NOW()');
       connection.release();
       this.isConnected = true;
-      console.log('✓ Realm connection established');
+      this.logger.info('Realm connection established');
       return this.pool;
     } catch (err) {
-      console.error('✗ Failed to establish realm connection:', err);
+      this.logger.error({ err }, 'Failed to establish realm connection');
+      await this.pool.end();
+      this.pool = null;
       throw err;
     }
   }
@@ -47,25 +51,39 @@ class RealmConnector {
   }
 
   async transaction(operationsCallback) {
+    if (!this.pool) {
+      throw new Error('Realm not connected');
+    }
+
     const connection = await this.pool.connect();
+    let released = false;
+    const executor = {
+      execute: (queryText, parameters = []) => connection.query(queryText, parameters),
+    };
+
     try {
       await connection.query('BEGIN');
-      const outcome = await operationsCallback(connection);
+      const outcome = await operationsCallback(executor);
       await connection.query('COMMIT');
       return outcome;
     } catch (err) {
       await connection.query('ROLLBACK');
+      connection.release(err);
+      released = true;
       throw err;
     } finally {
-      connection.release();
+      if (!released) {
+        connection.release();
+      }
     }
   }
 
   async disconnect() {
     if (this.pool) {
       await this.pool.end();
+      this.pool = null;
       this.isConnected = false;
-      console.log('✓ Realm disconnected');
+      this.logger.info('Realm disconnected');
     }
   }
 }

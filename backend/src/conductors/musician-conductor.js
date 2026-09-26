@@ -1,4 +1,5 @@
 import { musicianRepository } from '../repositories/musician-repository.js';
+import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 
 export class MusicianConductor {
@@ -23,7 +24,7 @@ export class MusicianConductor {
         data: this.transformProfile(profile),
       });
     } catch (err) {
-      request.log.error('Failed to fetch profile:', err);
+      request.log.error({ err }, 'Failed to fetch profile');
       return reply.code(500).send({
         success: false,
         error: {
@@ -36,7 +37,7 @@ export class MusicianConductor {
 
   async updateMyProfile(request, reply) {
     const { userId } = request.authenticatedUser;
-    const updateData = request.body;
+    const updateData = request.body ?? {};
 
     const validations = InputValidator.gatherValidationErrors(
       InputValidator.validateLength(updateData.artistName, 1, 255, 'Artist name'),
@@ -45,7 +46,9 @@ export class MusicianConductor {
       InputValidator.validateAge(updateData.age),
       InputValidator.validateUrl(updateData.websiteUrl),
       InputValidator.validateUrl(updateData.profilePictureUrl),
-      InputValidator.validateCoordinates(updateData.latitude, updateData.longitude)
+      InputValidator.validateCoordinates(updateData.latitude, updateData.longitude),
+      InputValidator.validateInstruments(updateData.instruments),
+      InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
     );
 
     if (validations) {
@@ -60,7 +63,7 @@ export class MusicianConductor {
     }
 
     try {
-      let profile = await musicianRepository.findByUserId(userId);
+      const profile = await musicianRepository.findByUserId(userId);
 
       if (!profile) {
         return reply.code(404).send({
@@ -72,15 +75,17 @@ export class MusicianConductor {
         });
       }
 
-      const updatedProfile = await musicianRepository.updateProfile(profile.id, updateData);
+      await realmConnector.transaction(async (executor) => {
+        await musicianRepository.updateProfile(profile.id, updateData, executor);
 
-      if (updateData.instruments) {
-        await musicianRepository.attachInstruments(profile.id, updateData.instruments);
-      }
+        if (updateData.instruments !== undefined) {
+          await musicianRepository.attachInstruments(profile.id, updateData.instruments, executor);
+        }
 
-      if (updateData.genreIds) {
-        await musicianRepository.attachGenres(profile.id, updateData.genreIds);
-      }
+        if (updateData.genreIds !== undefined) {
+          await musicianRepository.attachGenres(profile.id, updateData.genreIds, executor);
+        }
+      });
 
       const refreshedProfile = await musicianRepository.findByUserId(userId);
 
@@ -89,7 +94,7 @@ export class MusicianConductor {
         data: this.transformProfile(refreshedProfile),
       });
     } catch (err) {
-      request.log.error('Failed to update profile:', err);
+      request.log.error({ err }, 'Failed to update profile');
       return reply.code(500).send({
         success: false,
         error: {
@@ -103,28 +108,46 @@ export class MusicianConductor {
   async searchProfiles(request, reply) {
     const { city, instrumentId, genreId, searchTerm, page = 1, pageSize = 20 } = request.query;
 
+    const paginationResult = InputValidator.parsePagination(page, pageSize);
+    const queryValidation = InputValidator.gatherValidationErrors(
+      paginationResult,
+      InputValidator.validateUuid(instrumentId, 'Instrument ID'),
+      InputValidator.validateUuid(genreId, 'Genre ID'),
+    );
+    if (queryValidation) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid search query',
+          details: queryValidation,
+        },
+      });
+    }
+
     try {
       const filters = { city, instrumentId, genreId, searchTerm };
-      const pagination = { 
-        page: parseInt(page), 
-        pageSize: Math.min(parseInt(pageSize), 100) 
-      };
+      const pagination = paginationResult.pagination;
 
-      const profiles = await musicianRepository.searchProfiles(filters, pagination);
+      const profiles = await musicianRepository.searchProfiles(filters, {
+        ...pagination,
+        limit: pagination.pageSize + 1,
+      });
+      const hasMore = profiles.length > pagination.pageSize;
 
       return reply.code(200).send({
         success: true,
         data: {
-          profiles: profiles.map(p => this.transformBasicProfile(p)),
+          profiles: profiles.slice(0, pagination.pageSize).map(p => this.transformBasicProfile(p)),
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
-            hasMore: profiles.length === pagination.pageSize,
+            hasMore,
           },
         },
       });
     } catch (err) {
-      request.log.error('Failed to search profiles:', err);
+      request.log.error({ err }, 'Failed to search profiles');
       return reply.code(500).send({
         success: false,
         error: {
@@ -156,7 +179,7 @@ export class MusicianConductor {
         data: this.transformProfile(profile),
       });
     } catch (err) {
-      request.log.error('Failed to fetch profile:', err);
+      request.log.error({ err }, 'Failed to fetch profile');
       return reply.code(500).send({
         success: false,
         error: {
@@ -210,7 +233,7 @@ export class MusicianConductor {
         data: project,
       });
     } catch (err) {
-      request.log.error('Failed to add project:', err);
+      request.log.error({ err }, 'Failed to add project');
       return reply.code(500).send({
         success: false,
         error: {
@@ -257,7 +280,7 @@ export class MusicianConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to remove project:', err);
+      request.log.error({ err }, 'Failed to remove project');
       return reply.code(500).send({
         success: false,
         error: {
