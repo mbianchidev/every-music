@@ -1,25 +1,30 @@
-const AnnouncementCard = ({ post, actions }) => (
-  <div className="card">
-    <h3 className="heading-md">{post.title}</h3>
-    <p style={{ opacity: 0.8, marginBottom: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-      {post.description}
-    </p>
-    
-    {post.instruments && post.instruments.length > 0 && (
-      <div style={{ marginBottom: '1rem' }}>
-        {post.instruments.slice(0, 3).map((inst, i) => (
-          <span key={i} className="tag">{inst.name}</span>
-        ))}
-      </div>
-    )}
-    
-    <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '1rem' }}>
-      <span>📍 {post.location?.city || 'Remote'}</span>
-      {post.isRemote && <span style={{ marginLeft: '0.5rem' }}>🌐 Remote</span>}
-    </div>
-    
-    {actions}
-  </div>
-);
+const AnnouncementCard = ({ post, actions }) => {
+  const city = post.location?.city;
+
+  return (
+    <article className="card announcement-card">
+      <h2 className="heading-md">{post.title}</h2>
+      <p className="announcement-description">{post.description}</p>
+
+      {post.instruments?.length > 0 && (
+        <div className="tag-list" aria-label="Instruments">
+          {post.instruments.slice(0, 3).map((instrument) => (
+            <span key={instrument.instrumentId || instrument.instrument_id} className="tag">
+              {instrument.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p className="announcement-meta">
+        <span aria-hidden="true">⌖ </span>
+        {city || 'Location flexible'}
+        {post.isRemote && <span> · Remote friendly</span>}
+      </p>
+
+      {actions && <div className="card-actions">{actions}</div>}
+    </article>
+  );
+};
 
 export default AnnouncementCard;

@@ -1,8 +1,9 @@
-const PageHeader = ({ title, subtitle }) => (
-  <div style={{ padding: '2rem 0', borderBottom: '4px solid #F8F8F8', marginBottom: '2rem' }}>
+const PageHeader = ({ eyebrow, title, subtitle }) => (
+  <header className="page-header">
+    {eyebrow && <p className="eyebrow">{eyebrow}</p>}
     <h1 className="heading-lg">{title}</h1>
-    {subtitle && <p style={{ opacity: 0.7 }}>{subtitle}</p>}
-  </div>
+    {subtitle && <p className="body-muted">{subtitle}</p>}
+  </header>
 );
 
 export default PageHeader;

@@ -1,59 +1,131 @@
-// Nucleus - Bitwise state with base64 compression
-class Nucleus {
-  constructor() {
-    this.bits = 0;
-    this.payload = { persona: null, keys: null, tools: [], sounds: [] };
-    this.listeners = [];
-    this.storageId = 'em_n3';
+const EMPTY_STATE = {
+  persona: null,
+  keys: null,
+  tools: [],
+  sounds: [],
+};
+
+function isSession(value) {
+  return value
+    && typeof value === 'object'
+    && typeof value.persona === 'object'
+    && typeof value.keys?.accessToken === 'string'
+    && typeof value.keys?.refreshToken === 'string';
+}
+
+export class Nucleus {
+  constructor({
+    storage = globalThis.sessionStorage,
+    storageId = 'everymusic.session.v1',
+  } = {}) {
+    this.storage = storage;
+    this.storageId = storageId;
+    this.payload = { ...EMPTY_STATE };
+    this.listeners = new Set();
     this.rehydrate();
   }
-  
-  rehydrate() {
-    try {
-      const cached = sessionStorage.getItem(this.storageId);
-      if (cached) {
-        const unpacked = JSON.parse(atob(cached));
-        this.payload = { ...this.payload, ...unpacked };
-        this.bits = unpacked.persona && unpacked.keys ? 1 : 0;
-      }
-    } catch {}
+
+  get authorized() {
+    return Boolean(this.payload.persona && this.payload.keys?.accessToken);
   }
-  
-  persist() {
-    if (this.bits & 1) {
-      const packed = btoa(JSON.stringify({ persona: this.payload.persona, keys: this.payload.keys }));
-      sessionStorage.setItem(this.storageId, packed);
+
+  snapshot() {
+    return {
+      ...this.payload,
+      authorized: this.authorized,
+    };
+  }
+
+  rehydrate() {
+    if (!this.storage) {
+      return;
+    }
+
+    try {
+      const cached = this.storage.getItem(this.storageId);
+      if (!cached) {
+        return;
+      }
+
+      const unpacked = JSON.parse(cached);
+      if (!isSession(unpacked)) {
+        this.storage.removeItem(this.storageId);
+        return;
+      }
+
+      this.payload = {
+        ...EMPTY_STATE,
+        persona: unpacked.persona,
+        keys: unpacked.keys,
+      };
+    } catch (error) {
+      console.warn('Discarding unreadable session state', error);
+      this.storage.removeItem(this.storageId);
     }
   }
-  
+
+  persist() {
+    if (!this.storage) {
+      return;
+    }
+
+    if (!this.authorized) {
+      this.storage.removeItem(this.storageId);
+      return;
+    }
+
+    this.storage.setItem(this.storageId, JSON.stringify({
+      persona: this.payload.persona,
+      keys: this.payload.keys,
+    }));
+  }
+
   emit() {
     this.persist();
-    this.listeners.forEach(fn => fn({ ...this.payload, authorized: !!(this.bits & 1) }));
+    const snapshot = this.snapshot();
+    this.listeners.forEach((listener) => listener(snapshot));
   }
-  
-  subscribe(fn) {
-    this.listeners.push(fn);
-    fn({ ...this.payload, authorized: !!(this.bits & 1) });
-    return () => { const i = this.listeners.indexOf(fn); if (i > -1) this.listeners.splice(i, 1); };
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    listener(this.snapshot());
+    return () => this.listeners.delete(listener);
   }
-  
+
   login(persona, keys) {
-    this.bits |= 1;
-    this.payload.persona = persona;
-    this.payload.keys = keys;
+    this.payload = {
+      ...this.payload,
+      persona,
+      keys,
+    };
     this.emit();
   }
-  
+
+  updateTokens(keys) {
+    if (!this.payload.persona) {
+      return;
+    }
+
+    this.payload = {
+      ...this.payload,
+      keys: {
+        ...this.payload.keys,
+        ...keys,
+      },
+    };
+    this.emit();
+  }
+
   logout() {
-    this.bits &= ~1;
-    this.payload.persona = null;
-    this.payload.keys = null;
-    sessionStorage.removeItem(this.storageId);
+    this.payload = { ...EMPTY_STATE };
     this.emit();
   }
-  
+
   mutate(persona) {
-    this.payload.persona = persona;
+    this.payload = {
+      ...this.payload,
+      persona,
+    };
     this.emit();
   }
 }
