@@ -1,19 +1,25 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+## Supported versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Security fixes are provided for the latest release on `master`.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| alpha   | :white_check_mark: |
-| 0.0.1   | :x:                |
+| Version | Supported |
+|---|---|
+| Latest 1.x | Yes |
+| Older releases | No |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Do not open a public issue for a suspected vulnerability.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Use [GitHub private vulnerability reporting](https://github.com/mbianchidev/every-music/security/advisories/new) and include:
+
+- affected version or commit
+- reproduction steps or proof of concept
+- expected impact
+- suggested mitigation, if known
+
+The project will acknowledge a complete report within seven days, provide status updates while investigating, and coordinate disclosure after a fix is available.
+
+Do not access data that is not yours, disrupt production services, or publish sensitive details before coordinated disclosure.
