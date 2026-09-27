@@ -1,86 +1,145 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import FormField from '../components/FormField.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 class RegisterScreen extends Component {
   constructor(props) {
     super(props);
-    this.state = { email: '', password: '', confirmPwd: '', error: '', loading: false, success: false };
+    this.state = {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      error: '',
+      loading: false,
+      successMessage: '',
+    };
   }
-  
-  handleRegister = async () => {
-    const { email, password, confirmPwd } = this.state;
-    
-    if (!email.includes('@')) {
-      this.setState({ error: 'Valid email required' });
+
+  validate() {
+    const { email, password, confirmPassword } = this.state;
+
+    if (!email.includes('@')) return 'Enter a valid email address.';
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      return 'Password needs uppercase, lowercase, and a number.';
+    }
+    if (password !== confirmPassword) return 'Passwords do not match.';
+    return '';
+  }
+
+  handleRegister = async (event) => {
+    event.preventDefault();
+    const validationError = this.validate();
+
+    if (validationError) {
+      this.setState({ error: validationError });
       return;
     }
-    
-    if (password.length < 8) {
-      this.setState({ error: 'Password must be at least 8 characters' });
-      return;
-    }
-    
-    if (password !== confirmPwd) {
-      this.setState({ error: 'Passwords do not match' });
-      return;
-    }
-    
+
     this.setState({ loading: true, error: '' });
-    
+
     try {
-      await conduit.transmit('/auth/register', { method: 'POST', body: { email, password } });
-      this.setState({ success: true, loading: false });
-    } catch (err) {
-      this.setState({ error: err.message, loading: false });
+      const response = await conduit.transmit('/auth/register', {
+        method: 'POST',
+        body: {
+          email: this.state.email,
+          password: this.state.password,
+        },
+      });
+      this.setState({
+        successMessage: response.message,
+        loading: false,
+      });
+    } catch (error) {
+      this.setState({ error: error.message, loading: false });
     }
   };
-  
-  render() {
-    const { email, password, confirmPwd, error, loading, success } = this.state;
-    
-    if (success) {
-      return (
-        <div className="container-narrow" style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: '100%' }}>
-            <h1 className="heading-lg">CHECK YOUR EMAIL! 📬</h1>
-            <div className="success">We sent a verification link to {email}</div>
-            <p style={{ marginBottom: '2rem' }}>Click the link in the email to verify your account, then come back here to log in.</p>
-            <button className="btn btn-primary" onClick={() => window.location.hash = '#login'}>GO TO LOGIN</button>
-          </div>
-        </div>
-      );
-    }
-    
+
+  renderSuccess() {
     return (
-      <div className="container-narrow" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="container-narrow center-content">
+        <div className="card" style={{ width: '100%' }}>
+          <p className="eyebrow">Account created</p>
+          <h1 className="heading-lg">CHECK YOUR EMAIL</h1>
+          <div className="success" role="status">{this.state.successMessage}</div>
+          <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
+            GO TO SIGN IN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  render() {
+    const { email, password, confirmPassword, error, loading, successMessage } = this.state;
+
+    if (successMessage) {
+      return this.renderSuccess();
+    }
+
+    return (
+      <div className="container-narrow center-content">
         <div style={{ width: '100%' }}>
-          <h1 className="heading-lg">JOIN THE BAND</h1>
-          <p style={{ opacity: 0.7, marginBottom: '2rem' }}>Create your musician profile</p>
-          
-          {error && <div className="error">{error}</div>}
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FormField label="Email">
-              <input type="email" className="input" value={email} onChange={e => this.setState({ email: e.target.value })} placeholder="your@email.com" disabled={loading} />
+          <PageHeader
+            eyebrow="New member"
+            title="JOIN THE BAND"
+            subtitle="Create your account, verify your email, then build your profile."
+          />
+
+          {error && <div className="error" role="alert">{error}</div>}
+
+          <form className="form-stack" onSubmit={this.handleRegister}>
+            <FormField id="register-email" label="Email" required>
+              <input
+                type="email"
+                className="input"
+                value={email}
+                onChange={(event) => this.setState({ email: event.target.value })}
+                autoComplete="email"
+                inputMode="email"
+                disabled={loading}
+              />
             </FormField>
-            
-            <FormField label="Password">
-              <input type="password" className="input" value={password} onChange={e => this.setState({ password: e.target.value })} placeholder="••••••••" disabled={loading} />
+
+            <FormField
+              id="register-password"
+              label="Password"
+              hint="At least 8 characters with uppercase, lowercase, and a number."
+              required
+            >
+              <input
+                type="password"
+                className="input"
+                value={password}
+                onChange={(event) => this.setState({ password: event.target.value })}
+                autoComplete="new-password"
+                disabled={loading}
+              />
             </FormField>
-            
-            <FormField label="Confirm Password">
-              <input type="password" className="input" value={confirmPwd} onChange={e => this.setState({ confirmPwd: e.target.value })} placeholder="••••••••" disabled={loading} />
+
+            <FormField id="register-confirm-password" label="Confirm password" required>
+              <input
+                type="password"
+                className="input"
+                value={confirmPassword}
+                onChange={(event) => this.setState({ confirmPassword: event.target.value })}
+                autoComplete="new-password"
+                disabled={loading}
+              />
             </FormField>
-            
-            <button className="btn btn-primary" onClick={this.handleRegister} disabled={loading}>
-              {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT'}
             </button>
-            
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <p>Already have an account? <span style={{ color: '#00F5FF', textDecoration: 'underline', cursor: 'pointer' }} onClick={() => window.location.hash = '#login'}>Log in</span></p>
-            </div>
-          </div>
+
+            <p>
+              Already a member?{' '}
+              <button className="text-link" type="button" onClick={() => { window.location.hash = '#login'; }}>
+                Sign in
+              </button>
+            </p>
+          </form>
         </div>
       </div>
     );

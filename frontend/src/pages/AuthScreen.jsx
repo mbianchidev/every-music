@@ -2,65 +2,125 @@ import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import FormField from '../components/FormField.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 class AuthScreen extends Component {
   constructor(props) {
     super(props);
-    this.state = { email: '', password: '', error: '', loading: false };
+    this.state = {
+      email: '',
+      password: '',
+      error: '',
+      errorCode: '',
+      loading: false,
+      message: '',
+    };
   }
-  
-  handleLogin = async () => {
+
+  handleLogin = async (event) => {
+    event.preventDefault();
     const { email, password } = this.state;
-    
-    if (!email.includes('@')) {
-      this.setState({ error: 'Valid email required' });
+
+    if (!email.includes('@') || !password) {
+      this.setState({ error: 'Enter your email and password.', errorCode: '' });
       return;
     }
-    
-    if (password.length < 8) {
-      this.setState({ error: 'Password must be at least 8 characters' });
-      return;
-    }
-    
-    this.setState({ loading: true, error: '' });
-    
+
+    this.setState({ loading: true, error: '', errorCode: '', message: '' });
+
     try {
-      const resp = await conduit.transmit('/auth/login', { method: 'POST', body: { email, password } });
-      nucleus.login(resp.user, { accessToken: resp.accessToken, refreshToken: resp.refreshToken });
+      const response = await conduit.transmit('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
+      nucleus.login(response.user, {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
       window.location.hash = '#feed';
-    } catch (err) {
-      this.setState({ error: err.message, loading: false });
+    } catch (error) {
+      this.setState({
+        error: error.message,
+        errorCode: error.code,
+        loading: false,
+      });
     }
   };
-  
+
+  handleResend = async () => {
+    this.setState({ loading: true, error: '', message: '' });
+
+    try {
+      const response = await conduit.transmit('/auth/resend-verification', {
+        method: 'POST',
+        body: { email: this.state.email },
+      });
+      this.setState({ loading: false, message: response.message });
+    } catch (error) {
+      this.setState({ loading: false, error: error.message });
+    }
+  };
+
   render() {
-    const { email, password, error, loading } = this.state;
-    
+    const { email, password, error, errorCode, loading, message } = this.state;
+
     return (
-      <div className="container-narrow" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="container-narrow center-content">
         <div style={{ width: '100%' }}>
-          <h1 className="heading-lg">WELCOME BACK</h1>
-          <p style={{ opacity: 0.7, marginBottom: '2rem' }}>Log in to your musician profile</p>
-          
-          {error && <div className="error">{error}</div>}
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FormField label="Email">
-              <input type="email" className="input" value={email} onChange={e => this.setState({ email: e.target.value })} placeholder="your@email.com" disabled={loading} />
+          <PageHeader
+            eyebrow="Member access"
+            title="WELCOME BACK"
+            subtitle="Sign in to your musician profile."
+          />
+
+          {error && <div className="error" role="alert">{error}</div>}
+          {message && <div className="success" role="status">{message}</div>}
+
+          <form className="form-stack" onSubmit={this.handleLogin}>
+            <FormField id="login-email" label="Email" required>
+              <input
+                type="email"
+                className="input"
+                value={email}
+                onChange={(event) => this.setState({ email: event.target.value })}
+                autoComplete="email"
+                inputMode="email"
+                disabled={loading}
+              />
             </FormField>
-            
-            <FormField label="Password">
-              <input type="password" className="input" value={password} onChange={e => this.setState({ password: e.target.value })} placeholder="••••••••" disabled={loading} />
+
+            <FormField id="login-password" label="Password" required>
+              <input
+                type="password"
+                className="input"
+                value={password}
+                onChange={(event) => this.setState({ password: event.target.value })}
+                autoComplete="current-password"
+                disabled={loading}
+              />
             </FormField>
-            
-            <button className="btn btn-primary" onClick={this.handleLogin} disabled={loading}>
-              {loading ? 'LOGGING IN...' : 'LOG IN'}
+
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? 'SIGNING IN…' : 'SIGN IN'}
             </button>
-            
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <p>New to Every.music? <span style={{ color: '#00F5FF', textDecoration: 'underline', cursor: 'pointer' }} onClick={() => window.location.hash = '#register'}>Create account</span></p>
-            </div>
-          </div>
+
+            <button className="text-link" type="button" onClick={() => { window.location.hash = '#forgot-password'; }}>
+              Forgot your password?
+            </button>
+
+            {errorCode === 'EMAIL_NOT_VERIFIED' && (
+              <button className="btn btn-secondary" type="button" onClick={this.handleResend} disabled={loading}>
+                RESEND VERIFICATION EMAIL
+              </button>
+            )}
+
+            <p>
+              New to Every.music?{' '}
+              <button className="text-link" type="button" onClick={() => { window.location.hash = '#register'; }}>
+                Create an account
+              </button>
+            </p>
+          </form>
         </div>
       </div>
     );

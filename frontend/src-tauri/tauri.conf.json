@@ -12,7 +12,8 @@
   "app": {
     "windows": [
       {
-        "title": "Every.music - Find Your Band",
+        "label": "main",
+        "title": "Every.music",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -24,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:8080; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:8080 https:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
     }
   },
   "bundle": {
@@ -38,6 +39,8 @@
       "icons/icon.ico"
     ],
     "category": "Music",
+    "publisher": "Every.music",
+    "copyright": "Copyright © 2026 Every.music",
     "shortDescription": "Connect musicians, find band members",
     "longDescription": "Every.music helps musicians find band members and collaborators through a feed of announcements. Build your musical profile and join a global community."
   }

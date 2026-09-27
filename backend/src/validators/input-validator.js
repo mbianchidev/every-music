@@ -31,7 +31,7 @@ export class InputValidator {
   }
 
   static validatePassword(password) {
-    if (!password || password.length < 8) {
+    if (typeof password !== 'string' || password.length < 8) {
       return { valid: false, message: 'Password must be at least 8 characters' };
     }
     if (!/[A-Z]/.test(password)) {
@@ -54,15 +54,21 @@ export class InputValidator {
   }
 
   static validateLength(value, min, max, fieldName) {
-    if (value && (value.length < min || value.length > max)) {
-      return { valid: false, message: `${fieldName} must be between ${min} and ${max} characters` };
+    if (value !== null && value !== undefined) {
+      if (typeof value !== 'string') {
+        return { valid: false, message: `${fieldName} must be text` };
+      }
+
+      if (value.length < min || value.length > max) {
+        return { valid: false, message: `${fieldName} must be between ${min} and ${max} characters` };
+      }
     }
     return { valid: true };
   }
 
   static validateAge(age) {
     if (age !== null && age !== undefined) {
-      if (age < 13 || age > 120) {
+      if (!Number.isInteger(age) || age < 13 || age > 120) {
         return { valid: false, message: 'Age must be between 13 and 120' };
       }
     }
@@ -72,7 +78,10 @@ export class InputValidator {
   static validateUrl(url) {
     if (!url) return { valid: true };
     try {
-      new URL(url);
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return { valid: false, message: 'URL must use HTTP or HTTPS' };
+      }
       return { valid: true };
     } catch {
       return { valid: false, message: 'Invalid URL format' };
@@ -80,12 +89,18 @@ export class InputValidator {
   }
 
   static validateCoordinates(latitude, longitude) {
-    if ((latitude !== null && latitude !== undefined) || 
-        (longitude !== null && longitude !== undefined)) {
-      if (latitude < -90 || latitude > 90) {
+    const hasLatitude = latitude !== null && latitude !== undefined;
+    const hasLongitude = longitude !== null && longitude !== undefined;
+
+    if (hasLatitude !== hasLongitude) {
+      return { valid: false, message: 'Latitude and longitude must be provided together' };
+    }
+
+    if (hasLatitude && hasLongitude) {
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
         return { valid: false, message: 'Latitude must be between -90 and 90' };
       }
-      if (longitude < -180 || longitude > 180) {
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
         return { valid: false, message: 'Longitude must be between -180 and 180' };
       }
     }
@@ -100,10 +115,93 @@ export class InputValidator {
   }
 
   static validateArray(value, fieldName) {
-    if (value && !Array.isArray(value)) {
+    if (value !== null && value !== undefined && !Array.isArray(value)) {
       return { valid: false, message: `${fieldName} must be an array` };
     }
     return { valid: true };
+  }
+
+  static validateBoolean(value, fieldName) {
+    if (value !== null && value !== undefined && typeof value !== 'boolean') {
+      return { valid: false, message: `${fieldName} must be true or false` };
+    }
+    return { valid: true };
+  }
+
+  static parseOptionalBoolean(value, fieldName) {
+    if (value === null || value === undefined || value === '') {
+      return { valid: true, value: undefined };
+    }
+
+    if (value === true || value === 'true') {
+      return { valid: true, value: true };
+    }
+
+    if (value === false || value === 'false') {
+      return { valid: true, value: false };
+    }
+
+    return { valid: false, message: `${fieldName} must be true or false` };
+  }
+
+  static validateUuidArray(value, fieldName) {
+    const arrayValidation = this.validateArray(value, fieldName);
+    if (!arrayValidation.valid || value === null || value === undefined) {
+      return arrayValidation;
+    }
+
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (value.some((item) => typeof item !== 'string' || !uuidPattern.test(item))) {
+      return { valid: false, message: `${fieldName} must contain valid UUIDs` };
+    }
+
+    return { valid: true };
+  }
+
+  static validateUuid(value, fieldName) {
+    if (value === null || value === undefined || value === '') {
+      return { valid: true };
+    }
+
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return typeof value === 'string' && uuidPattern.test(value)
+      ? { valid: true }
+      : { valid: false, message: `${fieldName} must be a valid UUID` };
+  }
+
+  static validateInstruments(value) {
+    const arrayValidation = this.validateArray(value, 'Instruments');
+    if (!arrayValidation.valid || value === null || value === undefined) {
+      return arrayValidation;
+    }
+
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const skillLevels = ['beginner', 'intermediate', 'advanced', 'professional'];
+    const invalid = value.some((instrument) => !instrument
+      || !uuidPattern.test(instrument.instrumentId)
+      || (instrument.yearsExperience !== undefined
+        && (!Number.isInteger(instrument.yearsExperience) || instrument.yearsExperience < 0))
+      || (instrument.skillLevel !== undefined && !skillLevels.includes(instrument.skillLevel)));
+
+    return invalid
+      ? { valid: false, message: 'Instruments contain invalid values' }
+      : { valid: true };
+  }
+
+  static validateLinks(value) {
+    const arrayValidation = this.validateArray(value, 'Links');
+    if (!arrayValidation.valid || value === null || value === undefined) {
+      return arrayValidation;
+    }
+
+    const linkTypes = ['spotify', 'youtube', 'soundcloud', 'bandcamp', 'website', 'other'];
+    const invalid = value.some((link) => !link
+      || !linkTypes.includes(link.linkType || 'other')
+      || !this.validateUrl(link.url).valid);
+
+    return invalid
+      ? { valid: false, message: 'Links contain invalid values' }
+      : { valid: true };
   }
 
   static gatherValidationErrors(...validations) {
@@ -112,5 +210,26 @@ export class InputValidator {
       .map(v => v.message);
     
     return errors.length > 0 ? errors : null;
+  }
+
+  static parsePagination(pageValue = 1, pageSizeValue = 20, maximumPageSize = 100) {
+    const page = Number.parseInt(pageValue, 10);
+    const pageSize = Number.parseInt(pageSizeValue, 10);
+
+    if (!Number.isInteger(page) || page < 1) {
+      return { valid: false, message: 'Page must be a positive integer' };
+    }
+
+    if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > maximumPageSize) {
+      return {
+        valid: false,
+        message: `Page size must be between 1 and ${maximumPageSize}`,
+      };
+    }
+
+    return {
+      valid: true,
+      pagination: { page, pageSize },
+    };
   }
 }

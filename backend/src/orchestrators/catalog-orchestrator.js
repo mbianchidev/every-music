@@ -20,7 +20,7 @@ export async function catalogOrchestrator(fastify, options) {
         },
       });
     } catch (err) {
-      request.log.error('Failed to fetch instruments:', err);
+      request.log.error({ err }, 'Failed to fetch instruments');
       return reply.code(500).send({
         success: false,
         error: {
@@ -53,7 +53,7 @@ export async function catalogOrchestrator(fastify, options) {
         },
       });
     } catch (err) {
-      request.log.error('Failed to fetch genres:', err);
+      request.log.error({ err }, 'Failed to fetch genres');
       return reply.code(500).send({
         success: false,
         error: {

@@ -45,6 +45,17 @@ export async function authOrchestrator(fastify, options) {
     return authenticationConductor.verifyEmail(request, reply);
   });
 
+  fastify.post('/resend-verification', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 hour'
+      }
+    }
+  }, async (request, reply) => {
+    return authenticationConductor.resendVerification(request, reply);
+  });
+
   fastify.post('/refresh-token', {
     config: {
       rateLimit: {

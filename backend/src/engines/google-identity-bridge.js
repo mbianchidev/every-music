@@ -4,17 +4,20 @@ import { realmConfig } from '../../config/realm.js';
 class GoogleIdentityBridge {
   constructor() {
     this.client = null;
+    this.logger = console;
   }
 
-  initialize() {
+  initialize(logger = console) {
+    this.logger = logger;
+
     if (realmConfig.googleGateway.identityKey && realmConfig.googleGateway.identityLock) {
       this.client = new OAuth2Client(
         realmConfig.googleGateway.identityKey,
         realmConfig.googleGateway.identityLock
       );
-      console.log('✓ Google identity bridge initialized');
+      this.logger.info('Google identity bridge initialized');
     } else {
-      console.warn('⚠ Google identity bridge not configured');
+      this.logger.info('Google identity bridge is not configured');
     }
   }
 
@@ -41,7 +44,8 @@ class GoogleIdentityBridge {
         familyName: payload.family_name,
       };
     } catch (err) {
-      throw new Error(`Google verification failed: ${err.message}`);
+      this.logger.warn({ err }, 'Google credential verification failed');
+      throw new Error('Google credential verification failed');
     }
   }
 }

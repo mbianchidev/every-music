@@ -1,10 +1,11 @@
 import { opportunityRepository } from '../repositories/opportunity-repository.js';
+import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 
 export class OpportunityConductor {
   async createAnnouncement(request, reply) {
     const { userId } = request.authenticatedUser;
-    const announcementData = request.body;
+    const announcementData = request.body ?? {};
 
     const validations = InputValidator.gatherValidationErrors(
       InputValidator.validateRequired(announcementData.title, 'Title'),
@@ -12,7 +13,13 @@ export class OpportunityConductor {
       InputValidator.validateRequired(announcementData.description, 'Description'),
       InputValidator.validateLength(announcementData.description, 20, 5000, 'Description'),
       InputValidator.validateUrl(announcementData.pictureUrl),
-      InputValidator.validateCoordinates(announcementData.latitude, announcementData.longitude)
+      InputValidator.validateCoordinates(announcementData.latitude, announcementData.longitude),
+      InputValidator.validateBoolean(announcementData.isRemote, 'Remote'),
+      InputValidator.validateBoolean(announcementData.isCoverBand, 'Cover band'),
+      InputValidator.validateBoolean(announcementData.isPublished, 'Published'),
+      InputValidator.validateUuidArray(announcementData.instrumentIds, 'Instrument IDs'),
+      InputValidator.validateUuidArray(announcementData.genreIds, 'Genre IDs'),
+      InputValidator.validateLinks(announcementData.links),
     );
 
     if (validations) {
@@ -27,28 +34,36 @@ export class OpportunityConductor {
     }
 
     try {
-      const announcement = await opportunityRepository.createAnnouncement(userId, announcementData);
-
-      if (announcementData.instrumentIds && announcementData.instrumentIds.length > 0) {
-        await opportunityRepository.attachInstruments(announcement.id, announcementData.instrumentIds);
-      }
-
-      if (announcementData.genreIds && announcementData.genreIds.length > 0) {
-        await opportunityRepository.attachGenres(announcement.id, announcementData.genreIds);
-      }
-
-      if (announcementData.links && announcementData.links.length > 0) {
-        await opportunityRepository.attachLinks(announcement.id, announcementData.links);
-      }
-
-      const fullAnnouncement = await opportunityRepository.findById(announcement.id);
+      const fullAnnouncement = await realmConnector.transaction(async (executor) => {
+        const announcement = await opportunityRepository.createAnnouncement(
+          userId,
+          announcementData,
+          executor,
+        );
+        await opportunityRepository.attachInstruments(
+          announcement.id,
+          announcementData.instrumentIds || [],
+          executor,
+        );
+        await opportunityRepository.attachGenres(
+          announcement.id,
+          announcementData.genreIds || [],
+          executor,
+        );
+        await opportunityRepository.attachLinks(
+          announcement.id,
+          announcementData.links || [],
+          executor,
+        );
+        return opportunityRepository.findById(announcement.id, executor);
+      });
 
       return reply.code(201).send({
         success: true,
         data: this.transformAnnouncement(fullAnnouncement),
       });
     } catch (err) {
-      request.log.error('Failed to create announcement:', err);
+      request.log.error({ err }, 'Failed to create announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -72,7 +87,7 @@ export class OpportunityConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to fetch announcements:', err);
+      request.log.error({ err }, 'Failed to fetch announcements');
       return reply.code(500).send({
         success: false,
         error: {
@@ -109,7 +124,7 @@ export class OpportunityConductor {
         data: this.transformAnnouncement(announcement),
       });
     } catch (err) {
-      request.log.error('Failed to fetch announcement:', err);
+      request.log.error({ err }, 'Failed to fetch announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -132,36 +147,60 @@ export class OpportunityConductor {
       pageSize = 20,
     } = request.query;
 
+    const paginationResult = InputValidator.parsePagination(page, pageSize);
+    const remoteResult = InputValidator.parseOptionalBoolean(isRemote, 'Remote');
+    const coverBandResult = InputValidator.parseOptionalBoolean(isCoverBand, 'Cover band');
+    const queryValidation = InputValidator.gatherValidationErrors(
+      paginationResult,
+      remoteResult,
+      coverBandResult,
+      InputValidator.validateUuid(instrumentId, 'Instrument ID'),
+      InputValidator.validateUuid(genreId, 'Genre ID'),
+    );
+
+    if (queryValidation) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid search query',
+          details: queryValidation,
+        },
+      });
+    }
+
     try {
       const filters = {
         instrumentId,
         genreId,
         city,
-        isRemote: isRemote !== undefined ? isRemote === 'true' : undefined,
-        isCoverBand: isCoverBand !== undefined ? isCoverBand === 'true' : undefined,
+        isRemote: remoteResult.value,
+        isCoverBand: coverBandResult.value,
         searchTerm,
       };
 
-      const pagination = {
-        page: parseInt(page),
-        pageSize: Math.min(parseInt(pageSize), 100),
-      };
-
-      const announcements = await opportunityRepository.searchAnnouncements(filters, pagination);
+      const pagination = paginationResult.pagination;
+      const announcements = await opportunityRepository.searchAnnouncements(filters, {
+        ...pagination,
+        limit: pagination.pageSize + 1,
+      });
+      const hasMore = announcements.length > pagination.pageSize;
 
       return reply.code(200).send({
         success: true,
         data: {
-          announcements: announcements.map(a => this.transformBasicAnnouncement(a)),
+          announcements: announcements
+            .slice(0, pagination.pageSize)
+            .map(a => this.transformBasicAnnouncement(a)),
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
-            hasMore: announcements.length === pagination.pageSize,
+            hasMore,
           },
         },
       });
     } catch (err) {
-      request.log.error('Failed to search announcements:', err);
+      request.log.error({ err }, 'Failed to search announcements');
       return reply.code(500).send({
         success: false,
         error: {
@@ -175,13 +214,19 @@ export class OpportunityConductor {
   async updateAnnouncement(request, reply) {
     const { userId } = request.authenticatedUser;
     const { announcementId } = request.params;
-    const updateData = request.body;
+    const updateData = request.body ?? {};
 
     const validations = InputValidator.gatherValidationErrors(
       InputValidator.validateLength(updateData.title, 5, 255, 'Title'),
       InputValidator.validateLength(updateData.description, 20, 5000, 'Description'),
       InputValidator.validateUrl(updateData.pictureUrl),
-      InputValidator.validateCoordinates(updateData.latitude, updateData.longitude)
+      InputValidator.validateCoordinates(updateData.latitude, updateData.longitude),
+      InputValidator.validateBoolean(updateData.isRemote, 'Remote'),
+      InputValidator.validateBoolean(updateData.isCoverBand, 'Cover band'),
+      InputValidator.validateBoolean(updateData.isPublished, 'Published'),
+      InputValidator.validateUuidArray(updateData.instrumentIds, 'Instrument IDs'),
+      InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
+      InputValidator.validateLinks(updateData.links),
     );
 
     if (validations) {
@@ -196,13 +241,38 @@ export class OpportunityConductor {
     }
 
     try {
-      const updated = await opportunityRepository.updateAnnouncement(
-        announcementId,
-        userId,
-        updateData
-      );
+      const fullAnnouncement = await realmConnector.transaction(async (executor) => {
+        const updated = await opportunityRepository.updateAnnouncement(
+          announcementId,
+          userId,
+          updateData,
+          executor,
+        );
 
-      if (!updated) {
+        if (!updated) {
+          return null;
+        }
+
+        if (updateData.instrumentIds !== undefined) {
+          await opportunityRepository.attachInstruments(
+            announcementId,
+            updateData.instrumentIds,
+            executor,
+          );
+        }
+
+        if (updateData.genreIds !== undefined) {
+          await opportunityRepository.attachGenres(announcementId, updateData.genreIds, executor);
+        }
+
+        if (updateData.links !== undefined) {
+          await opportunityRepository.attachLinks(announcementId, updateData.links, executor);
+        }
+
+        return opportunityRepository.findById(announcementId, executor);
+      });
+
+      if (!fullAnnouncement) {
         return reply.code(404).send({
           success: false,
           error: {
@@ -212,26 +282,12 @@ export class OpportunityConductor {
         });
       }
 
-      if (updateData.instrumentIds !== undefined) {
-        await opportunityRepository.attachInstruments(announcementId, updateData.instrumentIds);
-      }
-
-      if (updateData.genreIds !== undefined) {
-        await opportunityRepository.attachGenres(announcementId, updateData.genreIds);
-      }
-
-      if (updateData.links !== undefined) {
-        await opportunityRepository.attachLinks(announcementId, updateData.links);
-      }
-
-      const fullAnnouncement = await opportunityRepository.findById(announcementId);
-
       return reply.code(200).send({
         success: true,
         data: this.transformAnnouncement(fullAnnouncement),
       });
     } catch (err) {
-      request.log.error('Failed to update announcement:', err);
+      request.log.error({ err }, 'Failed to update announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -266,7 +322,7 @@ export class OpportunityConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to delete announcement:', err);
+      request.log.error({ err }, 'Failed to delete announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -280,7 +336,7 @@ export class OpportunityConductor {
   async reactToAnnouncement(request, reply) {
     const { userId } = request.authenticatedUser;
     const { announcementId } = request.params;
-    const { reactionType } = request.body;
+    const { reactionType } = request.body ?? {};
 
     const validation = InputValidator.validateEnum(
       reactionType,
@@ -311,7 +367,12 @@ export class OpportunityConductor {
         });
       }
 
-      await opportunityRepository.recordReaction(announcementId, userId, reactionType);
+      await realmConnector.transaction((executor) => opportunityRepository.recordReaction(
+        announcementId,
+        userId,
+        reactionType,
+        executor,
+      ));
 
       return reply.code(200).send({
         success: true,
@@ -321,7 +382,7 @@ export class OpportunityConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to record reaction:', err);
+      request.log.error({ err }, 'Failed to record reaction');
       return reply.code(500).send({
         success: false,
         error: {
@@ -358,7 +419,7 @@ export class OpportunityConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to save announcement:', err);
+      request.log.error({ err }, 'Failed to save announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -393,7 +454,7 @@ export class OpportunityConductor {
         },
       });
     } catch (err) {
-      request.log.error('Failed to unsave announcement:', err);
+      request.log.error({ err }, 'Failed to unsave announcement');
       return reply.code(500).send({
         success: false,
         error: {
@@ -408,27 +469,40 @@ export class OpportunityConductor {
     const { userId } = request.authenticatedUser;
     const { page = 1, pageSize = 20 } = request.query;
 
-    try {
-      const pagination = {
-        page: parseInt(page),
-        pageSize: Math.min(parseInt(pageSize), 100),
-      };
+    const paginationResult = InputValidator.parsePagination(page, pageSize);
+    if (!paginationResult.valid) {
+      return reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: paginationResult.message,
+        },
+      });
+    }
 
-      const announcements = await opportunityRepository.getSavedAnnouncements(userId, pagination);
+    try {
+      const pagination = paginationResult.pagination;
+      const announcements = await opportunityRepository.getSavedAnnouncements(userId, {
+        ...pagination,
+        limit: pagination.pageSize + 1,
+      });
+      const hasMore = announcements.length > pagination.pageSize;
 
       return reply.code(200).send({
         success: true,
         data: {
-          announcements: announcements.map(a => this.transformBasicAnnouncement(a)),
+          announcements: announcements
+            .slice(0, pagination.pageSize)
+            .map(a => this.transformBasicAnnouncement(a)),
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
-            hasMore: announcements.length === pagination.pageSize,
+            hasMore,
           },
         },
       });
     } catch (err) {
-      request.log.error('Failed to fetch saved announcements:', err);
+      request.log.error({ err }, 'Failed to fetch saved announcements');
       return reply.code(500).send({
         success: false,
         error: {
@@ -480,9 +554,11 @@ export class OpportunityConductor {
       title: announcement.title,
       description: announcement.description,
       pictureUrl: announcement.picture_url,
-      city: announcement.city,
-      state: announcement.state,
-      country: announcement.country,
+      location: {
+        city: announcement.city,
+        state: announcement.state,
+        country: announcement.country,
+      },
       isRemote: announcement.is_remote,
       isCoverBand: announcement.is_cover_band,
       stats: {

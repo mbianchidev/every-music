@@ -4,18 +4,30 @@ import nucleus from '../lib/nucleus.js';
 import Navigation from '../components/Navigation.jsx';
 import Spinner from '../components/Spinner.jsx';
 import FormField from '../components/FormField.jsx';
+import ErrorState from '../components/ErrorState.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 class EditProfileScreen extends Component {
   constructor(props) {
     super(props);
-    this.state = { artistName: '', firstName: '', lastName: '', city: '', bio: '', loading: true, saving: false, error: '' };
+    this.state = {
+      artistName: '',
+      firstName: '',
+      lastName: '',
+      city: '',
+      bio: '',
+      loading: true,
+      saving: false,
+      error: '',
+    };
   }
-  
+
   componentDidMount() {
     this.loadProfile();
   }
-  
+
   loadProfile = async () => {
+    this.setState({ loading: true, error: '' });
     try {
       const data = await conduit.transmit('/profiles/me', { auth: true });
       this.setState({
@@ -24,86 +36,97 @@ class EditProfileScreen extends Component {
         lastName: data.lastName || '',
         city: data.city || '',
         bio: data.bio || '',
-        loading: false
+        loading: false,
       });
-    } catch {
-      this.setState({ loading: false });
+    } catch (error) {
+      this.setState({ loading: false, error: error.message });
     }
   };
-  
-  handleSave = async () => {
+
+  handleSave = async (event) => {
+    event.preventDefault();
     const { artistName, firstName, lastName, city, bio } = this.state;
-    
-    if (!artistName) {
-      this.setState({ error: 'Artist name is required' });
+
+    if (!artistName.trim()) {
+      this.setState({ error: 'Artist name is required.' });
       return;
     }
-    
+
     this.setState({ saving: true, error: '' });
-    
+
     try {
       const updated = await conduit.transmit('/profiles/me', {
         method: 'PUT',
         auth: true,
-        body: { artistName, firstName, lastName, city, bio }
+        body: {
+          artistName: artistName.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          city: city.trim(),
+          bio: bio.trim(),
+        },
       });
       nucleus.mutate(updated);
       window.location.hash = '#profile';
-    } catch (err) {
-      this.setState({ error: err.message, saving: false });
+    } catch (error) {
+      this.setState({ error: error.message, saving: false });
     }
   };
-  
+
   render() {
     const { artistName, firstName, lastName, city, bio, loading, saving, error } = this.state;
-    
+
     if (loading) {
       return (
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Spinner />
+        <div className="container">
+          <Spinner label="Loading your profile" />
+          <Navigation active="profile" />
         </div>
       );
     }
-    
+
+    if (error && !artistName && !firstName && !lastName && !city && !bio) {
+      return (
+        <div className="container">
+          <PageHeader eyebrow="Your identity" title="EDIT PROFILE" />
+          <ErrorState message={error} onRetry={this.loadProfile} />
+          <Navigation active="profile" />
+        </div>
+      );
+    }
+
     return (
       <div className="container">
-        <div style={{ padding: '2rem 0', borderBottom: '4px solid #F8F8F8', marginBottom: '2rem' }}>
-          <h1 className="heading-lg">EDIT PROFILE</h1>
-        </div>
-        
-        {error && <div className="error">{error}</div>}
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '6rem' }}>
-          <FormField label="Artist Name" required>
-            <input type="text" className="input" value={artistName} onChange={e => this.setState({ artistName: e.target.value })} placeholder="Your stage name" disabled={saving} />
+        <PageHeader eyebrow="Your identity" title="EDIT PROFILE" subtitle="Keep it clear, current, and recognizably you." />
+        {error && <div className="error" role="alert">{error}</div>}
+
+        <form className="form-stack" onSubmit={this.handleSave}>
+          <FormField id="profile-artist-name" label="Artist name" required>
+            <input className="input" value={artistName} onChange={(event) => this.setState({ artistName: event.target.value })} maxLength="255" disabled={saving} />
           </FormField>
-          
-          <FormField label="First Name">
-            <input type="text" className="input" value={firstName} onChange={e => this.setState({ firstName: e.target.value })} placeholder="First name" disabled={saving} />
+          <FormField id="profile-first-name" label="First name">
+            <input className="input" value={firstName} onChange={(event) => this.setState({ firstName: event.target.value })} autoComplete="given-name" maxLength="100" disabled={saving} />
           </FormField>
-          
-          <FormField label="Last Name">
-            <input type="text" className="input" value={lastName} onChange={e => this.setState({ lastName: e.target.value })} placeholder="Last name" disabled={saving} />
+          <FormField id="profile-last-name" label="Last name">
+            <input className="input" value={lastName} onChange={(event) => this.setState({ lastName: event.target.value })} autoComplete="family-name" maxLength="100" disabled={saving} />
           </FormField>
-          
-          <FormField label="City">
-            <input type="text" className="input" value={city} onChange={e => this.setState({ city: e.target.value })} placeholder="Your city" disabled={saving} />
+          <FormField id="profile-city" label="City">
+            <input className="input" value={city} onChange={(event) => this.setState({ city: event.target.value })} autoComplete="address-level2" maxLength="255" disabled={saving} />
           </FormField>
-          
-          <FormField label="Bio">
-            <textarea className="input" style={{ minHeight: '120px', resize: 'vertical' }} value={bio} onChange={e => this.setState({ bio: e.target.value })} placeholder="Tell us about yourself..." disabled={saving} />
+          <FormField id="profile-bio" label="Bio">
+            <textarea className="input" style={{ minHeight: '140px', resize: 'vertical' }} value={bio} onChange={(event) => this.setState({ bio: event.target.value })} maxLength="5000" disabled={saving} />
           </FormField>
-          
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={this.handleSave} disabled={saving}>
-              {saving ? 'SAVING...' : '💾 SAVE'}
+
+          <div className="button-row">
+            <button className="btn btn-primary" type="submit" disabled={saving}>
+              {saving ? 'SAVING…' : 'SAVE PROFILE'}
             </button>
-            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => window.location.hash = '#profile'} disabled={saving}>
+            <button className="btn btn-ghost" type="button" onClick={() => { window.location.hash = '#profile'; }} disabled={saving}>
               CANCEL
             </button>
           </div>
-        </div>
-        
+        </form>
+
         <Navigation active="profile" />
       </div>
     );

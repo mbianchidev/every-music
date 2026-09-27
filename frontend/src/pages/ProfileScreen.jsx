@@ -3,116 +3,144 @@ import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import Navigation from '../components/Navigation.jsx';
 import Spinner from '../components/Spinner.jsx';
+import ErrorState from '../components/ErrorState.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 class ProfileScreen extends Component {
   constructor(props) {
     super(props);
-    this.state = { profile: null, loading: true };
+    this.state = {
+      profile: null,
+      loading: true,
+      error: '',
+      loggingOut: false,
+    };
   }
-  
+
   componentDidMount() {
     this.loadProfile();
   }
-  
+
   loadProfile = async () => {
+    this.setState({ loading: true, error: '' });
     try {
-      const data = await conduit.transmit('/profiles/me', { auth: true });
-      this.setState({ profile: data, loading: false });
-    } catch {
-      this.setState({ loading: false });
+      const profile = await conduit.transmit('/profiles/me', { auth: true });
+      this.setState({ profile, loading: false });
+    } catch (error) {
+      this.setState({ error: error.message, loading: false });
     }
   };
-  
+
   handleLogout = async () => {
+    this.setState({ loggingOut: true, error: '' });
+    const refreshToken = nucleus.payload.keys?.refreshToken;
+
     try {
-      await conduit.transmit('/auth/logout', { method: 'POST', auth: true });
-    } catch {}
+      await conduit.transmit('/auth/logout', {
+        method: 'POST',
+        auth: true,
+        body: { refreshToken },
+      });
+    } catch (error) {
+      console.warn('Server-side session revocation failed; clearing the local session', error);
+    }
+
     nucleus.logout();
     window.location.hash = '#login';
   };
-  
-  render() {
-    const { profile, loading } = this.state;
-    
-    if (loading) {
+
+  renderProfile() {
+    const { profile, loggingOut } = this.state;
+
+    if (!profile?.artistName) {
       return (
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Spinner />
+        <div className="card">
+          <p className="eyebrow">First step</p>
+          <h2 className="heading-md">COMPLETE YOUR PROFILE</h2>
+          <p className="body-muted">Tell other musicians who you are and what you play.</p>
+          <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#edit-profile'; }}>
+            CREATE PROFILE
+          </button>
         </div>
       );
     }
-    
+
+    return (
+      <article className="card card-highlight">
+        <header>
+          <p className="eyebrow">Musician profile</p>
+          <h2 className="heading-md" style={{ color: 'var(--paper)' }}>{profile.artistName}</h2>
+          {(profile.firstName || profile.lastName) && (
+            <p className="body-muted">{profile.firstName} {profile.lastName}</p>
+          )}
+        </header>
+
+        {profile.bio && (
+          <section>
+            <h3 className="heading-md">ABOUT</h3>
+            <p>{profile.bio}</p>
+          </section>
+        )}
+
+        {profile.instruments?.length > 0 && (
+          <section>
+            <h3 className="heading-md">INSTRUMENTS</h3>
+            <div className="tag-list">
+              {profile.instruments.map((instrument) => (
+                <span className="tag" key={instrument.instrument_id}>
+                  {instrument.name} · {instrument.skill_level}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {profile.genres?.length > 0 && (
+          <section>
+            <h3 className="heading-md">GENRES</h3>
+            <div className="tag-list">
+              {profile.genres.map((genre) => (
+                <span className="tag" key={genre.genre_id}>{genre.name}</span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {profile.city && (
+          <section>
+            <h3 className="heading-md">LOCATION</h3>
+            <p>{[profile.city, profile.state, profile.country].filter(Boolean).join(', ')}</p>
+          </section>
+        )}
+
+        <div className="button-row">
+          <button className="btn btn-secondary" type="button" onClick={() => { window.location.hash = '#edit-profile'; }}>
+            EDIT PROFILE
+          </button>
+          <button className="btn btn-ghost" type="button" onClick={this.handleLogout} disabled={loggingOut}>
+            {loggingOut ? 'SIGNING OUT…' : 'SIGN OUT'}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  render() {
+    const { loading, error, profile } = this.state;
+
     return (
       <div className="container">
-        <div style={{ padding: '2rem 0', borderBottom: '4px solid #F8F8F8', marginBottom: '2rem' }}>
-          <h1 className="heading-lg">MY PROFILE</h1>
-        </div>
-        
-        {!profile || !profile.artistName ? (
-          <div className="card">
-            <h2 className="heading-md">Complete Your Profile!</h2>
-            <p style={{ opacity: 0.7, margin: '1rem 0' }}>Set up your musician profile to start connecting</p>
-            <button className="btn btn-primary" onClick={() => window.location.hash = '#edit-profile'}>CREATE PROFILE</button>
-          </div>
+        <PageHeader eyebrow="Your identity" title="PROFILE" subtitle="Show collaborators what you bring to the room." />
+        {loading ? (
+          <Spinner label="Loading your profile" />
+        ) : error && !profile ? (
+          <ErrorState message={error} onRetry={this.loadProfile} />
         ) : (
-          <div className="card card-highlight">
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 className="heading-md" style={{ color: '#F8F8F8' }}>{profile.artistName}</h2>
-              {(profile.firstName || profile.lastName) && (
-                <p style={{ opacity: 0.7 }}>{profile.firstName} {profile.lastName}</p>
-              )}
-            </div>
-            
-            {profile.bio && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 className="heading-md">BIO</h3>
-                <p>{profile.bio}</p>
-              </div>
-            )}
-            
-            {profile.instruments && profile.instruments.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 className="heading-md">INSTRUMENTS</h3>
-                {profile.instruments.map((inst, i) => (
-                  <div key={i} style={{ padding: '0.75rem', background: '#1A1A1A', border: '2px solid #CCFF00', marginBottom: '0.5rem' }}>
-                    <div style={{ fontWeight: 700 }}>{inst.name}</div>
-                    <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
-                      {inst.years_experience} years • {inst.skill_level}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {profile.genres && profile.genres.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 className="heading-md">GENRES</h3>
-                {profile.genres.map((genre, i) => (
-                  <span key={i} style={{ padding: '0.5rem 1rem', background: '#FF006E', color: '#F8F8F8', fontWeight: 700, border: '2px solid #0A0A0A', display: 'inline-block', marginRight: '0.5rem', marginBottom: '0.5rem' }}>
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {profile.city && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 className="heading-md">LOCATION</h3>
-                <p>
-                  📍 {profile.city}
-                  {profile.state && `, ${profile.state}`}
-                  {profile.country && ` • ${profile.country}`}
-                </p>
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => window.location.hash = '#edit-profile'}>✏️ EDIT</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={this.handleLogout}>🚪 LOGOUT</button>
-            </div>
-          </div>
+          <>
+            {error && <div className="error" role="alert">{error}</div>}
+            {this.renderProfile()}
+          </>
         )}
-        
         <Navigation active="profile" />
       </div>
     );

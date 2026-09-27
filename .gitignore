@@ -40,4 +40,5 @@ realm-data/
 *.log
 *.tmp
 .cache/
+.impeccable/
 node_modules/

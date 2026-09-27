@@ -1,232 +1,194 @@
-name: Every.music CI/CD
+name: Every.music CI
 
 on:
   push:
-    branches: [ master, main, release/*, hotfix/*, feature/* ]
+    branches: [master, main, "release/**", "hotfix/**", "feature/**"]
+    tags: ["v*"]
   pull_request:
-    branches: [ master, main, release/*, hotfix/* ]
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
-  NODE_VERSION: '22'
-  RUST_VERSION: 'stable'
+  NODE_VERSION: "22"
 
 jobs:
-  backend-validation:
-    name: Backend API Tests
+  backend:
+    name: Backend tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-    
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run verify
+      - run: npm audit --omit=dev --audit-level=high
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Run backend validation
-        working-directory: ./backend
-        run: npm run verify
-
-  frontend-validation:
-    name: Frontend Build & Tests
+  frontend:
+    name: Frontend tests and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-    
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --omit=dev --audit-level=high
 
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run compile
-
-      - name: Verify build output
-        working-directory: ./frontend
-        run: |
-          if [ ! -d "dist" ]; then
-            echo "Build failed - dist folder not created"
-            exit 1
-          fi
-          echo "Frontend compiled successfully"
-
-  docker-builds:
-    name: Docker Container Builds
+  integration:
+    name: PostgreSQL integration smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [backend-validation, frontend-validation]
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build backend container
-        working-directory: ./backend
-        run: docker build -t everymusic-nexus:latest .
-
-      - name: Build frontend container
-        working-directory: ./frontend
-        run: docker build -t everymusic-web:latest .
-
-      - name: Verify containers
-        run: |
-          echo "Backend image built: $(docker images everymusic-nexus:latest --format '{{.Size}}')"
-          echo "Frontend image built: $(docker images everymusic-web:latest --format '{{.Size}}')"
-
-  tauri-desktop-build:
-    name: Desktop App Build (Tauri)
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    needs: [frontend-validation]
-    if: github.ref == 'refs/heads/release/*'
-    permissions:
-      contents: read
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build Tauri desktop app
-        working-directory: ./frontend
-        run: npm run desktop:build
-
-  tauri-ios-build:
-    name: iOS App Build (Tauri)
-    runs-on: macos-latest
-    timeout-minutes: 30
-    needs: [frontend-validation]
-    if: startsWith(github.ref, 'refs/heads/release/')
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Rust toolchain with iOS targets
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Initialize Tauri iOS project
-        working-directory: ./frontend
-        run: npx tauri ios init
-
-      - name: Build Tauri iOS app
-        working-directory: ./frontend
-        run: npx tauri ios build --export-method debug
-
-  integration-verification:
-    name: Full Stack Integration
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [backend-validation, frontend-validation]
-    permissions:
-      contents: read
-    
+    needs: backend
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
+          POSTGRES_USER: everymusic
+          POSTGRES_PASSWORD: integration-password
+          POSTGRES_DB: everymusic
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
+          --health-cmd "pg_isready -U everymusic -d everymusic"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
         ports:
           - 5432:5432
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Start backend with test database
-        working-directory: ./backend
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Bootstrap, migrate, and smoke test
+        working-directory: backend
         env:
-          REALM_CONNECTION: postgresql://testuser:testpass@localhost:5432/testdb
-          CIPHER_PRIMARY_KEY: test-cipher-primary-key-at-least-32-chars-long
-          CIPHER_REFRESH_KEY: test-cipher-refresh-key-for-ci-testing
-          NEXUS_PORT: 8080
           REALM_ENV: test
+          REALM_CONNECTION: postgresql://everymusic:integration-password@127.0.0.1:5432/everymusic
+          CIPHER_PRIMARY_KEY: integration-primary-key-that-is-at-least-32-characters
+          CIPHER_REFRESH_KEY: integration-refresh-key-that-is-at-least-32-characters
+          PORTAL_ORIGINS: http://localhost:3000
         run: |
-          npm ci
-          npm start &
-          sleep 10
-          curl -f http://localhost:8080/pulse || exit 1
-          echo "Backend health check passed"
+          npm run bootstrap
+          npm run migrate
+          npm start > /tmp/everymusic-nexus.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat /tmp/everymusic-nexus.log' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health/ready >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:8080/health/ready
+          npm run smoke
 
-      - name: Verify API endpoints
+  tauri:
+    name: Tauri check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
         run: |
-          curl -f http://localhost:8080/pulse
-          echo "Integration verification complete"
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+      - run: cargo check --locked
+        working-directory: frontend/src-tauri
+
+  containers:
+    name: Container builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --no-cache -t everymusic-nexus:test backend
+      - run: docker build --no-cache -t everymusic-web:test frontend
+      - name: Validate Compose
+        env:
+          POSTGRES_PASSWORD: compose-test-password
+          CIPHER_PRIMARY_KEY: compose-primary-key-that-is-at-least-32-characters
+          CIPHER_REFRESH_KEY: compose-refresh-key-that-is-at-least-32-characters
+          MAIL_GATEWAY: smtp.example.test
+          MAIL_IDENTITY: noreply@example.test
+          MAIL_CREDENTIAL: compose-mail-password
+          MAIL_SENDER_ALIAS: Every.music <noreply@example.test>
+        run: docker compose config --quiet
+
+  desktop-release:
+    name: Desktop bundle (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    needs: [frontend, tauri]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+      - run: npm ci
+        working-directory: frontend
+      - name: Validate packaged API URL
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.DESKTOP_API_BASE_URL }}
+        run: >-
+          node -e "const value = process.env.VITE_API_BASE_URL;
+          if (!value) throw new Error('DESKTOP_API_BASE_URL repository variable is required');
+          const url = new URL(value);
+          if (!['http:', 'https:'].includes(url.protocol) || !url.pathname.endsWith('/realm'))
+          throw new Error('DESKTOP_API_BASE_URL must be an absolute HTTP(S) URL ending in /realm');"
+      - run: npm run desktop:build
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.DESKTOP_API_BASE_URL }}
