@@ -11,5 +11,6 @@ API.md
 *.log
 coverage
 .nyc_output
+test
 dist
 build

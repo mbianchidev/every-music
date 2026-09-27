@@ -8,12 +8,48 @@ import { realmConfig, validateRealmConfig } from '../config/realm.js';
 const { Pool } = pg;
 const migrationsDirectory = join(dirname(fileURLToPath(import.meta.url)), '../database/migrations');
 
-export async function runMigrations({ logger = console } = {}) {
+const delay = (milliseconds) => new Promise((resolve) => {
+  setTimeout(resolve, milliseconds);
+});
+
+async function waitForDatabase(pool, {
+  attempts,
+  delayMilliseconds,
+  logger,
+}) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await pool.query('SELECT 1');
+      return;
+    } catch (error) {
+      if (attempt === attempts) {
+        throw error;
+      }
+
+      logger.warn(
+        `Database unavailable for migrations; retrying in ${delayMilliseconds}ms (${attempt}/${attempts})`,
+      );
+      await delay(delayMilliseconds);
+    }
+  }
+}
+
+export async function runMigrations({
+  logger = console,
+  connectionAttempts = 15,
+  connectionDelayMilliseconds = 2000,
+} = {}) {
   validateRealmConfig();
 
   const pool = new Pool({ connectionString: realmConfig.realm.connectionString });
 
   try {
+    await waitForDatabase(pool, {
+      attempts: connectionAttempts,
+      delayMilliseconds: connectionDelayMilliseconds,
+      logger,
+    });
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         name TEXT PRIMARY KEY,
