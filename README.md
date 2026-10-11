@@ -60,7 +60,11 @@ The Vite development server proxies `/realm` and health requests to `http://loca
 cd backend && npm run verify
 cd frontend && npm run check
 cd frontend/src-tauri && cargo check --locked
+cd frontend/src-tauri && cargo test --locked --release -p glib-variant-iter-regression --lib
 ```
+
+The GLib regression requires GLib development libraries and `pkg-config`.
+See the [Linux GLib backport](docs/mobile.md#linux-glib-backport) for the dependency patch and its provenance.
 
 Production dependency audits:
 

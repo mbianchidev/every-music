@@ -1,0 +1,8 @@
+[package]
+name = "glib-variant-iter-regression"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+glib = "0.18.5"
