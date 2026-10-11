@@ -28,4 +28,9 @@ tauri-plugin-log = "2"
 members = ["tests/glib-variant-iter"]
 
 [patch.crates-io]
+# TODO/FIXME(agents): Check for an upstream RUSTSEC-2024-0429 fix on every
+# Tauri/GTK/GLib dependency update. When a patched GLib release is compatible
+# with the complete Linux dependency tree, remove this override and vendor/glib
+# in favor of that upstream crate, update the regression dependency to the same
+# version, and regenerate Cargo.lock.
 glib = { path = "vendor/glib" }

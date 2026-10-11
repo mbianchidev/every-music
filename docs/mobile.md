@@ -58,11 +58,20 @@ cargo test --locked --release -p glib-variant-iter-regression --lib
 cargo tree --locked --target x86_64-unknown-linux-gnu -i glib
 ```
 
-CI runs the optimized regression on Linux. Keep the override until Tauri can use
-a patched upstream GLib release. When replacing the vendored crate, verify its
-published checksum, preserve the backport and license, and rerun the regression.
+CI runs the optimized regression on Linux. Until an upstream replacement is
+compatible, any vendor refresh must verify the published checksum, preserve the
+backport and license, and rerun the regression.
 This is a source-level fix, not a claim that the unchanged 0.18.5 version falls
 outside the advisory's version range.
+
+**TODO/FIXME (dependency-update agents):** On every Tauri, GTK, or GLib update,
+check for a patched upstream GLib release accepted by the complete Linux
+dependency tree. As soon as one is compatible, remove the local fix in favor of
+the upstream library:
+
+1. Remove the `glib` entry from `[patch.crates-io]` and delete `frontend/src-tauri/vendor/glib`.
+2. Update the regression package to use the same compatible upstream GLib version as Tauri and regenerate `Cargo.lock`.
+3. Confirm the Linux dependency tree contains only patched upstream GLib releases, rerun the optimized regression and native CI build, and remove the obsolete backport documentation.
 
 ## Android
 
