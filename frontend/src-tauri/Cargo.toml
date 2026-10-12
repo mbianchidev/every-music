@@ -26,6 +26,7 @@ tauri-plugin-log = "2"
 
 [workspace]
 members = ["tests/glib-variant-iter"]
+exclude = ["vendor/glib"]
 
 [patch.crates-io]
 # TODO/FIXME(agents): Check for an upstream RUSTSEC-2024-0429 fix on every

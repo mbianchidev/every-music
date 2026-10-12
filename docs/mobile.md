@@ -46,8 +46,13 @@ The only source change is the two-line fix from
 make the output pointer mutable and pass `&mut p` to `g_variant_get_child`.
 The upstream MIT license and copyright notice are retained.
 
-The isolated regression package uses the same workspace override and lockfile
-as the desktop application, without requiring the Tauri GUI to run. It exercises
+The isolated regression package depends directly on the patched vendor directory
+and shares the desktop application's workspace lockfile, without requiring the
+Tauri GUI to run. The explicit path keeps the test bound to the backport instead
+of declaring an unpatched crates.io release that triggers a misleading Dependabot
+alert. The vendor crate is excluded from workspace membership so its upstream
+development dependencies and test suites stay outside application-wide builds.
+The regression exercises
 `next`, `nth`, `last`, `next_back`, and `nth_back` in release mode, where the
 unpatched implementation crashes. On a host with GLib development libraries and
 `pkg-config` installed:
