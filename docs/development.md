@@ -1,21 +1,36 @@
 # Development
 
+[Documentation index](README.md) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Contributing](../CONTRIBUTING.md)
+
 ## Prerequisites
 
-- Node.js 22
+- Node.js 22.12+ and npm (CI uses Node 22)
 - PostgreSQL 16
-- Rust stable for Tauri
-- Docker with Compose for container validation
+- Rust stable and platform SDKs for Tauri changes
+- A Docker engine with Compose v2 for container validation
+
+Use only synthetic data and an isolated development database.
+Do not use a production connection string for bootstrap, migrations, or smoke
+tests. Keep actual `.env` files untracked.
 
 ## Backend
 
-Create `backend/.env` from `backend/.env.example`. Generate different signing keys:
+From the repository root, copy `backend/.env.example` to `backend/.env`.
+Create an empty PostgreSQL database and set `REALM_CONNECTION` to its URL.
+The role must be able to create tables and the `uuid-ossp` extension.
+Generate a different value for each signing key:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
 ```
 
-Initialize and run:
+Set working SMTP values and put `http://localhost:3000` first in
+`PORTAL_ORIGINS` for normal browser development. Incomplete SMTP is allowed
+outside production, but accounts cannot sign in until their email is verified.
+Remove optional Google placeholder values unless testing that API integration.
+See [configuration](configuration.md) for all names, defaults, and scopes.
+
+Initialize and run, from the repository root:
 
 ```bash
 cd backend
@@ -25,17 +40,9 @@ npm run migrate
 npm run watch
 ```
 
-`bootstrap` is for a new development database. `migrate` is safe to run repeatedly and is the deployment path for existing databases.
-
-Useful commands:
-
-```bash
-npm test
-npm run verify
-npm run smoke
-```
-
-The smoke test expects a running API and uses `REALM_CONNECTION` for setup and cleanup.
+`bootstrap` is for a new development database only: it creates tables and seeds
+catalogs, not users. `migrate` is safe to run repeatedly and is the path for
+existing databases. The API uses port 8080 by default.
 
 ## Frontend
 
@@ -45,18 +52,68 @@ npm ci
 npm run dev
 ```
 
-Set `VITE_API_BASE_URL` when the API is not available through the same origin:
+Run frontend commands in a second terminal, starting at the repository root.
+Open <http://localhost:3000>. Vite proxies `/realm` and `/pulse` to port 8080;
+query `/health/live` and `/health/ready` on the API directly.
+
+Set a different API origin when needed:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8080/realm npm run dev
 ```
 
-Tests exercise session persistence, typed API failures, network preservation, and single-flight token refresh:
+## Verification
+
+After installing dependencies, run from the repository root:
 
 ```bash
-npm test
-npm run check
+(cd backend && npm run verify)
+(cd frontend && npm run check)
+node --test scripts/test/release.test.mjs
+(cd backend && npm audit --omit=dev --audit-level=high)
+(cd frontend && npm audit --omit=dev --audit-level=high)
 ```
+
+Backend verification includes syntax checks and the Node test runner. Frontend
+checks run tests and the Vite production build. Tests cover native-fetch receiver
+binding, typed API failures, session persistence, network preservation, and
+single-flight refresh. Release tests cover safe API URLs and fresh/nonempty
+installers. There is no separate formatter/linter configured.
+
+For native changes, also run `cargo check --locked` from
+`frontend/src-tauri`. Linux needs the optimized
+[GLib regression](mobile.md#linux-glib-backport). Packaging uses the
+[release entrypoint](releases.md), which verifies installers and checksums.
+
+For UI changes, use a browser with the actual client and isolated API/database.
+Check sign-in, profile editing, posting/deletion, saving/removing, reload,
+expired-session behavior, and offline recovery. Use synthetic accounts and
+follow the [manual accessibility checklist](../ACCESSIBILITY.md).
+Mocked API screenshots must be labelled; they do not prove the live stack works.
+
+## Integration smoke test
+
+With the local API running against the same isolated database:
+
+```bash
+cd backend
+npm run smoke
+```
+
+`REALM_CONNECTION` is used for setup/cleanup, and `SMOKE_BASE_URL` defaults to
+`http://127.0.0.1:8080`. The test registers a synthetic `example.test` account,
+marks that test email verified directly in the database, exercises session
+rotation/announcements/bookmarks/logout, and deletes its own user in `finally`.
+It does not send a real verification email or validate SMTP delivery.
+
+## Debugging
+
+Use the browser Network and Console panels to inspect request paths, status
+codes, and typed API errors. Do not paste tokens or personal data into issues.
+The API uses readable development logs and structured JSON in production.
+Start with readiness, database/migration logs, SMTP configuration, and the first
+`PORTAL_ORIGINS` entry; see [troubleshooting](usage.md#troubleshooting).
+See [architecture](architecture.md) for where each request/state transition lives.
 
 ## Database changes
 
@@ -74,3 +131,9 @@ Migration `001_hash_auth_tokens.sql` invalidates existing refresh sessions and o
 - Treat `undefined` relation fields as “leave unchanged” and empty arrays as “clear all”.
 - Surface recoverable UI errors and provide retry actions. Do not turn request failures into empty states.
 - Prefer native HTML semantics before ARIA.
+
+## Documentation and releases
+
+Keep [usage](usage.md), [configuration](configuration.md), and [API contracts](api.md)
+aligned with changes. Follow [releases](releases.md) for packaging and
+[AGENTS.md](../AGENTS.md) for repository-specific agent constraints.

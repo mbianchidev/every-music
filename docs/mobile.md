@@ -1,10 +1,12 @@
 # Desktop and mobile builds
 
+[Documentation index](README.md) | [Release artifacts](releases.md) | [Configuration](configuration.md)
+
 Every.music uses Tauri 2 around the React client.
 
 ## Common setup
 
-- Node.js 22
+- Node.js 22.12+
 - Rust stable
 - Platform toolchains required by Tauri
 - A reachable HTTPS API
@@ -27,8 +29,14 @@ npm run desktop
 npm run desktop:build
 ```
 
-The release workflow builds Linux, macOS, and Windows bundles on version tags or manual dispatch.
-It requires the repository variable `DESKTOP_API_BASE_URL`, for example `https://api.example.com/realm`.
+For verified local installers, use `node scripts/release.mjs` from the repository
+root with `VITE_API_BASE_URL` set. See [release builds](releases.md) for preflight,
+host requirements, checksums, and signing status.
+
+The CI workflow builds Linux, macOS, and Windows development installers on version
+tags or manual dispatch and uploads them as artifacts. It uses the repository
+variable `DESKTOP_API_BASE_URL` or a manual `api_base_url` input. These are not
+published GitHub releases or signed/notarized store packages.
 
 ### Linux GLib backport
 
@@ -80,11 +88,12 @@ the upstream library:
 
 ## Android
 
-Install Android Studio, SDK 24+, the NDK, and Java 17+.
+Install Android Studio, SDK 24+, the NDK, and Java 17+. The Android scaffold is
+tracked under `src-tauri/gen/android`; initialize with `npx tauri android init`
+only if recreating an absent platform project.
 
 ```bash
 cd frontend
-npx tauri android init
 VITE_API_BASE_URL=https://api.example.com/realm npm run android
 VITE_API_BASE_URL=https://api.example.com/realm npm run android:build
 ```
@@ -93,7 +102,8 @@ For an Android emulator reaching a host API, use `http://10.0.2.2:8080/realm` on
 
 ## iOS
 
-On macOS, install Xcode and CocoaPods:
+On macOS, install Xcode and CocoaPods. The iOS scaffold is not tracked in this
+repository; initialize it before building:
 
 ```bash
 cd frontend
@@ -103,6 +113,9 @@ VITE_API_BASE_URL=https://api.example.com/realm npm run ios:build
 ```
 
 App Store and device builds require platform signing identities. Never commit keystores, provisioning profiles, signing passwords, or `key.properties`.
+
+Android/iOS packaging and physical-device accessibility are not covered by the
+desktop CI matrix. Validate them on the relevant SDKs/devices before distribution.
 
 ## Verification
 

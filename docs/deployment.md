@@ -1,5 +1,7 @@
 # Deployment and operations
 
+[Documentation index](README.md) | [Complete configuration](configuration.md) | [Usage and troubleshooting](usage.md)
+
 ## Required configuration
 
 Copy `.env.example` to the deployment secret store. Do not commit `.env`.
@@ -34,6 +36,26 @@ curl --fail http://127.0.0.1/healthz
 
 The API container runs database migrations before accepting traffic. The web and API ports bind to loopback by default; place them behind a TLS reverse proxy for internet access.
 
+## Upgrading
+
+1. Create a PostgreSQL backup in secure storage outside the checkout and test its
+   restore into an isolated database. Confirm which application revision and
+   schema the backup belongs to.
+2. Review the intended revision's migrations and configuration changes.
+   Obtain that reviewed revision without overwriting local secrets or data.
+3. Run `docker compose build --no-cache`, then `docker compose up -d`.
+   The API applies outstanding migrations before listening.
+4. Check `docker compose ps`, readiness, and API logs. Exercise user workflows
+   with synthetic accounts in staging, including SMTP verification/reset delivery.
+5. Retain the backup and previous application artifacts until the upgrade is
+   accepted. Application rollback does not reverse a schema migration; use a
+   planned restore or compatible forward fix rather than assuming it is safe.
+
+Outside Compose, run `npm run migrate` from `backend/` as a release step before
+starting the API. Never run `bootstrap` against an existing database.
+See [data lifecycle](usage.md#upgrades-stopping-and-uninstalling) for shutdown
+and volume behavior, and [native release delivery](releases.md) for client builds.
+
 ## Health model
 
 - `GET /health/live`: process is running.
@@ -60,7 +82,7 @@ Registration remains committed if SMTP delivery fails. Users can request another
 - Refresh sessions default to 30 days and are revocable.
 - Refresh tokens rotate on use. A 30-second deterministic grace window lets a client recover the same replacement after a lost response; later reuse revokes all sessions for the account.
 - Password reset revokes all refresh sessions for the account.
-- Tokens are stored as SHA-256 hashes in PostgreSQL.
+- Stored refresh, verification, and reset tokens are SHA-256 hashes in PostgreSQL.
 
 ## Observability
 
@@ -80,6 +102,6 @@ Fastify emits structured JSON logs in production. Collect stdout/stderr and aler
 3. Database backup and rollback plan are confirmed.
 4. Required environment variables and origin allowlists are reviewed.
 5. `docker compose build --no-cache` succeeds.
-6. Readiness and the backend smoke test pass.
+6. Deployment readiness passes, and the backend smoke test passes in an isolated staging database.
 7. TLS, DNS, SMTP, PostgreSQL backups, and log collection are configured by the hosting platform.
-8. `DESKTOP_API_BASE_URL` is configured as an absolute URL ending in `/realm` before creating desktop release bundles.
+8. Native packaging has a reviewed HTTPS API URL ending in `/realm`, supplied through `DESKTOP_API_BASE_URL` or the manual workflow input; follow [release verification](releases.md).

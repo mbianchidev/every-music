@@ -1,5 +1,9 @@
 # **Every.music**
 
+> Historical product vision and planning notes, not the current feature contract.
+> See the [documentation index](README.md) and
+> [implemented features](../README.md#implemented-features) for current behavior.
+
 \---
 
 # **Mission**

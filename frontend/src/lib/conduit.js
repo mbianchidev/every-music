@@ -24,7 +24,7 @@ export class ApiError extends Error {
 export class Conduit {
   constructor({
     baseUrl = apiBaseUrl(),
-    fetchImpl = globalThis.fetch,
+    fetchImpl = globalThis.fetch.bind(globalThis),
     session = nucleus,
     timeoutMs = DEFAULT_TIMEOUT_MS,
   } = {}) {
