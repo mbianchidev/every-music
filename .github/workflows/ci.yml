@@ -136,7 +136,7 @@ jobs:
           workspaces: frontend/src-tauri
       - run: cargo check --locked
         working-directory: frontend/src-tauri
-      - name: Test GLib iterator backport with optimizations
+      - name: Test GLib backport and typed FFI regressions with optimizations
         run: cargo test --locked --release -p glib-variant-iter-regression --lib
         working-directory: frontend/src-tauri
 
