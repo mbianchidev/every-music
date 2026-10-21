@@ -1,4 +1,5 @@
 # Backend (Fastify/Node)
+/.env
 backend/node_modules/
 backend/.env
 backend/*.log
@@ -42,3 +43,4 @@ realm-data/
 .cache/
 .impeccable/
 node_modules/
+artifacts/

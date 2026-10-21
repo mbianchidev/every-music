@@ -27,6 +27,21 @@ function createSession() {
   };
 }
 
+test('uses the global receiver for the default browser fetch transport', async (t) => {
+  const fetchMock = t.mock.method(globalThis, 'fetch', async function (url, options) {
+    assert.equal(this, globalThis);
+    assert.equal(url, 'https://api.example.test/realm/profiles/me');
+    assert.equal(options.method, 'GET');
+    return jsonResponse({ success: true, data: { artistName: 'Example Artist' } });
+  });
+  const conduit = new Conduit({ baseUrl: 'https://api.example.test/realm' });
+
+  assert.deepEqual(await conduit.transmit('/profiles/me'), {
+    artistName: 'Example Artist',
+  });
+  assert.equal(fetchMock.mock.callCount(), 1);
+});
+
 test('returns typed API errors', async () => {
   const conduit = new Conduit({
     baseUrl: 'https://api.example.test/realm',

@@ -1,5 +1,7 @@
 # API reference
 
+[Documentation index](README.md) | [Configuration](configuration.md) | [Architecture](architecture.md)
+
 Local base URL: `http://localhost:8080`.
 
 Authenticated requests use:
