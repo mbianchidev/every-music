@@ -1,28 +1,31 @@
 # Every.music
 
+[![CI](https://github.com/mbianchidev/every-music/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/mbianchidev/every-music/actions/workflows/ci.yml)
+
+[Quickstart](#quick-start-with-docker-compose) | [Documentation](#documentation) | [Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) | [Roadmap](docs/main.md)
+
+[![Every.music announcement feed showing three collaboration opportunities, a saved announcement, and navigation to posting, saved calls, and profiles](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+
+*Current web feed with synthetic API fixtures and a screenshot-only transport adapter. Real API requests have a [known browser limitation](#current-limitations). Select the image to view it at full resolution.*
+
 Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, browse opportunities, and build a musician profile using a React web client backed by a Fastify API and PostgreSQL.
 
-## Implemented features
+## Contents
 
-- **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
-- **Profiles:** edit your artist name, first and last name, city, and biography.
-- **Announcements:** browse the feed, publish an open call with a city and remote-collaboration option, and delete your own announcements.
-- **Bookmarks:** save announcements and revisit or remove them from the saved list.
-- **API capabilities:** filtered profile and announcement searches, instrument and genre catalogs, musical projects, announcement updates and reactions, and optional Google ID-token sign-in. Some of these capabilities are API-only; see [current limitations](#current-limitations).
-
-## Stack and platforms
-
-| Component | Implementation |
-|---|---|
-| API | Fastify 5 on Node.js 22 |
-| Database | PostgreSQL 16 with SQL migrations |
-| Web client | React 19 and Vite 8 |
-| Native shell | Tauri 2, sharing the web client |
-| Local deployment | Docker Compose, with nginx serving the web client and proxying the API |
-
-The web app runs in a browser. The Tauri shell targets Linux, macOS, and Windows; Android and iOS require additional platform setup. Native clients still need a running API and database, not just the application bundle.
+- [Quick start](#quick-start-with-docker-compose)
+- [Why Every.music](#why-everymusic)
+- [How it works](#how-it-works)
+- [Get started and configuration](#get-started-and-configuration)
+- [Implemented features and limitations](#implemented-features)
+- [Documentation](#documentation)
+- [AI policy](#ai-policy)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
 ## Quick start with Docker Compose
+
+> **Browser blocker:** the current client fails before sending API requests because of a native `fetch` receiver error. The stack and health probes can run, but the browser issue must be resolved before the first-use account and announcement workflows below will work. See [current limitations](#current-limitations).
 
 You need Git with GitHub SSH access for the clone command, a running Docker engine with Compose v2, and working authenticated SMTP credentials for account verification and password resets. Host installations of Node.js, PostgreSQL, and Rust are not needed for this setup. Commands below use a POSIX shell.
 
@@ -69,7 +72,50 @@ Compose initializes a new database volume with the schema and instrument/genre c
 
 **Email troubleshooting:** readiness checks PostgreSQL, not SMTP. Registration remains saved if email delivery fails, but unverified accounts cannot sign in. Fix `.env`, apply the configuration with `docker compose up -d realm-nexus`, then attempt sign-in to access **Resend verification email**. Inspect failures with `docker compose logs realm-nexus`.
 
-## Local development
+## Why Every.music
+
+Keep your musician profile, open calls, and bookmarked opportunities in one place. Announcements describe the collaborator you need, including whether remote collaboration is welcome. Self-hosting keeps the deployment and database under your control, at the cost of operating the API, PostgreSQL, and SMTP.
+
+## How it works
+
+The React client calls the Fastify API under `/realm`; the API stores accounts, profiles, announcements, and bookmarks in PostgreSQL. Compose runs the database, API, and nginx web server together. The same client is wrapped by Tauri for native builds.
+
+### Stack and platforms
+
+| Component | Implementation |
+|---|---|
+| API | Fastify 5 on Node.js 22 |
+| Database | PostgreSQL 16 with SQL migrations |
+| Web client | React 19 and Vite 8 |
+| Native shell | Tauri 2, sharing the web client |
+| Local deployment | Docker Compose, with nginx serving the web client and proxying the API |
+
+The web app runs in a browser. The Tauri shell targets Linux, macOS, and Windows; Android and iOS require additional platform setup. Native clients still need a running API and database, not just the application bundle.
+
+### Runtime behavior
+
+- Access tokens default to 30 minutes; revocable refresh sessions default to 30 days.
+- Authentication, reset, and verification tokens are hashed before database storage.
+- Account/profile creation and multi-table announcement updates are transactional.
+- `/health/live` checks the process; `/health/ready` checks PostgreSQL.
+- The web client's request layer implements a single shared refresh and retry for expired authentication, subject to the browser blocker noted above.
+- Network failures preserve local session state; confirmed authentication failures clear it.
+- Web and API responses include baseline security headers.
+- The UI includes labelled forms, visible keyboard focus, route focus management, live status messages, and reduced-motion support.
+
+### Repository layout
+
+```text
+backend/                 Fastify API, database schema, and migrations
+frontend/                React client and Tauri shell
+docs/                    Project documentation and screenshots
+.github/workflows/       CI and security scanning
+docker-compose.yml       Full-stack deployment
+```
+
+## Get started and configuration
+
+### Local development
 
 Use Node.js 22 (at least 22.12.0), npm, and PostgreSQL 16. Create an empty database first, using a role permitted to create tables and the `uuid-ossp` extension.
 
@@ -123,7 +169,7 @@ VITE_API_BASE_URL=http://localhost:8080/realm npm run dev
 
 Allow the client origin in the API's `PORTAL_ORIGINS`. Compose ports bind to loopback by default; internet-facing deployments need a TLS reverse proxy, backups, and log collection. See [deployment and operations](docs/deployment.md) for the full configuration.
 
-## Desktop and mobile
+### Desktop and mobile
 
 Native development requires Rust stable and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/). After installing frontend dependencies and starting the API:
 
@@ -136,13 +182,7 @@ Packaged clients have no Vite or nginx proxy. Set `VITE_API_BASE_URL` to an abso
 
 Android requires Android Studio, the SDK/NDK, and Java 17+; iOS requires macOS, Xcode, and CocoaPods. Both need Tauri project initialization and platform signing setup for distribution. See [desktop and mobile builds](docs/mobile.md) for commands and requirements. CI checks the Tauri application and can build desktop bundles; it does not build Android or iOS bundles.
 
-## Current limitations
-
-- The current UI has no Google sign-in, profile-search screen, search filters or pagination controls, announcement-editing or reaction controls, or editors for instruments, genres, and musical projects. These capabilities are exposed through the API.
-- In-app chat, push notifications, payments/subscriptions, and a media-upload workflow are not implemented. [Product vision](docs/main.md) contains proposed features and historical design ideas, not a list of shipped functionality.
-- Native shells do not bundle the backend or provide an offline mode. A reachable API is required.
-
-## Quality gates
+### Quality gates
 
 After installing dependencies, run from the repository root:
 
@@ -172,16 +212,23 @@ Production dependency audits:
 (cd frontend && npm audit --omit=dev --audit-level=high)
 ```
 
-## Runtime behavior
+## Implemented features
 
-- Access tokens default to 30 minutes; revocable refresh sessions default to 30 days.
-- Authentication, reset, and verification tokens are hashed before database storage.
-- Account/profile creation and multi-table announcement updates are transactional.
-- `/health/live` checks the process; `/health/ready` checks PostgreSQL.
-- The web client retries one expired authenticated request after a single shared refresh.
-- Network failures preserve local session state; confirmed authentication failures clear it.
-- Web and API responses include baseline security headers.
-- The UI includes labelled forms, visible keyboard focus, route focus management, live status messages, and reduced-motion support.
+These screens and API capabilities are implemented; real browser requests are currently blocked as described below.
+
+- **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
+- **Profiles:** edit your artist name, first and last name, city, and biography.
+- **Announcements:** browse the feed, publish an open call with a city and remote-collaboration option, and delete your own announcements.
+- **Bookmarks:** save announcements and revisit or remove them from the saved list.
+- **API capabilities:** filtered profile and announcement searches, instrument and genre catalogs, musical projects, announcement updates and reactions, and optional Google ID-token sign-in. Some of these capabilities are API-only.
+
+### Current limitations
+
+- **Browser API access is blocked:** [the request client](frontend/src/lib/conduit.js) stores native `fetch` as an instance property and invokes it with an invalid receiver. Chromium reports `Failed to execute 'fetch' on 'Window': Illegal invocation`, so sign-in and other API-backed screens cannot complete requests. The screenshot uses mocked responses and a capture-only adapter, not a change to application code.
+- The current UI has no Google sign-in, profile-search screen, search filters or pagination controls, announcement-editing or reaction controls, or editors for instruments, genres, and musical projects. These capabilities are exposed through the API.
+- In-app chat, push notifications, payments/subscriptions, and a media-upload workflow are not implemented. [Product vision](docs/main.md) contains proposed features and historical design ideas, not a list of shipped functionality.
+- Native shells do not bundle the backend or provide an offline mode. A reachable API is required.
+- No downloadable release is published in this repository. Native instructions describe building from source, not installing a published package.
 
 ## Documentation
 
@@ -192,21 +239,19 @@ Production dependency audits:
 - [Security policy](SECURITY.md)
 - [Product vision and historical roadmap](docs/main.md)
 
+## AI policy
+
+You are responsible for everything you contribute, including AI-assisted code, documentation, and assets. Review and test your contribution, and be able to explain what the code does and why it is needed.
+
 ## Contributing
 
 Issues and focused pull requests are welcome. Read the [development guide](docs/development.md) for coding conventions and database migration requirements, and run the relevant quality gates before submitting changes.
 
-Report suspected vulnerabilities privately using the [security policy](SECURITY.md), not a public issue.
+[Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) or [propose a feature](https://github.com/mbianchidev/every-music/issues/new?template=feature_request.md) using the existing issue templates.
 
-## Repository layout
+## Security
 
-```text
-backend/                 Fastify API, database schema, and migrations
-frontend/                React client and Tauri shell
-docs/                    Maintained project documentation
-.github/workflows/       CI and security scanning
-docker-compose.yml       Canonical full-stack deployment
-```
+Report suspected vulnerabilities privately using the [security policy](SECURITY.md), not a public issue. GitHub private vulnerability reporting is enabled for this repository.
 
 ## License
 
