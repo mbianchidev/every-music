@@ -77,6 +77,11 @@ backport and license, and rerun the regression.
 This is a source-level fix, not a claim that the unchanged 0.18.5 version falls
 outside the advisory's version range.
 
+The same regression package also covers GLib's typed charset and file-URI
+out-parameters, owned errors, nullable strings, object and boxed-value
+copy/drop lifetimes, and UUID validation. These checks use synthetic data and
+do not create files or require a running GUI.
+
 **TODO/FIXME (dependency-update agents):** On every Tauri, GTK, or GLib update,
 check for a patched upstream GLib release accepted by the complete Linux
 dependency tree. As soon as one is compatible, remove the local fix in favor of
@@ -85,6 +90,31 @@ the upstream library:
 1. Remove the `glib` entry from `[patch.crates-io]` and delete `frontend/src-tauri/vendor/glib`.
 2. Update the regression package to use the same compatible upstream GLib version as Tauri and regenerate `Cargo.lock`.
 3. Confirm the Linux dependency tree contains only patched upstream GLib releases, rerun the optimized regression and native CI build, and remove the obsolete backport documentation.
+
+### Reviewing vendored GLib code-scanning alerts
+
+Keep the vendored sources in Rust CodeQL analysis. Do not exclude the directory
+or disable security rules to clear alerts.
+
+When reviewing `rust/access-invalid-pointer`, check the concrete pointer and
+return types at every generic `from_glib_none`/`from_glib_full` call. Reviewed
+false-positive paths joined charset strings or `GError` out-parameters to
+unrelated `ObjectRef`, `Value`, and test-only `MyBoxed` conversions. GLib fills
+the out-parameters before conversion; error conversions are guarded by a
+non-null check, and nullable hostname conversions return `Option<GString>`.
+The `MyBoxed` derive is inside the dependency's `#[cfg(test)]` module, not the
+application build.
+
+A reviewed `rust/cleartext-logging` path similarly joined
+`uuid_string_is_valid` to `LogLevel` conversion. UUID validation returns a
+`gboolean` converted to Rust `bool`; it does not pass the UUID string to the
+separate `FromGlib<u32> for LogLevel` implementation or its panic message.
+
+Resolve a false positive individually with the concrete source, sink, and type
+evidence in the alert's dismissal comment. The optimized regressions supplement
+that source review; passing tests alone do not establish pointer safety.
+Reassess new or changed paths rather than treating all vendored alerts as
+false positives. Preserve the iterator security backport when investigating.
 
 ## Android
 
