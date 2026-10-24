@@ -35,5 +35,8 @@
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-pretty": "^13.2.0"
+  },
+  "overrides": {
+    "node-domexception": "npm:@profoundlogic/node-domexception@1.0.2"
   }
 }

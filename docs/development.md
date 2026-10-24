@@ -91,6 +91,22 @@ expired-session behavior, and offline recovery. Use synthetic accounts and
 follow the [manual accessibility checklist](../ACCESSIBILITY.md).
 Mocked API screenshots must be labelled; they do not prove the live stack works.
 
+### Dependency install policy
+
+The backend overrides the deprecated transitive `node-domexception` package with
+`@profoundlogic/node-domexception@1.0.2`, a dependency-free export of the native
+`DOMException` provided by supported Node.js versions. This keeps the Google
+authentication HTTP stack unchanged. Transport tests check constructor identity
+and file-backed blob errors. Remove the override when upstream no longer needs
+the deprecated shim, then rerun locked installs and backend verification.
+
+For npm 11, the frontend's `allowScripts` approves only the reviewed
+`fsevents@2.3.3` macOS optional dependency. The approval is version-pinned, not a
+blanket permission for dependency scripts. After upgrading it, review the new
+package and run `(cd frontend && npm install-scripts approve fsevents)` on macOS
+with an npm version supporting this command, then commit the updated approval.
+Older npm versions ignore this field and retain their existing install behavior.
+
 ## CI execution
 
 Backend, frontend, PostgreSQL integration, container, and Tauri checks start
