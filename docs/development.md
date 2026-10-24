@@ -91,6 +91,23 @@ expired-session behavior, and offline recovery. Use synthetic accounts and
 follow the [manual accessibility checklist](../ACCESSIBILITY.md).
 Mocked API screenshots must be labelled; they do not prove the live stack works.
 
+## CI execution
+
+Backend, frontend, PostgreSQL integration, container, and Tauri checks start
+independently: each job checks out and prepares its own inputs, with no build
+artifacts passed between them. This removes unnecessary prerequisite waits
+without skipping checks or changing their names, commands, or triggers. It can
+use more runner time on a failing revision because integration, container, and
+Tauri checks no longer wait for the unit checks to pass. Desktop packaging still
+waits for both frontend and Tauri checks and retains all three release platforms.
+
+CodeQL still scans Actions, JavaScript/TypeScript, and Rust on every configured
+event. A newer run for the same pull request cancels its obsolete scan; push and
+scheduled runs have separate concurrency groups per run and are not canceled by
+PR updates. The analysis matrix stops remaining languages if one fails, leaving
+the workflow failed rather than reporting partial analysis as success. The
+desktop packaging matrix still collects results for every platform on failure.
+
 ## Integration smoke test
 
 With the local API running against the same isolated database:
