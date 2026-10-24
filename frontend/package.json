@@ -21,12 +21,12 @@
     "ios:build": "tauri ios build"
   },
   "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.12.3",
-    "@tauri-apps/cli": "^2.12.2",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/cli": "^2.12.3",
     "@vitejs/plugin-react": "^6.1.2",
     "vite": "^8.3.4"
   }
