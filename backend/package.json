@@ -4,6 +4,9 @@
   "description": "Nexus API - Every.music orchestration layer",
   "type": "module",
   "main": "src/nexus.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "launch": "node src/nexus.js",
     "start": "node src/nexus.js",

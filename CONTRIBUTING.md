@@ -19,7 +19,7 @@ Coding agents must read [AGENTS.md](AGENTS.md) before editing. Everyone should
 start with the [documentation index](docs/README.md) and
 [development guide](docs/development.md), which cover:
 
-- Node.js 22.12+, npm, PostgreSQL 16, and optional Rust/platform SDK requirements.
+- Node.js 26.12.1 recommended (22.12+ minimum), npm, PostgreSQL 16, and optional Rust/platform SDK requirements.
 - Locked dependency installation, an isolated database, and API/client startup.
 - Unit tests, production builds, dependency audits, and integration smoke tests.
 - Database migrations, error handling, and transaction conventions.

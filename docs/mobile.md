@@ -6,7 +6,7 @@ Every.music uses Tauri 2 around the React client.
 
 ## Common setup
 
-- Node.js 22.12+
+- Node.js 26.12.1 recommended (22.12+ minimum)
 - Rust stable
 - Platform toolchains required by Tauri
 - A reachable HTTPS API
@@ -118,9 +118,20 @@ false positives. Preserve the iterator security backport when investigating.
 
 ## Android
 
-Install Android Studio, SDK 24+, the NDK, and Java 17+. The Android scaffold is
+Install Android Studio, SDK 24+, the NDK, and a compatible JDK. The Android scaffold is
 tracked under `src-tauri/gen/android`; initialize with `npx tauri android init`
 only if recreating an absent platform project.
+
+Android Gradle Plugin 8.11.0 requires at least JDK 17, its default JDK.
+The tracked Gradle 8.14.3 wrapper supports running on JDKs up to 24, not Java 27.
+Use JDK 17 or a newer JDK within that supported range, selected through
+`JAVA_HOME` or Android Studio's Gradle JDK setting. See the
+[AGP requirements](https://developer.android.com/build/releases/agp-8-11-0-release-notes#compatibility)
+and [Gradle 8.14.3 matrix](https://docs.gradle.org/8.14.3/userguide/compatibility.html#java_runtime).
+Java 27 requires Gradle 9.8 or newer and a separately validated Android/Tauri
+toolchain migration; it is not a drop-in runtime upgrade here.
+The generated Kotlin `jvmTarget = "1.8"` is Android bytecode compatibility,
+not the JDK used to run Gradle, and remains unchanged.
 
 ```bash
 cd frontend
