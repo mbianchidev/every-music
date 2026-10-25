@@ -14,7 +14,7 @@ Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and the
 
 ## Setup and verification
 
-Use Node.js 22.12+ (CI uses Node 22), PostgreSQL 16, and npm lockfiles.
+Use Node.js 22.12+ (CI uses Node 26.12.1), PostgreSQL 16, and npm lockfiles.
 Native checks also need Rust stable and the platform SDKs.
 
 From the repository root, after dependencies are installed:

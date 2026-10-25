@@ -82,7 +82,7 @@ The React client calls the Fastify API under `/realm`; the API stores accounts, 
 
 | Component | Implementation |
 |---|---|
-| API | Fastify 5 on Node.js 22 |
+| API | Fastify 5 on Node.js 26.12.1 |
 | Database | PostgreSQL 16 with SQL migrations |
 | Web client | React 19 and Vite 8 |
 | Native shell | Tauri 2, sharing the web client |
@@ -102,7 +102,8 @@ troubleshooting, upgrades, and data/uninstall behavior. The
 [configuration reference](docs/configuration.md) lists every supported setting,
 default, and configuration scope.
 
-For development, use Node.js 22.12+, npm, and PostgreSQL 16; follow the
+For development, use Node.js 26.12.1, npm, and PostgreSQL 16 (Node.js 22.12+
+remains the minimum); follow the
 [development guide](docs/development.md) for locked installs, an empty database,
 API/client startup, tests, audits, and debugging.
 

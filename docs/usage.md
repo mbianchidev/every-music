@@ -8,7 +8,7 @@
   It requires Git, a Docker engine with Compose v2, and authenticated SMTP.
   Containers supply Node.js and PostgreSQL; no Rust toolchain is needed.
 - **Development:** use [local development](development.md). It needs Node.js
-  22.12+ and PostgreSQL 16.
+  26.12.1 (22.12+ minimum) and PostgreSQL 16.
 - **Native client:** use a verified [CI development bundle or source build](releases.md).
   The API URL is embedded when building, and a backend is always required.
   There is no offline mode or published app-store release.

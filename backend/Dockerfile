@@ -1,5 +1,5 @@
 # Stage 1: Dependencies
-FROM node:22-alpine AS dependencies
+FROM node:26.12.1-alpine AS dependencies
 
 WORKDIR /nexus
 
@@ -9,7 +9,7 @@ RUN npm ci --omit=dev && \
     npm cache clean --force
 
 # Stage 2: Runtime
-FROM node:22-alpine AS runtime
+FROM node:26.12.1-alpine AS runtime
 
 ENV NODE_ENV=production
 

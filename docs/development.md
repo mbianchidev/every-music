@@ -4,10 +4,16 @@
 
 ## Prerequisites
 
-- Node.js 22.12+ and npm (CI uses Node 22)
+- Node.js 26.12.1 and npm recommended (22.12+ minimum)
 - PostgreSQL 16
 - Rust stable and platform SDKs for Tauri changes
 - A Docker engine with Compose v2 for container validation
+
+CI and both Docker builds pin Node.js 26.12.1, the current stable release.
+The package manifests retain Node.js 22.12.0 as the minimum rather than requiring
+the newer runtime. React and React DOM are already on the latest stable 19.3.1
+release. This repository does not use Next.js, Go, or Python. Android's separate
+Java/Gradle compatibility limits are documented in [mobile setup](mobile.md#android).
 
 Use only synthetic data and an isolated development database.
 Do not use a production connection string for bootstrap, migrations, or smoke

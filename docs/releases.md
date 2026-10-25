@@ -16,7 +16,7 @@ checksums. It never creates a tag, GitHub release, upload, or registry push.
 
 ## Prerequisites and supported hosts
 
-- Node.js 22.12+, npm, Rust stable, and [Tauri platform dependencies](https://v2.tauri.app/start/prerequisites/).
+- Node.js 26.12.1 recommended (22.12+ minimum), npm, Rust stable, and [Tauri platform dependencies](https://v2.tauri.app/start/prerequisites/).
 - Run `(cd frontend && npm ci)` before packaging.
 - Use the host-native architecture (`arm64` or `x64`); cross-compilation and
   universal macOS packages are not provided by this wrapper.
