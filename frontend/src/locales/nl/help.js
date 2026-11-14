@@ -84,6 +84,7 @@ export default {
     counts: '{open} open, {progress} in behandeling',
     detail: {
       back: 'Terug naar de inbox', message: 'Bericht', steps: 'Stappen om het te herhalen', link: 'Link',
+      fields: { appVersion: 'Appversie', platform: 'Platform', locale: 'Taal', userAgent: 'Browser' },
       diagnostics: 'Technische gegevens gedeeld met toestemming', contact: 'Antwoordadres', write: 'Schrijf naar {email}',
       noEmail: 'Er is geen e-mailadres opgegeven. De aanvrager leest antwoorden in de app.',
       account: 'Verstuurd vanaf een ingelogd account', visitor: 'Verstuurd zonder in te loggen',

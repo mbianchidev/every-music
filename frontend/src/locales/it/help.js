@@ -84,6 +84,7 @@ export default {
     counts: '{open} aperte, {progress} in lavorazione',
     detail: {
       back: 'Torna alle richieste', message: 'Messaggio', steps: 'Passaggi per riprodurlo', link: 'Link',
+      fields: { appVersion: 'Versione dell\'app', platform: 'Piattaforma', locale: 'Lingua', userAgent: 'Browser' },
       diagnostics: 'Dettagli tecnici condivisi con consenso', contact: 'Indirizzo di risposta', write: 'Scrivi a {email}',
       noEmail: 'Nessun indirizzo email fornito. Chi ha scritto legge le risposte nell\'app.',
       account: 'Inviata da un account con accesso', visitor: 'Inviata senza accesso',

@@ -52,7 +52,7 @@ function RequestDetail({ id, onClose, onSaved }) {
       {data.steps && <><h4>{t('help.admin.detail.steps')}</h4><p className="detail-text">{data.steps}</p></>}
       {data.link && <><h4>{t('help.admin.detail.link')}</h4><p><a href={data.link} target="_blank" rel="noopener noreferrer nofollow">{data.link}</a></p></>}
       {data.diagnostics && <><h4>{t('help.admin.detail.diagnostics')}</h4>
-        <dl className="support-diagnostics">{Object.entries(data.diagnostics).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></>}
+        <dl className="support-diagnostics">{Object.entries(data.diagnostics).map(([key, value]) => <div key={key}><dt>{t(`help.admin.detail.fields.${key}`)}</dt><dd>{value}</dd></div>)}</dl></>}
       <h4>{t('help.admin.detail.contact')}</h4>
       {data.contactEmail ? <p><a href={`mailto:${data.contactEmail}`}>{t('help.admin.detail.write', { email: data.contactEmail })}</a></p>
         : <p className="body-muted">{t('help.admin.detail.noEmail')}</p>}

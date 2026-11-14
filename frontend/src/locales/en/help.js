@@ -84,6 +84,7 @@ export default {
     counts: '{open} open, {progress} in progress',
     detail: {
       back: 'Back to the inbox', message: 'Message', steps: 'Steps to reproduce', link: 'Link',
+      fields: { appVersion: 'App version', platform: 'Platform', locale: 'Language', userAgent: 'Browser' },
       diagnostics: 'Technical details shared with consent', contact: 'Reply address', write: 'Write to {email}',
       noEmail: 'No email address was provided. The requester reads replies in the app.',
       account: 'Sent from a signed-in account', visitor: 'Sent without signing in',
