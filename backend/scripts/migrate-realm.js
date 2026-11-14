@@ -7,6 +7,7 @@ import { realmConfig, validateRealmConfig } from '../config/realm.js';
 
 const { Pool } = pg;
 const migrationsDirectory = join(dirname(fileURLToPath(import.meta.url)), '../database/migrations');
+const MIGRATION_LOCK_KEY = 7302214811;
 
 const delay = (milliseconds) => new Promise((resolve) => {
   setTimeout(resolve, milliseconds);
@@ -43,6 +44,7 @@ export async function runMigrations({
   validateRealmConfig();
 
   const pool = new Pool({ connectionString });
+  let lock;
 
   try {
     await waitForDatabase(pool, {
@@ -50,6 +52,10 @@ export async function runMigrations({
       delayMilliseconds: connectionDelayMilliseconds,
       logger,
     });
+
+    // API replicas that start together wait here so each migration runs once.
+    lock = await pool.connect();
+    await lock.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -97,6 +103,10 @@ export async function runMigrations({
       }
     }
   } finally {
+    if (lock) {
+      await lock.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
+      lock.release();
+    }
     await pool.end();
   }
 }
