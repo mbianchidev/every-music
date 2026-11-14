@@ -17,6 +17,7 @@ const emptyFilters = {
   location: '', remote: '', shipping: '', instrumentId: '', genreId: '', sort: 'newest',
 };
 const FILTER_KEYS = ['type', 'category', 'subcategory', 'condition', 'priceMin', 'priceMax', 'location', 'remote', 'shipping', 'instrumentId', 'genreId'];
+const GEAR_ONLY = ['condition', 'shipping'];
 
 export default function MarketplaceScreen({ route }) {
   const { t } = useI18n();
@@ -42,7 +43,7 @@ export default function MarketplaceScreen({ route }) {
     ...debounced, tab, page, pageSize: 12, type: TAB_TYPES[tab].includes(debounced.type) ? debounced.type : '',
     priceMin: invalidPrice ? '' : priceMin ?? '', priceMax: invalidPrice ? '' : priceMax ?? '',
     currency: priced && !invalidPrice ? debounced.currency : '',
-    condition: gear ? debounced.condition : '', shipping: gear ? debounced.shipping : '',
+    condition: gear ? debounced.condition : '', shipping: gear ? debounced.shipping : '', remote: gear ? '' : debounced.remote,
   });
   const resource = useResource(`/marketplace/listings?${query}`, { events: 'marketplace.changed,marketplace.saved.changed,profiles.changed' });
   const update = (key, value) => {
@@ -54,7 +55,8 @@ export default function MarketplaceScreen({ route }) {
   }, [tab, filters, page]);
   const rows = resource.data?.listings || [];
   const updating = resource.loading || filters !== debounced;
-  const activeFilters = FILTER_KEYS.filter(key => filters[key] !== '').length + Number(filters.sort !== 'newest');
+  const activeFilters = FILTER_KEYS.filter(key => filters[key] !== '' && (gear ? key !== 'remote' : !GEAR_ONLY.includes(key))).length
+    + Number(filters.sort !== 'newest');
   const changePage = value => {
     setPage(value);
     document.getElementById('results-heading')?.focus();
@@ -130,8 +132,8 @@ export default function MarketplaceScreen({ route }) {
                 {['newest', 'price_asc', 'price_desc', 'title'].map(value => <option key={value} value={value}>{t(`marketplace.sort.${value}`)}</option>)}
               </select>
             </FormField>
-            <label className="checkbox-label"><input type="checkbox" checked={filters.remote === 'true'} onChange={event => update('remote', event.target.checked ? 'true' : '')} />
-              {t('marketplace.search.remote')}</label>
+            {!gear && <label className="checkbox-label"><input type="checkbox" checked={filters.remote === 'true'} onChange={event => update('remote', event.target.checked ? 'true' : '')} />
+              {t('marketplace.search.remote')}</label>}
             {gear && <label className="checkbox-label"><input type="checkbox" checked={filters.shipping === 'true'} onChange={event => update('shipping', event.target.checked ? 'true' : '')} />
               {t('marketplace.search.shipping')}</label>}
             <button className="btn btn-ghost" type="button" onClick={() => { setFilters({ ...emptyFilters }); setPage(1); }}>{t('marketplace.search.clear')}</button>

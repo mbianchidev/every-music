@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS marketplace_listing_photos (
     UNIQUE (listing_id, position)
 );
 CREATE INDEX IF NOT EXISTS idx_marketplace_listing_photos_media ON marketplace_listing_photos(media_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_listing_photos_url ON marketplace_listing_photos(('/realm/media/' || media_id::text));
 
 CREATE TABLE IF NOT EXISTS marketplace_listing_instruments (
     listing_id UUID NOT NULL REFERENCES marketplace_listings(id) ON DELETE CASCADE,

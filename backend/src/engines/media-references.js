@@ -11,5 +11,5 @@ export const publicMediaReferences = [
     AND a.is_deleted = FALSE AND (a.expires_at IS NULL OR a.expires_at > NOW()))`,
   `EXISTS(SELECT 1 FROM marketplace_listing_photos ph JOIN marketplace_listings l ON l.id = ph.listing_id
     JOIN users u ON u.id = l.user_id AND u.is_active AND NOT u.is_deleted
-    WHERE ph.media_id = substr($2, 14)::uuid AND l.removed_at IS NULL AND l.expires_at > NOW())`,
+    WHERE ('/realm/media/' || ph.media_id::text) = $2 AND l.removed_at IS NULL AND l.expires_at > NOW())`,
 ];
