@@ -133,6 +133,12 @@ contents. Open reports remain for review; resolved report details/evidence expir
 after 90 days. Audit metadata expires after 365 days. Operator backup retention
 and any applicable deletion duties must be managed separately.
 
+Self-service account deletion removes the account's conversations for both
+participants, its messages, keys and encrypted key backups, and every report
+filed by or about it. Audit entries keep their action and time; the deleted
+actor becomes blank and target IDs no longer resolve to an account. See
+[deleting your account](usage.md#delete-your-account).
+
 ## Administrator provisioning
 
 There is no default admin and no public role-assignment endpoint. An operator

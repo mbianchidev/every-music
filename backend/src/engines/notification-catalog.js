@@ -26,6 +26,9 @@ export const notificationKinds = {
   application_status: { inApp: 'on', push: 'on', email: 'optional' },
   listing_expiring: { inApp: 'on', push: 'optional', email: 'optional' },
   listing_removed: { inApp: 'on', push: 'optional', email: 'optional' },
+  security_alert: { inApp: 'on', push: 'on', email: 'optional' },
+  verification_requested: { inApp: 'on', push: 'optional', email: 'off' },
+  verification_decided: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {

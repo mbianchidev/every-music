@@ -162,7 +162,7 @@ export class MusicianRepository {
     const query = `
       SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
              p.city, p.state, p.country, p.bio, p.profile_picture_url,
-             p.created_at,
+             p.created_at, p.verified_at,
              (SELECT jsonb_agg(jsonb_build_object(
                'instrument_id', ui.instrument_id, 'name', i.name,
                'skill_level', ui.skill_level, 'years_experience', ui.years_experience

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { finishSignIn } from '../lib/sign-in.js';
+import TwoStepSignIn from './TwoStepSignIn.jsx';
 
 let sdk;
 let pendingChallenge;
@@ -23,8 +24,11 @@ function loadGoogleIdentity() {
   return sdk;
 }
 
-export default function GoogleSignIn() {
+export default function GoogleSignIn({ onTwoFactor }) {
   const container = useRef(null);
+  const twoFactorHandler = useRef(onTwoFactor);
+  twoFactorHandler.current = onTwoFactor;
+  const [challenge, setChallenge] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,7 +58,8 @@ export default function GoogleSignIn() {
             const response = await conduit.transmit('/auth/login/google', {
               method: 'POST', body: { idToken: credential, challengeId: challenge.id }, signal: controller.signal,
             });
-            if (active) finishSignIn(response);
+            if (active && response.twoFactorRequired) (twoFactorHandler.current ?? setChallenge)(response);
+            else if (active) finishSignIn(response);
           } catch (failure) { if (active) setError(failure.message); }
           finally { signingIn = false; if (active) setBusy(false); }
         },
@@ -71,6 +76,7 @@ export default function GoogleSignIn() {
       <div ref={container} />
       {enabled && globalThis.__TAURI_INTERNALS__ && <p className="field-hint">Google sign-in uses a system browser and is available in the web app, not an embedded WebView. Use email sign-in or password recovery here.</p>}
       {busy && <p role="status">Signing in with Google...</p>}
+      {challenge && <TwoStepSignIn challenge={challenge} onCancel={() => { setChallenge(null); setRevision(value => value + 1); }} />}
       {error && <><p className="field-error" role="alert">{error}</p><button className="text-link" type="button" onClick={() => { pendingChallenge = null; setRevision(value => value + 1); }}>Retry Google sign-in</button></>}
     </div>
   );

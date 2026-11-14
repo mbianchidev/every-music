@@ -61,6 +61,36 @@ function createEntitlements(env) {
   return { free, premium, partner: { ...premium, businessPages: true } };
 }
 
+function createAccountTrust(env) {
+  return {
+    twoFactorKey: env.TWO_FACTOR_ENCRYPTION_KEY || '',
+    verificationRetentionDays: parseInteger(env.VERIFICATION_MEDIA_RETENTION_DAYS, 7, 'VERIFICATION_MEDIA_RETENTION_DAYS', { minimum: 1, maximum: 90 }),
+    sms: {
+      twilio: {
+        accountSid: env.TWILIO_ACCOUNT_SID || '',
+        authToken: env.TWILIO_AUTH_TOKEN || '',
+        fromNumber: env.TWILIO_FROM_NUMBER || '',
+        messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID || '',
+      },
+    },
+  };
+}
+
+export function validateAccountTrust(accountTrust) {
+  if (!accountTrust) return;
+  if (accountTrust.twoFactorKey && accountTrust.twoFactorKey.length < 32) {
+    throw new Error('TWO_FACTOR_ENCRYPTION_KEY must be at least 32 characters when set');
+  }
+  const twilio = accountTrust.sms?.twilio ?? {};
+  const anyTwilio = Object.values(twilio).some(Boolean);
+  if (anyTwilio && (!twilio.accountSid || !twilio.authToken || !(twilio.fromNumber || twilio.messagingServiceSid))) {
+    throw new Error('SMS requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER or TWILIO_MESSAGING_SERVICE_SID');
+  }
+  if (twilio.fromNumber && !/^\+[1-9]\d{7,14}$/.test(twilio.fromNumber)) {
+    throw new Error('TWILIO_FROM_NUMBER must be an E.164 phone number such as +15550100000');
+  }
+}
+
 function parseOrigins(value) {
   return (value || 'http://localhost:3000')
     .split(',')
@@ -172,6 +202,7 @@ export function createRealmConfig(env = process.env) {
       listingDays: parseInteger(env.MARKETPLACE_LISTING_DAYS, 60, 'MARKETPLACE_LISTING_DAYS', { minimum: 1, maximum: 365 }),
       expiryReminderDays: parseInteger(env.MARKETPLACE_EXPIRY_REMINDER_DAYS, 3, 'MARKETPLACE_EXPIRY_REMINDER_DAYS', { minimum: 1, maximum: 30 }),
     },
+    accountTrust: createAccountTrust(env),
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
@@ -227,6 +258,7 @@ export function validateRealmConfig(config = realmConfig) {
   if (config.marketplace && config.marketplace.expiryReminderDays >= config.marketplace.listingDays) {
     throw new Error('MARKETPLACE_EXPIRY_REMINDER_DAYS must be lower than MARKETPLACE_LISTING_DAYS');
   }
+  validateAccountTrust(config.accountTrust);
 
   if (config.environment === 'production') {
     const mailValues = [

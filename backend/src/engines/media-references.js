@@ -21,4 +21,5 @@ export const retainedMediaReferences = [
   `EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)`,
   `EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)`,
   'EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE ph.media_id = m.id)',
+  'EXISTS(SELECT 1 FROM verification_requests v WHERE m.id IN (v.selfie_media_id, v.document_media_id))',
 ];

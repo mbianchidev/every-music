@@ -165,6 +165,13 @@ per-IP login limit that the community suite exercises in the same API process.
 Do not run `npm run check` / `npm run compile` in the same frontend checkout
 while browser tests run: both builds replace `dist`, and the browser build
 embeds its isolated API origin. Backend checks can run independently.
+The account-trust browser journeys (`e2e/w2-account-trust.spec.js`) enroll an
+authenticator with the rendered QR/setup key, use recovery codes, export and
+delete an account, search hashed contacts, and approve a verification request.
+They start fixture sessions directly and synthesize only the first sign-in
+step's challenge response, so they stay within the shared per-IP sign-in
+limits; the second step, and every other request, uses the real API. The
+first step itself is covered by `integration/features/w2-account-trust.js`.
 The Google browser server is a loopback-only integration entrypoint requiring
 `REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
 not the production server and must never be exposed as one.

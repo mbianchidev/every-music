@@ -1,0 +1,20 @@
+export default {
+  title: 'Two-step verification',
+  intro: {
+    totp: 'Enter the 6-digit code from your authenticator app.',
+    email: 'We sent a 6-digit code to {destination}.',
+    sms: 'We sent a 6-digit code by text message to {destination}.',
+  },
+  notSent: 'The code could not be sent. Send a new code or use a recovery code.',
+  codeLabel: 'Verification code',
+  codeHint: 'The 6 digits from your app, email, or text message.',
+  recoveryLabel: 'Recovery code',
+  recoveryHint: 'One of the recovery codes you saved, such as ABCDE-FGHJK. Each code works once.',
+  useRecovery: 'Use a recovery code instead',
+  useCode: 'Use a verification code instead',
+  submit: 'Verify and sign in',
+  submitting: 'Verifying...',
+  resend: 'Send a new code',
+  resent: 'A new code was sent.',
+  cancel: 'Start over',
+};

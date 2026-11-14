@@ -26,7 +26,7 @@ export class IdentityRepository {
   async findById(userId, executor = realmConnector) {
     const query = `
       SELECT id, email, auth_provider, google_id, email_verified,
-             is_active, role, created_at, last_login
+             is_active, role, created_at, last_login, sessions_revoked_at
       FROM users
       WHERE id = $1 AND is_deleted = false
     `;

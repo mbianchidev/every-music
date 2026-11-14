@@ -1,5 +1,6 @@
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
+import VerifiedBadge from './VerifiedBadge.jsx';
 
 export default function MusicianCard({ musician }) {
   const name = musician.artistName || [musician.firstName, musician.lastName].filter(Boolean).join(' ') || 'Musician';
@@ -7,7 +8,7 @@ export default function MusicianCard({ musician }) {
     <article className="card musician-card">
       <div className="musician-summary">
         <Avatar name={name} src={musician.profilePictureUrl} />
-        <div><h2 className="heading-md"><a href={`#musician?id=${musician.userId}`}>{name}</a></h2>
+        <div><h2 className="heading-md"><a href={`#musician?id=${musician.userId}`}>{name}</a><VerifiedBadge verifiedAt={musician.verifiedAt} /></h2>
           <p><Icon name="location" size={13} /> {musician.city || 'Location not specified'}</p></div>
       </div>
       {musician.bio && <p className="announcement-description">{musician.bio}</p>}

@@ -3,6 +3,7 @@ import * as webpush from 'web-push';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { requestError } from './request-error.js';
 import { retainedMediaReferences } from './media-references.js';
+import { maintainAccountTrust } from './account-maintenance.js';
 
 export function isAllowedPushEndpoint(value) {
   try {
@@ -100,6 +101,7 @@ export class PushDispatcher {
     await this.connector.execute(`
       DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'
       AND NOT (${retainedMediaReferences.join(' OR ')})`);
+    await maintainAccountTrust(this.connector);
     this.lastMaintenance = Date.now();
   }
 
