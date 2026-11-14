@@ -44,7 +44,8 @@ test.beforeAll(async () => {
   await pool.query("INSERT INTO user_instruments (profile_id, instrument_id, skill_level, years_experience) VALUES ($1, $2, 'advanced', 5)", [
     profile.id, instruments.find(item => item.name === 'Drums').id,
   ]);
-  await pool.query('INSERT INTO blocked_users (user_id, blocked_user_id) VALUES ($1, $2)', [people[0].id, people[2].id]);
+  // The applicant blocks the owner: the call stays visible (owner blocks would 404 it), but applying is refused.
+  await pool.query('INSERT INTO blocked_users (user_id, blocked_user_id) VALUES ($1, $2)', [people[2].id, people[0].id]);
 });
 
 test.afterAll(async () => {
