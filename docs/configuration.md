@@ -155,7 +155,7 @@ each job per interval, and event keys keep reruns from creating duplicates.
 | `NOTIFICATION_JOB_INTERVAL_MINUTES` | `60` (1-1440) | How often each scheduled job runs across all API processes |
 | `STATS_DIGEST_WEEKDAY` | `1` (1-7, Monday-Sunday) | First ISO weekday on which the weekly statistics digests are created |
 | `STATS_DIGEST_MIN_EVENTS` | `1` (1-100000) | Minimum activity in the previous 7 days before a digest is sent |
-| `COME_BACK_AFTER_DAYS` | `30` (1-365) | Days since the last sign-in before a come-back reminder; also the gap between reminders |
+| `COME_BACK_AFTER_DAYS` | `30` (1-90) | Days since the last sign-in before a come-back reminder; also the gap between reminders. At most the 90-day notification retention, which keeps reminders unique |
 | `COME_BACK_MAX_REMINDERS` | `3` (0-24) | Reminders per inactivity streak; `0` disables them |
 | `INVITE_NUDGE_AFTER_DAYS` | `7` (1-365) | Days after signup for the single in-app invite-friends nudge (sent within the following 30 days) |
 

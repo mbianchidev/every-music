@@ -126,6 +126,7 @@ export class NotificationScheduler {
 
   // At most one reminder per inactivity period, keyed by the last sign-in and
   // the period number so a new streak starts over after the user returns.
+  // Periods are capped at the 90-day notification retention so keys outlive them.
   async comeBack() {
     const { comeBackAfterDays: days, comeBackMaxReminders: maximum } = this.settings;
     if (!maximum) return 0;
