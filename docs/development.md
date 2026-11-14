@@ -113,7 +113,10 @@ above. Dependencies must be installed in both packages.
 ```
 
 `test:integration` runs `integration/community.js` and every file under
-`integration/features/`, one file at a time. Add feature suites there. Set
+`integration/features/`, one file at a time. Add feature suites there.
+`features/infrastructure.js` exercises both media storage drivers against an
+in-process S3-compatible endpoint (no external service), encrypted attachment
+access rules, object cleanup, and native push devices with stubbed providers. Set
 `E2E_API_PORT` and `E2E_WEB_PORT` to run browser tests on ports other than the
 default 55474 and 4179.
 
@@ -127,7 +130,8 @@ provider is contacted.
 
 `test:migrations` needs a role with `CREATEDB` on that isolated instance and a
 local Git ref for the previous schema. It creates two uniquely named temporary
-databases, runs the actual migration runner against fresh/prior schemas,
+databases, runs the actual migration runner (twice concurrently, then again)
+against fresh/prior schemas,
 replays migrations 003/004, compares columns/indexes/constraints, checks legacy
 projects/messages/tombstones, member-role and consent defaults, then drops only
 the databases it created.
@@ -276,6 +280,18 @@ retention, provisioning and cryptographic limitations.
 - Check plan limits with `entitlementRepository` instead of hard-coding them.
 - Register publicly visible managed images in
   `backend/src/engines/media-references.js`.
+- Grant specific signed-in users access to non-public media (attachment blobs,
+  verification evidence, member-only content) by appending a predicate to
+  `authorizedMediaReferences` in the same file. Predicates are SQL with `$2`
+  bound to the media URL (`/realm/media/<id>`) and `$3` to the viewer's user ID;
+  check the viewer's current right to the referencing content, for example:
+  `EXISTS(SELECT 1 FROM group_messages gm JOIN group_members m ON m.group_id = gm.group_id
+  WHERE gm.attachment_url = $2 AND m.user_id = $3)`. Owners can always read their
+  media, attachments are never served through `publicMediaReferences`, and granted
+  responses are `private, no-store`. Add a `retainedMediaReferences` predicate
+  (`$2` only) when drafts or private content reference media, or the hourly cleanup
+  deletes those uploads after a day. Read and write media through
+  `mediaRepository` so the configured storage driver is used.
 
 - Keep HTTP envelopes consistent: `{ "success": true, "data": ... }` or `{ "success": false, "error": ... }`.
 - Use repository executors supplied by `realmConnector.transaction`; calling the global pool from inside a transaction is not atomic.

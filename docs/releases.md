@@ -5,7 +5,8 @@
 ## What is distributed
 
 The repository currently has no published GitHub release or app-store package.
-The CI packaging job can produce downloadable **development** installers.
+The CI packaging jobs can produce downloadable **development** installers and
+unsigned mobile packages.
 They are not a claim of Developer ID signing, notarization, Windows publisher
 verification, or readiness for store submission.
 
@@ -33,7 +34,8 @@ checksums. It never creates a tag, GitHub release, upload, or registry push.
 
 Tauri remains responsible for its platform prerequisites. Preflight validates
 the tools it can inspect; a full build is needed to verify SDK/bundler availability.
-Mobile builds use the [Android/iOS procedures](mobile.md), not this wrapper.
+Mobile builds use the [Android/iOS procedures](mobile.md) and the
+[mobile CI workflow](#mobile-development-packages), not this wrapper.
 
 ## Build locally
 
@@ -115,6 +117,28 @@ The release-wrapper tests run with the frontend checks:
 ```bash
 node --test scripts/test/release.test.mjs
 ```
+
+## Mobile development packages
+
+The [Mobile packages workflow](https://github.com/mbianchidev/every-music/actions/workflows/mobile.yml)
+runs on manual dispatch or `v*` tags, not on pull requests. Dispatch it on the
+intended branch, choose `all`, `android`, or `ios`, and supply `api_base_url`
+unless the `MOBILE_API_BASE_URL` or `DESKTOP_API_BASE_URL` repository variable is
+set. It packages:
+
+- `everymusic-android-<commit>`: the universal **unsigned** release APK and AAB
+  built by `tauri android build --apk --aab`, plus `SHA256SUMS`.
+- `everymusic-ios-<commit>`: a zipped simulator `.app` for Apple silicon Macs and
+  an **unsigned** device `.ipa` built by `tauri ios build --no-sign`, plus
+  `SHA256SUMS`.
+
+Verify downloads with `shasum -a 256 -c SHA256SUMS`. Android only installs signed
+APKs: align and sign the APK with your own keystore (`zipalign -p 4` then
+`apksigner sign`) before `adb install`, and sign the AAB with your upload key
+before uploading it to a store. Install the simulator app with
+`xcrun simctl install booted Every.music.app`. The unsigned IPA proves the device
+build compiles; re-sign it with a development or distribution identity and
+provisioning profile to run it on hardware. Artifacts are kept for 14 days.
 
 Actual publication, code signing/notarization, store identities, and long-term
 release hosting are separate steps; no signing credentials are committed or

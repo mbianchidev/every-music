@@ -131,6 +131,14 @@ browser push; permission is requested only when you choose to enable it.
 Push is generic and excludes message text. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
 
+**Settings > Mobile devices** lists phones and tablets registered for native
+push (Android through Firebase Cloud Messaging, iOS through Apple Push
+Notification service) with their registration dates. Select **Remove** to stop
+push on a device you no longer use; **Disable push on all devices** also removes
+every mobile device. The section is hidden when the server has no
+[mobile push provider](configuration.md#native-mobile-push) and no device is
+registered. Device tokens are never shown.
+
 ### Themes, analytics, and installation
 
 The **Color theme** control offers System, Light, and Dark. An explicit choice
@@ -195,11 +203,12 @@ reset revokes the account's refresh sessions. Never share reset links or tokens.
 | Push is unavailable | Check HTTPS, production build/service worker, VAPID keys, browser support and permission; iOS needs Home Screen installation |
 | Google button is missing or fails | Configure the web client ID and exact authorized origins; use Retry Google sign-in after the five-minute challenge expires |
 | Uploaded image is rejected | Use a real JPEG/PNG under 2 MiB/16 megapixels; animated and renamed non-image files are rejected |
+| Uploads or images fail with `MEDIA_STORAGE_UNAVAILABLE` | Check the S3 endpoint, bucket, credentials, and `storage` in API readiness; see [media storage](configuration.md#media-storage) |
 | No offline feed copy is available | Reopen the last matching feed in the same signed-in tab, or reconnect; private APIs and other search pages are not cached |
 | Changes to `.env` do not apply | Run `docker compose up -d` to recreate changed services; `restart` alone does not reload container environment |
 
-API readiness only checks PostgreSQL. It does not prove SMTP, external identity
-providers, or a client connection works. See [operations](deployment.md) for
+API readiness checks PostgreSQL and, with `MEDIA_STORAGE=s3`, the media bucket.
+It does not prove SMTP, push or identity providers, or a client connection works. See [operations](deployment.md) for
 health checks and structured logging.
 
 ## Upgrades, stopping, and uninstalling
@@ -213,8 +222,8 @@ docker compose down
 ```
 
 This stops/removes this Compose stack's containers and network, not its data.
-The named volume `everymusic-realm-volume` remains and is reused on the next
-start. Do not remove it or use volume-removal flags unless you deliberately
+The named volume `everymusic-realm-volume` (and `everymusic-object-volume` when
+the `object-storage` profile was used) remains and is reused on the next start. Do not remove it or use volume-removal flags unless you deliberately
 intend to erase the database and have a verified backup.
 
 Uninstalling a native client does not remove server-side profiles or
