@@ -54,6 +54,7 @@ export class MusicianConductor {
       InputValidator.validateInstruments(updateData.instruments),
       InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
       InputValidator.validateEnum(updateData.accountKind, ['artist', 'music_lover'], 'Account kind'),
+      InputValidator.validateLength(updateData.telegramId, 0, 100, 'Telegram username'),
     );
 
     if (validations) {

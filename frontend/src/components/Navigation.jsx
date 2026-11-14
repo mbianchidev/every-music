@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import Brand from './Brand.jsx';
 import Icon from './Icon.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 const sections = [
   { label: 'Discover', items: [
     { id: 'feed', icon: 'feed', label: 'Feed' },
     { id: 'musicians', icon: 'people', label: 'Musicians' },
+    { id: 'organizations', icon: 'wave', labelKey: 'organizations.nav.discover' },
     { id: 'messages', icon: 'message', label: 'Messages' },
     { id: 'notifications', icon: 'bell', label: 'Notifications' },
   ] },
   { label: 'Your space', items: [
     { id: 'my-posts', icon: 'post', label: 'My calls' },
     { id: 'saved', icon: 'bookmark', label: 'Saved' },
+    { id: 'your-pages', icon: 'feed', labelKey: 'organizations.nav.yours' },
     { id: 'profile', icon: 'user', label: 'Profile' },
     { id: 'analytics', icon: 'chart', label: 'Analytics' },
     { id: 'settings', icon: 'settings', label: 'Settings' },
@@ -19,6 +22,7 @@ const sections = [
 ];
 
 export default function Navigation({ routeName, unreadCount = 0, isAdmin = false }) {
+  const { t } = useI18n();
   const dialog = useRef(null);
   const trigger = useRef(null);
   const navigating = useRef(false);
@@ -35,7 +39,8 @@ export default function Navigation({ routeName, unreadCount = 0, isAdmin = false
     wide.addEventListener('change', resize);
     return () => wide.removeEventListener('change', resize);
   }, []);
-  const current = ({ musician: 'musicians', announcement: 'feed', 'edit-profile': 'profile', 'edit-announcement': 'my-posts' })[routeName] || routeName;
+  const current = ({ musician: 'musicians', announcement: 'feed', 'edit-profile': 'profile', 'edit-announcement': 'my-posts',
+    organization: 'organizations', 'create-organization': 'your-pages', 'edit-organization': 'your-pages', 'organization-members': 'your-pages' })[routeName] || routeName;
   const close = () => dialog.current.close();
   const navigate = event => {
     navigating.current = event.currentTarget.hash !== window.location.hash;
@@ -44,7 +49,7 @@ export default function Navigation({ routeName, unreadCount = 0, isAdmin = false
   const link = (item, mobile = false) => (
     <a key={item.id} className={`nav-item ${current === item.id ? 'nav-item-active' : ''}`} href={`#${item.id}`}
       aria-current={routeName === item.id ? 'page' : undefined} onClick={mobile ? navigate : undefined}>
-      <Icon name={item.icon} /><span>{item.label}</span>
+      <Icon name={item.icon} /><span>{item.labelKey ? t(item.labelKey) : item.label}</span>
       {item.id === 'notifications' && unreadCount > 0 && <span className="nav-badge" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </a>
   );

@@ -23,6 +23,12 @@ import AnalyticsScreen from './pages/AnalyticsScreen.jsx';
 import AppStatus from './components/AppStatus.jsx';
 import AdministrationScreen from './pages/AdministrationScreen.jsx';
 import ReportsScreen from './pages/ReportsScreen.jsx';
+import OrganizationSearchScreen from './pages/OrganizationSearchScreen.jsx';
+import OrganizationScreen from './pages/OrganizationScreen.jsx';
+import OrganizationEditorScreen from './pages/OrganizationEditorScreen.jsx';
+import OrganizationMembersScreen from './pages/OrganizationMembersScreen.jsx';
+import YourPagesScreen from './pages/YourPagesScreen.jsx';
+import { t } from './lib/i18n.js';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -47,6 +53,12 @@ const ROUTES = {
   analytics: { screen: AnalyticsScreen, title: 'Analytics', protected: true },
   reports: { screen: ReportsScreen, title: 'Your reports', protected: true },
   admin: { screen: AdministrationScreen, title: 'Administration', protected: true },
+  organizations: { screen: OrganizationSearchScreen, get title() { return t('organizations.routes.discover'); }, protected: true },
+  organization: { screen: OrganizationScreen, get title() { return t('organizations.routes.page'); }, protected: true },
+  'create-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.create'); }, protected: true },
+  'edit-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.edit'); }, protected: true },
+  'organization-members': { screen: OrganizationMembersScreen, get title() { return t('organizations.routes.members'); }, protected: true },
+  'your-pages': { screen: YourPagesScreen, get title() { return t('organizations.routes.yours'); }, protected: true },
 };
 
 function readRoute() {

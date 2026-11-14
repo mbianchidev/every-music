@@ -3,7 +3,8 @@ import conduit from '../lib/conduit.js';
 import FormField from './FormField.jsx';
 import ModalDialog from './ModalDialog.jsx';
 
-export default function ReportButton({ userId, name = 'this musician', message }) {
+export default function ReportButton({ userId, name = 'this musician', message, label }) {
+  const title = label || (message ? 'Report message' : 'Report musician');
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('spam');
   const [details, setDetails] = useState('');
@@ -24,9 +25,9 @@ export default function ReportButton({ userId, name = 'this musician', message }
     finally { setBusy(false); }
   };
   return <>
-    <button className="text-link" type="button" aria-haspopup="dialog" onClick={() => { setOpen(true); setConsent(false); setError(''); setSuccess(''); }}>{message ? 'Report message' : 'Report musician'}</button>
+    <button className="text-link" type="button" aria-haspopup="dialog" onClick={() => { setOpen(true); setConsent(false); setError(''); setSuccess(''); }}>{title}</button>
     {success && <p className="field-hint" role="status">{success} <a href="#reports">Your reports</a></p>}
-    <ModalDialog title={message ? 'Report message' : 'Report musician'} open={open} onClose={() => setOpen(false)}>
+    <ModalDialog title={title} open={open} onClose={() => setOpen(false)}>
       <p>Report a concern about {name}. Administrators receive only your report and any selected message, not access to the rest of the conversation.</p>
       {message && <blockquote className="reported-excerpt">{message.body}</blockquote>}
       {error && <p className="field-error" role="alert">{error}</p>}

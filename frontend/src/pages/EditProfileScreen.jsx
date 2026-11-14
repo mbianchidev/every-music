@@ -8,6 +8,8 @@ import PageHeader from '../components/PageHeader.jsx';
 import CatalogSelections from '../components/CatalogSelections.jsx';
 import ImageInput from '../components/ImageInput.jsx';
 import ProjectManager from '../components/ProjectManager.jsx';
+import AccountKindField from '../components/AccountKindField.jsx';
+import ProfileContactFields from '../components/ProfileContactFields.jsx';
 import { uploadImage } from '../lib/media.js';
 
 class EditProfileScreen extends Component {
@@ -26,6 +28,9 @@ class EditProfileScreen extends Component {
       instrumentIds: [],
       genreIds: [],
       experience: {},
+      accountKind: 'artist',
+      websiteUrl: '',
+      telegramId: '',
       loaded: false,
       loading: true,
       saving: false,
@@ -57,6 +62,9 @@ class EditProfileScreen extends Component {
         instrumentIds: data.instruments.map(item => item.instrument_id),
         genreIds: data.genres.map(item => item.genre_id),
         experience: Object.fromEntries(data.instruments.map(item => [item.instrument_id, { skillLevel: item.skill_level, yearsExperience: item.years_experience }])),
+        accountKind: data.accountKind || 'artist',
+        websiteUrl: data.contacts?.websiteUrl || '',
+        telegramId: data.contacts?.telegramId || '',
         loaded: true,
         loading: false,
       });
@@ -67,7 +75,7 @@ class EditProfileScreen extends Component {
 
   handleSave = async (event) => {
     event.preventDefault();
-    const { artistName, firstName, lastName, city, bio, instrumentIds, genreIds, experience, imageFile } = this.state;
+    const { artistName, firstName, lastName, city, bio, instrumentIds, genreIds, experience, imageFile, accountKind, websiteUrl, telegramId } = this.state;
 
     if (!artistName.trim()) {
       this.setState({ error: 'Artist name is required.' });
@@ -92,8 +100,11 @@ class EditProfileScreen extends Component {
           city: city.trim(),
           bio: bio.trim(),
           profilePictureUrl,
-          instruments: instrumentIds.map(instrumentId => ({ instrumentId, skillLevel: experience[instrumentId]?.skillLevel || 'beginner', yearsExperience: experience[instrumentId]?.yearsExperience ?? 0 })),
+          ...(accountKind === 'artist' ? { instruments: instrumentIds.map(instrumentId => ({ instrumentId, skillLevel: experience[instrumentId]?.skillLevel || 'beginner', yearsExperience: experience[instrumentId]?.yearsExperience ?? 0 })) } : {}),
           genreIds,
+          accountKind,
+          websiteUrl: websiteUrl.trim() || null,
+          telegramId: telegramId.trim() || null,
         },
       });
       nucleus.mutate(updated);
@@ -129,6 +140,7 @@ class EditProfileScreen extends Component {
         {error && <div className="error" role="alert">{error}</div>}
 
         <form className="form-stack" onSubmit={this.handleSave}>
+          <AccountKindField value={this.state.accountKind} disabled={saving} onChange={accountKind => this.setState({ accountKind })} />
           <ImageInput id="profile-image" label="Profile image" value={this.state.profilePictureUrl} disabled={saving}
             onChange={profilePictureUrl => this.setState({ profilePictureUrl })} onFile={imageFile => this.setState({ imageFile })} />
           <FormField id="profile-artist-name" label="Artist name" required>
@@ -146,7 +158,8 @@ class EditProfileScreen extends Component {
           <FormField id="profile-bio" label="Bio">
             <textarea className="input" style={{ minHeight: '140px', resize: 'vertical' }} value={bio} onChange={(event) => this.setState({ bio: event.target.value })} maxLength="5000" disabled={saving} />
           </FormField>
-          <CatalogSelections instruments={this.state.instruments} genres={this.state.genres}
+          <ProfileContactFields websiteUrl={this.state.websiteUrl} telegramId={this.state.telegramId} disabled={saving} onChange={(key, value) => this.setState({ [key]: value })} />
+          <CatalogSelections instruments={this.state.instruments} genres={this.state.genres} hideInstruments={this.state.accountKind === 'music_lover'}
             instrumentIds={this.state.instrumentIds} genreIds={this.state.genreIds}
             onInstruments={instrumentIds => this.setState({ instrumentIds })} onGenres={genreIds => this.setState({ genreIds })}
             experience={this.state.experience} disabled={saving} onExperience={(id, key, value) => this.setState(state => ({
@@ -162,7 +175,7 @@ class EditProfileScreen extends Component {
             </button>
           </div>
         </form>
-        <ProjectManager />
+        {this.state.accountKind === 'artist' && <ProjectManager />}
 
       </div>
     );

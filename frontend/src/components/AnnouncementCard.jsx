@@ -1,6 +1,7 @@
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import ManagedImage from './ManagedImage.jsx';
+import OrganizationByline from './OrganizationByline.jsx';
 
 const AnnouncementCard = ({ post, actions, expanded = false }) => {
   const city = post.location?.city;
@@ -11,6 +12,7 @@ const AnnouncementCard = ({ post, actions, expanded = false }) => {
         <a href={`#musician?id=${post.userId}`} aria-label={`Musician: ${post.creatorName}`}>{post.creatorName}</a>
         {post.isCoverBand && <span className="tag tag-muted">Covers</span>}
       </div>}
+      <OrganizationByline organization={post.organization} />
       <div className="call-card-heading">
         <h2 className="heading-md"><a href={`#announcement?id=${post.id}`}>{post.title}</a></h2>
         {post.pictureUrl && <ManagedImage className="call-thumbnail" src={post.pictureUrl} authenticated={post.isPublished === false} alt={`Announcement image: ${post.title}`} width="72" height="72" loading="lazy" />}

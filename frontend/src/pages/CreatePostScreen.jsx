@@ -8,10 +8,12 @@ import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import CatalogSelections from '../components/CatalogSelections.jsx';
 import ImageInput from '../components/ImageInput.jsx';
+import AnnouncementOrganizationField from '../components/AnnouncementOrganizationField.jsx';
 
 export default function CreatePostScreen({ route }) {
   const id = route.name === 'edit-announcement' ? route.query.get('id') : null;
-  const [draft, setDraft] = useState({ title: '', description: '', city: '', isRemote: false, isCoverBand: false, isPublished: true, instrumentIds: [], genreIds: [], pictureUrl: null, links: [] });
+  const [draft, setDraft] = useState({ title: '', description: '', city: '', isRemote: false, isCoverBand: false, isPublished: true, instrumentIds: [], genreIds: [], pictureUrl: null, links: [], organizationId: route.query.get('organization') || null });
+  const [organization, setOrganization] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,9 @@ export default function CreatePostScreen({ route }) {
           isRemote: post.isRemote, isCoverBand: post.isCoverBand, isPublished: post.isPublished, pictureUrl: post.pictureUrl,
           instrumentIds: post.instruments.map(item => item.instrument_id), genreIds: post.genres.map(item => item.genre_id),
           links: post.links.map(item => ({ linkType: item.link_type, url: item.url })),
+          organizationId: post.organization?.id ?? null,
         });
+        setOrganization(post.organization ? { ...post.organization, managed: true, permissions: ['post_announcements'] } : null);
       }
       setCatalog({ instruments: instruments.instruments, genres: genres.genres }); setLoaded(true);
     }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
@@ -67,6 +71,7 @@ export default function CreatePostScreen({ route }) {
       <PageHeader eyebrow="Make a connection" title={id ? 'Edit your call' : 'Post a call'} subtitle="Tell the right people what you have in mind." />
       {error && (loaded ? <p className="error" role="alert">{error}</p> : <ErrorState message={error} onRetry={() => setRevision(value => value + 1)} />)}
       {loading ? <Spinner label="Loading editor" /> : loaded && <form className="form-stack" onSubmit={save}>
+        <AnnouncementOrganizationField value={draft.organizationId} current={organization} onChange={value => field('organizationId', value)} disabled={saving} />
         <FormField id="announcement-title" label="Title" required><input className="input" value={draft.title} onChange={event => field('title', event.target.value)} minLength="5" maxLength="255" disabled={saving} /></FormField>
         <FormField id="announcement-description" label="Description" required hint="Include style, goals, availability, and expectations.">
           <textarea className="input" style={{ minHeight: '180px', resize: 'vertical' }} value={draft.description} onChange={event => field('description', event.target.value)} minLength="20" maxLength="5000" disabled={saving} />
