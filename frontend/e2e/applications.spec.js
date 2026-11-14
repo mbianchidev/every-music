@@ -3,24 +3,30 @@ import AxeBuilder from '@axe-core/playwright';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { apiOrigin } from './origins.js';
+import { CipherEngine } from '../../backend/src/engines/cipher-engine.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
-const bcrypt = requireBackend('bcryptjs');
 const pool = new Pool({ connectionString: process.env.REALM_CONNECTION });
 const marker = `applications-${randomUUID().slice(0, 8)}`;
-const password = 'Synthetic1Password';
 const people = [];
 const title = `Drummer wanted for ${marker}`;
 let announcementId;
+// Same synthetic signing keys as the browser API in playwright.config.js. Minting
+// sessions keeps this suite out of the shared login rate limit that
+// community.spec.js exercises through the real sign-in form.
+const cipher = new CipherEngine({ cipher: {
+  primaryKey: 'synthetic-browser-primary-key-longer-than-thirty-two-characters',
+  refreshKey: 'synthetic-browser-refresh-key-longer-than-thirty-two-characters',
+  issuer: 'every.music', audience: 'every.music.clients', accessTokenMinutes: 30, refreshTokenDays: 1,
+} });
 
 test.beforeAll(async () => {
-  const hash = bcrypt.hashSync(password, 4);
   const names = ['Demo Owner Harbor', 'Demo Applicant Lark', 'Demo Blocked Fern'];
   for (const [index, artistName] of names.entries()) {
     const email = `${marker}-${index}@example.test`;
     const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash, email_verified) VALUES ($1, $2, TRUE) RETURNING id', [email, hash],
+      'INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [email],
     );
     people.push({ id: rows[0].id, email, artistName });
     await pool.query('INSERT INTO profiles (user_id, artist_name, city) VALUES ($1, $2, $3)', [rows[0].id, artistName, 'Synthetic City']);
@@ -47,10 +53,18 @@ test.afterAll(async () => {
 });
 
 async function login(page, person) {
+  const refresh = cipher.createRefreshToken(person.id);
+  await pool.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [person.id, refresh.tokenHash, refresh.expiresAt]);
+  const session = {
+    persona: { userId: person.id, email: person.email, emailVerified: true },
+    keys: { accessToken: cipher.createAccessToken(person.id, person.email), refreshToken: refresh.token },
+  };
   await page.goto('/#login');
-  await page.getByLabel(/^Email\b/).fill(person.email);
-  await page.getByLabel(/^Password\b/).fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.evaluate(value => {
+    sessionStorage.setItem('everymusic.session.v1', JSON.stringify(value));
+    history.replaceState(null, '', '#feed');
+  }, session);
+  await page.reload();
   await expect(page.getByRole('heading', { name: 'Open calls', exact: true })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Live updates connected' })).toBeVisible();
 }
