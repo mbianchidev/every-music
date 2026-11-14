@@ -15,6 +15,9 @@ export const publicMediaReferences = [
   `EXISTS(SELECT 1 FROM organizations o WHERE o.picture_url = $2 AND o.is_deleted = FALSE)`,
   `EXISTS(SELECT 1 FROM organization_photos ph JOIN organizations o ON o.id = ph.organization_id
     WHERE ph.url = $2 AND o.is_deleted = FALSE)`,
+  `EXISTS(SELECT 1 FROM event_images ei JOIN events e ON e.id = ei.event_id
+    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND e.visibility = 'published'
+    AND (e.owner_user_id IS NULL OR EXISTS(SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted)))`,
 ];
 
 // SQL predicates granting one signed-in viewer (bound as $3) access to managed
@@ -23,7 +26,14 @@ export const publicMediaReferences = [
 // predicate must check the viewer's current right to the referencing content.
 // Matches are served with `Cache-Control: private, no-store`. Attachment blobs
 // are never served through publicMediaReferences, only through these.
-export const authorizedMediaReferences = [];
+export const authorizedMediaReferences = [
+  // Draft event images for everyone who may edit the event.
+  `EXISTS(SELECT 1 FROM event_images ei JOIN events e ON e.id = ei.event_id
+    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND (e.owner_user_id = $3 OR EXISTS(
+      SELECT 1 FROM event_organizers eo JOIN organizations o ON o.id = eo.organization_id AND o.is_deleted = FALSE
+      JOIN organization_members m ON m.organization_id = o.id AND m.status = 'active' AND m.user_id = $3
+      WHERE eo.event_id = e.id AND (m.role IN ('leader', 'admin') OR 'manage_calendar' = ANY(m.permissions)))))`,
+];
 
 // SQL predicates (URL bound as $2) that keep media from the hourly orphan
 // cleanup, which deletes unreferenced uploads older than one day together with
@@ -34,4 +44,5 @@ export const retainedMediaReferences = [
   'EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_deleted = FALSE)',
   "EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE '/realm/media/' || ph.media_id::text = $2)",
   "EXISTS(SELECT 1 FROM verification_requests v WHERE $2 IN ('/realm/media/' || v.selfie_media_id::text, '/realm/media/' || v.document_media_id::text))",
+  "EXISTS(SELECT 1 FROM event_images ei WHERE '/realm/media/' || ei.media_id::text = $2)",
 ];

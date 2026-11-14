@@ -245,6 +245,9 @@ export function createRealmConfig(env = process.env) {
     accountTrust: createAccountTrust(env),
     ...createHelpConfig(env),
     ...createInfrastructureConfig(env),
+    events: {
+      reminderIntervalSeconds: parseInteger(env.EVENT_REMINDER_INTERVAL_SECONDS, 60, 'EVENT_REMINDER_INTERVAL_SECONDS', { maximum: 3600 }),
+    },
     organizations: {
       youtubeFeedIntervalMinutes: parseInteger(env.YOUTUBE_FEED_INTERVAL_MINUTES, 60, 'YOUTUBE_FEED_INTERVAL_MINUTES', { maximum: 10080 }),
     },

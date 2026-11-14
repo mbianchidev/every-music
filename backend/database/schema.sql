@@ -1259,8 +1259,10 @@ CREATE TABLE IF NOT EXISTS event_communications (
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     author_id UUID REFERENCES users(id) ON DELETE SET NULL,
     kind TEXT NOT NULL CHECK (kind IN ('door_open', 'cancellation', 'refund', 'lineup_change', 'postponement', 'general')),
-    body TEXT NOT NULL CHECK (length(btrim(body)) BETWEEN 1 AND 4000),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    body TEXT CHECK (length(btrim(body)) BETWEEN 1 AND 4000),
+    automatic BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (automatic OR body IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS idx_event_communications_event ON event_communications(event_id, created_at DESC, id);
 CREATE INDEX IF NOT EXISTS idx_event_communications_author ON event_communications(author_id);

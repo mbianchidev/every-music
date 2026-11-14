@@ -7,6 +7,7 @@ import { secretBox } from '../engines/secret-box.js';
 import { requestError } from '../engines/request-error.js';
 import { exportSections } from '../engines/export-sections.js';
 import { organizationRepository } from './organization-repository.js';
+import { eventRepository } from './event-repository.js';
 
 async function exportFeatureSections(all) {
   const sections = {};
@@ -304,6 +305,7 @@ class AccountRepository {
           SELECT jsonb_agg(entry) FROM jsonb_array_elements(collaborators) entry WHERE entry->>'userId' <> $1::text), '[]'::jsonb)
         WHERE collaborators @> jsonb_build_array(jsonb_build_object('userId', $1::text))`, [userId]);
       await organizationRepository.handOverOnAccountDeletion(executor, userId);
+      await eventRepository.detachOnAccountDeletion(executor, userId);
       await executor.execute('DELETE FROM users WHERE id = $1', [userId]);
       if (reacted.length) {
         await executor.execute(`

@@ -102,4 +102,40 @@ export const exportSections = [
     key: 'marketplaceSavedListings', sql: `
       SELECT listing_id AS "listingId", created_at AS "savedAt" FROM marketplace_saved_listings WHERE user_id = $1 ORDER BY created_at`,
   },
+  {
+    key: 'eventsCreated', sql: `
+      SELECT id, title, description, event_type AS "type", status, visibility, starts_at AS "startsAt", ends_at AS "endsAt",
+        timezone, address, capacity, tickets_sold AS "ticketsSold", owner_user_id = $1 AS "ownedByYou", created_at AS "createdAt"
+      FROM events WHERE owner_user_id = $1 OR created_by = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'eventLineupEntries', sql: `
+      SELECT event_id AS "eventId", role, position, set_starts_at AS "setStartsAt", set_ends_at AS "setEndsAt", created_at AS "createdAt"
+      FROM event_lineup WHERE artist_user_id = $1 ORDER BY created_at`,
+  },
+  {
+    key: 'eventAttendance', sql: `
+      SELECT event_id AS "eventId", status, show_on_profile AS "showOnProfile", created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM event_attendees WHERE user_id = $1 ORDER BY created_at`,
+  },
+  {
+    key: 'eventReminders', sql: `
+      SELECT event_id AS "eventId", offset_minutes AS "offsetMinutes", remind_at AS "remindAt", sent_at AS "sentAt"
+      FROM event_reminders WHERE user_id = $1 ORDER BY remind_at`,
+  },
+  {
+    key: 'eventPostsWritten', sql: `
+      SELECT id, event_id AS "eventId", body, created_at AS "createdAt" FROM event_posts WHERE author_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'eventCommunicationsWritten', sql: `
+      SELECT id, event_id AS "eventId", kind, body, automatic, created_at AS "createdAt"
+      FROM event_communications WHERE author_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'organizationVerificationRequests', sql: `
+      SELECT id, subject_id AS "organizationId", status, request_note AS "note", document_media_id IS NOT NULL AS "documentStored",
+        review_note AS "reviewNote", created_at AS "createdAt", reviewed_at AS "reviewedAt"
+      FROM verification_requests WHERE requested_by = $1 AND subject_type = 'organization' ORDER BY created_at, id`,
+  },
 ];

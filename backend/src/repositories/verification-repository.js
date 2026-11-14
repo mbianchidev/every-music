@@ -3,6 +3,7 @@ import { publishEvent, publishAdminEvent } from './event-publisher.js';
 import { notificationRepository } from './notification-repository.js';
 import { administrationRepository } from './administration-repository.js';
 import { accountRepository } from './account-repository.js';
+import { organizationRepository } from './organization-repository.js';
 import { secretBox } from '../engines/secret-box.js';
 import { requestError } from '../engines/request-error.js';
 import { mediaStorage } from '../engines/media-storage.js';
@@ -102,8 +103,11 @@ class VerificationRepository {
           v.selfie_media_id AS "selfieMediaId", v.document_media_id AS "documentMediaId", v.status,
           v.review_note AS "reviewNote", v.created_at AS "createdAt", v.reviewed_at AS "reviewedAt",
           p.id AS "profileId", COALESCE(p.artist_name, 'Musician') AS "artistName", p.first_name AS "firstName",
-          p.last_name AS "lastName", p.profile_picture_url AS "profilePictureUrl", p.verified_at AS "verifiedAt"
+          p.last_name AS "lastName", p.profile_picture_url AS "profilePictureUrl", p.verified_at AS "verifiedAt",
+          v.request_note AS "requestNote", o.name AS "organizationName", o.kind AS "organizationKind",
+          o.verified_at AS "organizationVerifiedAt"
         FROM verification_requests v LEFT JOIN profiles p ON v.subject_type = 'user' AND p.user_id = v.subject_id
+        LEFT JOIN organizations o ON v.subject_type = 'organization' AND o.id = v.subject_id
         WHERE ($1::text IS NULL OR v.status = $1)
         ORDER BY CASE WHEN $1::text = 'pending' THEN v.created_at END ASC, v.created_at DESC, v.id
         LIMIT $2 OFFSET $3`, [status || null, pageSize + 1, (page - 1) * pageSize]);
@@ -137,12 +141,15 @@ class VerificationRepository {
       const request = rows[0];
       if (!request) throw requestError(404, 'VERIFICATION_NOT_FOUND', 'Verification request not found');
       if (request.status !== 'pending') throw requestError(409, 'VERIFICATION_RESOLVED', 'This request was already decided. Reload the queue.');
-      if (request.subject_id === actorId) throw requestError(403, 'SELF_REVIEW', 'Another administrator must review your own request.');
+      if (request.subject_id === actorId || request.requested_by === actorId) {
+        throw requestError(403, 'SELF_REVIEW', 'Another administrator must review your own request.');
+      }
       const status = decision === 'approve' ? 'approved' : 'rejected';
       await executor.execute(`
         UPDATE verification_requests SET status = $2, reviewer_id = $3, review_note = $4, reviewed_at = NOW(),
           media_purge_after = NOW() + make_interval(days => $5) WHERE id = $1`,
       [requestId, status, actorId, trimmed, retentionDays]);
+      if (request.subject_type === 'organization') return this.decideOrganization(executor, actorId, request, status);
       if (status === 'approved') {
         await executor.execute('UPDATE profiles SET verified_at = NOW() WHERE user_id = $1', [request.subject_id]);
       }
@@ -157,6 +164,28 @@ class VerificationRepository {
       await publishAdminEvent(executor);
       return { id: requestId, status };
     });
+  }
+
+  // Organization pages: approval sets organizations.verified_at; both
+  // outcomes are audited and the requesting leader is notified.
+  async decideOrganization(executor, actorId, request, status) {
+    const member = await executor.execute(`
+      SELECT 1 FROM organization_members WHERE organization_id = $1 AND user_id = $2 AND status = 'active'`, [request.subject_id, actorId]);
+    if (member.rowCount) throw requestError(403, 'SELF_REVIEW', 'Another administrator must review a page you belong to.');
+    const { rows: [organization] } = await executor.execute('SELECT name FROM organizations WHERE id = $1', [request.subject_id]);
+    if (!organization) throw requestError(404, 'ORGANIZATION_NOT_FOUND', 'Organization not found');
+    if (status === 'approved') await organizationRepository.setVerified(executor, actorId, request.subject_id, true);
+    await administrationRepository.audit(executor, actorId, `organization_verification_${status}`, request.subject_id);
+    await notificationRepository.create(executor, {
+      userId: request.requested_by, kind: 'verification_decided', link: `#organization?id=${request.subject_id}`,
+      key: `verification-decided:${request.id}`,
+      title: status === 'approved' ? `Your page "${organization.name}" is now verified` : `The verification request for "${organization.name}" was not approved`,
+      params: { decision: status, subjectType: 'organization', organizationId: request.subject_id, organizationName: organization.name },
+    });
+    await publishEvent(executor, 'organizations.changed', { id: request.subject_id });
+    await publishEvent(executor, 'verification.changed', { userId: request.requested_by });
+    await publishAdminEvent(executor);
+    return { id: request.id, status };
   }
 
   async revoke(actorId, userId) {
