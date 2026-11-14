@@ -2,6 +2,7 @@ import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
 import { useI18n } from '../lib/i18n.js';
+import PromotedLabel from './monetization/PromotedLabel.jsx';
 
 export default function MusicianCard({ musician }) {
   const { t, formatNumber } = useI18n();
@@ -13,7 +14,8 @@ export default function MusicianCard({ musician }) {
         <div><h2 className="heading-md"><a href={`#musician?id=${musician.userId}`}>{name}</a><VerifiedBadge verifiedAt={musician.verifiedAt} /></h2>
           <p><Icon name="location" size={13} /> {musician.place?.label || musician.city || 'Location not specified'}
             {musician.distanceKm !== null && musician.distanceKm !== undefined && <span className="distance"> · {t('places.distanceAway', { distance: formatNumber(musician.distanceKm) })}</span>}</p>
-          {musician.openToProjects && <span className="tag tag-open">{t('profileExtras.openToProjects')}</span>}</div>
+          {musician.openToProjects && <span className="tag tag-open">{t('profileExtras.openToProjects')}</span>}
+          <PromotedLabel promotion={musician.promotion} /></div>
       </div>
       {musician.bio && <p className="announcement-description">{musician.bio}</p>}
       <div className="card-taxonomy">{!!musician.instruments?.length && <div className="tag-list" aria-label="Instruments">

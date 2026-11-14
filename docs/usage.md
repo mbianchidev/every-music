@@ -339,6 +339,50 @@ every mobile device. The section is hidden when the server has no
 [mobile push provider](configuration.md#native-mobile-push) and no device is
 registered. Device tokens are never shown.
 
+### Premium, points, and promotions
+
+Open **Premium and points** in the navigation (on mobile, under **More**). It
+shows your current plan and when it renews or ends, a comparison of what the
+Free, Premium, and Partner plans include, and, when the server has
+[payments configured](monetization.md), **Subscribe** buttons and points packs.
+Paying opens Stripe's secure checkout; after paying you return to the store,
+which updates as soon as Stripe confirms the payment. **Manage billing** opens
+Stripe's portal to change plan, update your card, see invoices, or cancel.
+Without payments the page says so and points still work.
+
+Points never expire. Earn them by inviting friends, rating the app once
+(**Help > Rate the app**), watching sponsored music videos (a few a day), and
+at special events. **Points wallet** shows your balance, ways to earn, the
+sponsored videos you can watch, your promotions, and your points history.
+To earn from a video, select **Watch**, play the video to the end, then
+**Claim** once the short waiting time has passed.
+
+Spend points from the store or wallet on **Premium days**, from **Profile** on
+**Boost my profile**, and from **My calls** with **Promote** on a published
+call: a **boost** lifts the call in matching feed searches everywhere, and a
+**pin** puts it first for people searching in a city and radius you choose
+(wider areas cost more). The dialog shows the cost and your balance before you
+spend. Promoted results are always labelled **Promoted** and only take the top
+few places of a page; promotions end on their own.
+
+**Invite friends** shows your invite link and code. Copy or share the link;
+when a friend creates an account with it and verifies their email, you both
+get points. A friend who signed up without the link (for example with Google)
+can enter your code on their **Invite friends** page during their first week.
+Invite rewards are limited per month.
+
+Feeds and musician search can include a **Sponsored** card: a music-related
+offer chosen by Every.music, never from an ad network, and without tracking.
+Members on a paid plan can turn on **Settings > Sponsored cards > Hide
+sponsored cards**. Offers from Every.music arrive as **Offers** notifications,
+which you can turn off in the notification channels.
+
+Administrators find a **Monetization** console in **Administration**: totals
+(no revenue figures), sponsored cards with targeting, schedule, and an
+optional rewarded video (a linked `https` video file or an upload), offer
+broadcasts, and points grants for events. Card changes, uploads, offers, and
+grants are recorded in the audit log.
+
 ### Themes, analytics, and installation
 
 The **Color theme** control offers System, Light, and Dark. An explicit choice

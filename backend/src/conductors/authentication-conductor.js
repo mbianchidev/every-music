@@ -10,6 +10,7 @@ import { InputValidator } from '../validators/input-validator.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { realmConfig } from '../../config/realm.js';
 import { requestError } from '../engines/request-error.js';
+import { referralRepository } from '../repositories/referral-repository.js';
 
 function sendValidationError(reply, details) {
   return reply.code(400).send({
@@ -96,6 +97,7 @@ export class AuthenticationConductor {
         );
         await musicianRepository.createProfile(identity.id, {}, executor);
         await onboardingRepository.acceptTerms(executor, identity.id, termsVersion, 'registration');
+        identity.inviteRecorded = await referralRepository.recordSignup(executor, identity.id, body.inviteCode);
         return identity;
       });
       const verificationEmailSent = await mailDispatcher.dispatchVerification(
@@ -109,6 +111,7 @@ export class AuthenticationConductor {
           userId: newIdentity.id,
           email: newIdentity.email,
           emailVerified: newIdentity.email_verified,
+          inviteRecorded: newIdentity.inviteRecorded,
           verificationEmailSent,
           message: verificationEmailSent
             ? 'Registration successful. Check your email to verify your account.'
@@ -357,6 +360,12 @@ export class AuthenticationConductor {
             message: 'Verification token is invalid or expired',
           },
         });
+      }
+
+      try {
+        await referralRepository.rewardVerified(identity.id);
+      } catch (error) {
+        request.log.error({ err: error }, 'Referral reward after email verification failed; the monetization job retries it');
       }
 
       return reply.code(200).send({

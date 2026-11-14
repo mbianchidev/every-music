@@ -133,6 +133,7 @@ development packages; store signing is still a manual step.
 - **Help and onboarding:** help center with bug/contact/job forms and an admin inbox, operator-configured legal templates with terms acceptance, a skippable welcome tour, Back controls, update notices, in-app ratings, and branded icons and splash screens.
 - **Hosting and storage:** deploy on Compose, any container host, or Kubernetes; keep media in PostgreSQL or any private S3-compatible bucket (optional bundled SeaweedFS), store encrypted attachment blobs, deliver native Android/iOS push, and build unsigned mobile packages in CI.
 - **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
+- **Premium and points:** Stripe Checkout subscriptions and points packs (disabled without keys), a points wallet earned from invites, ratings, rewarded sponsored videos and events, paid boosts and area pins labelled as promoted, first-party sponsored cards, offer broadcasts, and an admin monetization console.
 
 ### Current limitations
 
@@ -142,7 +143,7 @@ development packages; store signing is still a manual step.
 - Distance, region and country filters use city-level GeoNames coordinates for cities above 15,000 people; towns typed as free text are shown but not found by those filters.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Band update feeds import only public YouTube channel feeds; Spotify and other services need manual updates or releases. Page events are a placeholder until events ship.
-- Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
+- AT Protocol federation is not implemented. Payments run through Stripe on the web; native store builds would need App Store and Google Play billing, which is not implemented (see [monetization](docs/monetization.md#platform-fees-and-app-stores)). The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
 - Desktop and mobile CI provide unsigned development artifacts, not signed/notarized or store releases. The mobile shell does not register for native push yet. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 

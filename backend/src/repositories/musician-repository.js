@@ -155,6 +155,7 @@ export class MusicianRepository {
     if (filters.viewerId) {
       whereConditions.push(`NOT ${blockedBetween(`${add(filters.viewerId)}::uuid`, 'p.user_id')}`);
     }
+    if (filters.userIds) whereConditions.push(`p.user_id = ANY(${add(filters.userIds)}::uuid[])`);
     if (filters.openToProjects !== undefined) {
       whereConditions.push(`${openToProjects} = ${add(filters.openToProjects)}`);
     }

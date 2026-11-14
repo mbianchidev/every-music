@@ -13,6 +13,8 @@ import DiscoveryFilters from '../components/DiscoveryFilters.jsx';
 import SaveSearchButton from '../components/SaveSearchButton.jsx';
 import { discoveryDefaults, hasCenter, searchQuery } from '../lib/discovery.js';
 import { useI18n } from '../lib/i18n.js';
+import { interleaveSponsored } from '../lib/monetization.js';
+import SponsoredCard from '../components/monetization/SponsoredCard.jsx';
 
 const emptyFilters = { searchTerm: '', city: '', instrumentId: '', genreId: '', isRemote: '', createdWithin: '', sort: 'newest', ...discoveryDefaults };
 
@@ -120,8 +122,9 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
           <div className="results-summary"><p role="status">{updating ? 'Updating results...' : rows.length ? `${rows.length} ${profiles ? 'musicians' : 'open calls'} on this page` : 'No matching results. Try different filters.'}</p>
             <span>Page {page}</span></div>
           <div className="grid">
-            {rows.map(item => profiles ? <MusicianCard key={item.id} musician={item} />
-              : <AnnouncementCard key={item.id} post={item} expanded={resource.data.offline} actions={<AnnouncementActions post={item} disabled={resource.data.offline} />} />)}
+            {interleaveSponsored(rows, resource.data.sponsored).map(({ type, item, card, key }) => type === 'sponsored' ? <SponsoredCard key={key} card={card} />
+              : profiles ? <MusicianCard key={key} musician={item} />
+              : <AnnouncementCard key={key} post={item} expanded={resource.data.offline} actions={<AnnouncementActions post={item} disabled={resource.data.offline} />} />)}
           </div>
           <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={updating || resource.data?.offline} />
         </section>

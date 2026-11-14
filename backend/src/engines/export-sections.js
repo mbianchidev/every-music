@@ -102,4 +102,51 @@ export const exportSections = [
     key: 'marketplaceSavedListings', sql: `
       SELECT listing_id AS "listingId", created_at AS "savedAt" FROM marketplace_saved_listings WHERE user_id = $1 ORDER BY created_at`,
   },
+  {
+    key: 'pointsBalance', single: true, sql: `
+      SELECT balance, updated_at AS "updatedAt" FROM points_balances WHERE user_id = $1`,
+  },
+  {
+    key: 'pointsLedger', sql: `
+      SELECT id, delta, reason, balance_after AS "balanceAfter", note, created_at AS "createdAt"
+      FROM points_ledger WHERE user_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'promotions', sql: `
+      SELECT id, kind, announcement_id AS "announcementId", place_label AS "place", radius_km AS "radiusKm",
+        starts_at AS "startsAt", ends_at AS "endsAt", points_spent AS "pointsSpent", created_at AS "createdAt"
+      FROM promotions WHERE user_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'inviteCode', single: true, sql: `
+      SELECT code, created_at AS "createdAt" FROM referral_codes WHERE user_id = $1`,
+  },
+  {
+    key: 'referralsMade', sql: `
+      SELECT status, source, created_at AS "createdAt", rewarded_at AS "rewardedAt" FROM referrals WHERE inviter_id = $1 ORDER BY created_at`,
+  },
+  {
+    key: 'referralReceived', single: true, sql: `
+      SELECT status, source, created_at AS "createdAt", rewarded_at AS "rewardedAt" FROM referrals WHERE invitee_id = $1`,
+  },
+  {
+    key: 'billingSubscriptions', sql: `
+      SELECT id, customer_id AS "customerId", plan, status, current_period_end AS "currentPeriodEnd",
+        cancel_at_period_end AS "cancelAtPeriodEnd", created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM billing_subscriptions WHERE user_id = $1 ORDER BY created_at`,
+  },
+  {
+    key: 'billingCheckouts', sql: `
+      SELECT id, product, pack_id AS "packId", points, status, created_at AS "createdAt", completed_at AS "completedAt"
+      FROM billing_checkout_sessions WHERE user_id = $1 ORDER BY created_at`,
+  },
+  {
+    key: 'rewardedVideoViews', sql: `
+      SELECT card_id AS "sponsoredCardId", status, points, started_at AS "startedAt", completed_at AS "completedAt"
+      FROM rewarded_video_views WHERE user_id = $1 ORDER BY started_at`,
+  },
+  {
+    key: 'sponsoredPreferences', single: true, sql: `
+      SELECT hide_sponsored AS "hideSponsored", updated_at AS "updatedAt" FROM monetization_settings WHERE user_id = $1`,
+  },
 ];

@@ -66,6 +66,10 @@ The body must also include `acceptedTermsVersion` equal to the current
 `termsVersion` from `GET /realm/legal`. Omitting it returns 400
 `TERMS_NOT_ACCEPTED`; a different version returns 409 `TERMS_VERSION_CHANGED`.
 The accepted version and time are stored with the new account.
+An optional `inviteCode` records a referral for the new account (see
+[referrals](#monetization-billing-points-and-sponsored-content)); unknown codes
+never block registration, and the response's `inviteRecorded` says whether it
+was recorded.
 
 Refresh:
 
@@ -250,6 +254,12 @@ detail adds `statsLocked`. The `popular` sort still uses reactions. Detail and
 summaries include `place`, `expiresAt` and (for distance searches)
 `distanceKm`. A call whose owner blocked the viewer returns 404 for detail,
 save, reaction and comment routes.
+
+Search pages for announcements and profiles start with up to
+`PROMOTED_RESULTS_PER_PAGE` paid placements, each marked with
+`promotion: { "kind": "pinned" | "boosted" }`, and include a `sponsored` array
+of `{ position, card }` objects; show each card before the result at
+`position`. See [monetization](#monetization-billing-points-and-sponsored-content).
 
 For relation fields on update:
 
@@ -756,6 +766,84 @@ the values; see [configuration](configuration.md#plans-and-limits). Features
 that exceed a limit return 403 `PLAN_LIMIT_REACHED`. Admin grants and revocations
 are recorded in the audit log.
 
+## Monetization: billing, points and sponsored content
+
+See [monetization](monetization.md) for the model and Stripe setup.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/billing` | `{ enabled, currency, plans[], packs[], plan, entitlements, limits, perks: { free, premium, partner }, subscription, billingAccount }`; works without Stripe (`enabled: false`) |
+| POST | `/realm/billing/checkout` | `{ "product": "premium" \| "partner" \| "points", "packId"? }`, 201 `{ url, sessionId }`; redirect the browser to `url`; at most 10 per hour |
+| POST | `/realm/billing/portal` | 200 `{ url }` of the Stripe customer portal; 404 `BILLING_ACCOUNT_NOT_FOUND` before the first checkout |
+| POST | `/realm/billing/webhook` | Stripe only: raw JSON body with a valid `Stripe-Signature`, 200 `{ received, duplicate }` |
+| GET | `/realm/points` | `{ balance, rules: { earn, spend }, promotions[] }` |
+| GET | `/realm/points/ledger` | Paginated `entries[]` of `{ id, delta, reason, balanceAfter, note, createdAt }`, newest first |
+| POST | `/realm/points/spend` | `{ "kind", "days", "announcementId"?, "placeId"?, "radiusKm"? }`, 201 `{ kind, cost, balance, promotion \| entitlement }`; at most 30 per hour |
+| GET | `/realm/referrals` | `{ code, link, counts: { pending, rewarded, capped }, recent[], rewards, claim: { open, used, status, days } }` |
+| POST | `/realm/referrals/claim` | `{ "code" }`, 201 `{ status, overview }`; at most 10 per hour |
+| GET | `/realm/rewards/videos` | Live rewarded videos `{ videos[], today: { completed, cap } }` |
+| POST | `/realm/rewards/videos/:cardId/views` | 201 `{ token, minimumSeconds, expiresInMinutes }`; abandons the caller's previous open view |
+| POST | `/realm/rewards/views/complete` | `{ "token" }`, 200 `{ points, balance, today }` |
+| POST | `/realm/sponsored/:cardId/click` | Optional authentication; counts one anonymous click, returns `{ linkUrl }` |
+| GET | `/realm/sponsored/:cardId/video` | Public uploaded video of a live card; supports `Range: bytes=` (206/416) |
+| GET/PUT | `/realm/monetization/settings` | `{ hideSponsored, eligible }`; turning hiding on needs a paid plan (403 `PLAN_LIMIT_REACHED`) |
+| GET | `/realm/admin/monetization` | Admin-only aggregates: payments and subscription counts, points earned/spent in 30 days by reason, points outstanding, active promotions, referrals, sponsored totals, recent offers and grants |
+| GET/POST | `/realm/admin/sponsored-cards` | Admin-only paginated list with 30-day totals, or create (201) |
+| PATCH/DELETE | `/realm/admin/sponsored-cards/:cardId` | Admin-only partial edit or deletion |
+| POST | `/realm/admin/sponsored-cards/:cardId/video` | Admin-only `{ "data": "<base64>", "mimeType": "video/mp4" \| "video/webm" }` up to `SPONSORED_VIDEO_BYTE_LIMIT`, 201 |
+| POST | `/realm/admin/offers` | Admin-only `{ "headline", "message", "audience": "all" \| "free" \| "paid", "link"?: "#route" }`, 201 `{ id, recipients }` |
+| POST | `/realm/admin/points/grants` | Admin-only `{ "email", "points": 1-100000, "note" }`, 201 `{ userId, points, balance, entry }` |
+
+Payment routes return 503 `PAYMENTS_DISABLED` unless `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET` are set; Stripe API failures return 502
+`PAYMENT_PROVIDER_ERROR`. Checkout returns 404 `PLAN_NOT_AVAILABLE` or
+`PACK_NOT_FOUND` for unconfigured products and 409 `SUBSCRIPTION_EXISTS` while
+a subscription is active (change plans in the portal). The webhook rejects
+unsigned or altered bodies with 400 `INVALID_SIGNATURE`. Plans and points are
+granted only from these events, never from the checkout return URL.
+
+Spend kinds are `premium_days`, `profile_boost`, `announcement_boost`, and
+`announcement_pin`. `days` must be one of the configured durations
+(`rules.spend.premiumDurations` or `promotionDurations`); pins also need a
+GeoNames `placeId` and `radiusKm` between `pinMinRadiusKm` and
+`pinMaxRadiusKm`. Errors: 400 `INVALID_SPEND`, 404 `ANNOUNCEMENT_NOT_FOUND` for
+someone else's call, 409 `ANNOUNCEMENT_NOT_LIVE` for drafts and expired calls,
+409 `ANNOUNCEMENT_EXPIRES_FIRST` when the call expires before the promotion
+would end, and 409 `INSUFFICIENT_POINTS`. Repeat boosts of one target and
+Premium days queue after the current period. Ledger `reason` values are
+`purchase`, `referral_inviter`, `referral_invitee`, `rewarded_video`,
+`app_rating`, `event_grant`, and the four spend kinds.
+
+Referral claims: 409 `REFERRAL_CLAIM_CLOSED` after `REFERRAL_CLAIM_DAYS`, 409
+`REFERRAL_EXISTS` when already referred, 404 `REFERRAL_CODE_NOT_FOUND`, 400
+`REFERRAL_SELF` or `REFERRAL_RECIPROCAL`. Rewards are credited once the invited
+account's email is verified; inviters beyond `REFERRAL_MONTHLY_CAP` rewarded
+invites this month get status `capped`.
+
+Rewarded views: 404 `VIDEO_NOT_FOUND`, 429 `DAILY_VIDEO_CAP_REACHED`, 409
+`WATCH_TIME_NOT_REACHED` (with the remaining seconds in the message) before
+`minimumSeconds` have passed since the token was issued, and 409
+`VIEW_NOT_ACTIVE` for used, abandoned, expired (after 60 minutes) or foreign
+tokens.
+
+Sponsored card fields: `sponsorName` (2-80), `title` (3-120), `body` (3-600),
+`linkUrl` and `videoUrl` (`https://` only), `linkLabel`, `imageUrl` (an image
+uploaded by the administrator with purpose `sponsored`) with a required
+`imageAlt`, `videoSeconds` (5-600), `rewardPoints` (1-1000, default
+`POINTS_REWARDED_VIDEO`), `placements` (`feed`, `musicians`), `genreIds` and
+`instrumentIds` (up to 20 catalog UUIDs), `placeId` with `radiusKm`, `startsAt`,
+`endsAt`, `priority` (0-100), `maxPerPage` (1-3), and `active`. Public card
+objects in search results contain `id`, `sponsorName`, `title`, `body`,
+`linkUrl`, `linkLabel`, `imageUrl`, `imageAlt`, `rewarded`, and `rewardPoints`.
+Card changes, video uploads, offers and grants are audited as
+`sponsored_card_created`, `sponsored_card_updated`, `sponsored_card_deleted`,
+`sponsored_video_uploaded`, `offer_broadcast`, and `points_granted`.
+
+Notifications: `points_earned` (`{ points, reason }`), `subscription_started`
+and `subscription_ended` (`{ plan }`), `payment_failed` (`{ plan }`), and
+`offers` (`{ headline, message }`). Live events: `points.changed` and
+`entitlements.changed` (to the member) and `sponsored.changed`.
+
 ## Marketplace
 
 | Method | Path | Contract |
@@ -894,7 +982,9 @@ A rating's `appVersion` must be `MAJOR.MINOR.PATCH`, not older than
 `rewarded_at`/`reward_reference` for a later rewards feature: server code can
 lock unrewarded rows with `ratingRepository.unrewarded(executor)` and mark them
 with `ratingRepository.markRewarded(executor, id, reference)` inside the same
-transaction that grants the reward. No points are granted by this API.
+transaction that grants the reward. The monetization job grants
+`POINTS_APP_RATING` points for the first rating of each account and marks later
+ratings processed without points.
 
 ## Analytics
 

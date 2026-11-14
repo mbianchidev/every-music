@@ -42,6 +42,9 @@ const messages = {
       },
       app_update_minor: { subject: 'An Every.music update is available', body: 'A new version of Every.music is available.' },
       app_update_major: { subject: 'A major Every.music update is available', body: 'A new major version of Every.music is available. Update to keep using the latest features.' },
+      subscription_started: { subject: 'Your Every.music plan is active', body: 'Thank you for supporting Every.music. Your paid plan is now active.' },
+      subscription_ended: { subject: 'Your Every.music plan has ended', body: 'You are back on the free plan. You can subscribe again at any time.' },
+      payment_failed: { subject: 'A payment for your Every.music plan failed', body: 'Update your payment method in Manage billing to keep your plan.' },
     },
   },
   nl: {
@@ -82,6 +85,9 @@ const messages = {
       },
       app_update_minor: { subject: 'Er is een update van Every.music beschikbaar', body: 'Er is een nieuwe versie van Every.music beschikbaar.' },
       app_update_major: { subject: 'Er is een grote update van Every.music beschikbaar', body: 'Er is een nieuwe hoofdversie van Every.music beschikbaar. Werk bij om de nieuwste functies te blijven gebruiken.' },
+      subscription_started: { subject: 'Je Every.music-abonnement is actief', body: 'Bedankt dat je Every.music steunt. Je betaalde abonnement is nu actief.' },
+      subscription_ended: { subject: 'Je Every.music-abonnement is beëindigd', body: 'Je gebruikt weer het gratis abonnement. Je kunt op elk moment opnieuw een abonnement nemen.' },
+      payment_failed: { subject: 'Een betaling voor je Every.music-abonnement is mislukt', body: 'Werk je betaalmethode bij via Facturering beheren om je abonnement te houden.' },
     },
   },
   it: {
@@ -122,6 +128,9 @@ const messages = {
       },
       app_update_minor: { subject: 'È disponibile un aggiornamento di Every.music', body: 'È disponibile una nuova versione di Every.music.' },
       app_update_major: { subject: 'È disponibile un aggiornamento importante di Every.music', body: 'È disponibile una nuova versione principale di Every.music. Aggiorna per continuare a usare le funzioni più recenti.' },
+      subscription_started: { subject: 'Il tuo piano Every.music è attivo', body: 'Grazie per sostenere Every.music. Il tuo piano a pagamento è ora attivo.' },
+      subscription_ended: { subject: 'Il tuo piano Every.music è terminato', body: 'Sei tornato al piano gratuito. Puoi abbonarti di nuovo in qualsiasi momento.' },
+      payment_failed: { subject: 'Un pagamento per il tuo piano Every.music non è riuscito', body: 'Aggiorna il metodo di pagamento in Gestisci fatturazione per mantenere il piano.' },
     },
   },
 };

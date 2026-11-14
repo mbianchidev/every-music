@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createECDH } from 'node:crypto';
 import { createInfrastructureConfig, validateInfrastructureConfig } from './infrastructure.js';
+import { createMonetizationConfig, validateMonetizationConfig } from './monetization.js';
 
 const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 
@@ -245,6 +246,7 @@ export function createRealmConfig(env = process.env) {
     accountTrust: createAccountTrust(env),
     ...createHelpConfig(env),
     ...createInfrastructureConfig(env),
+    ...createMonetizationConfig(env),
     organizations: {
       youtubeFeedIntervalMinutes: parseInteger(env.YOUTUBE_FEED_INTERVAL_MINUTES, 60, 'YOUTUBE_FEED_INTERVAL_MINUTES', { maximum: 10080 }),
     },
@@ -305,6 +307,7 @@ export function validateRealmConfig(config = realmConfig) {
   }
   validateAccountTrust(config.accountTrust);
   if (config.mediaStorage) validateInfrastructureConfig(config);
+  if (config.monetization) validateMonetizationConfig(config);
 
   if (config.environment === 'production') {
     const mailValues = [

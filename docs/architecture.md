@@ -18,6 +18,8 @@ Fastify -> SMS provider, Twilio adapter (optional two-step codes)
 Fastify -> FCM / APNs (optional native mobile push, generic payloads)
 Fastify -> S3-compatible object storage (optional media bytes, private bucket)
 Fastify -> https://www.youtube.com/feeds/videos.xml (optional band video import)
+Fastify -> Stripe API (optional checkout, customer portal, customer deletion)
+Stripe -> Fastify /realm/billing/webhook (signed subscription and payment events)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
@@ -307,6 +309,38 @@ fixed host, timeout, and size cap, and stores new videos and follower
 notifications atomically. The client loads organization screens on demand
 through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
 the shell. See the [organization model](organizations.md).
+
+## Monetization
+
+Migration `014_monetization.sql` adds Stripe customers, checkout sessions,
+subscriptions and processed webhook event IDs, an append-only `points_ledger`
+(a trigger rejects edits) with `points_balances`, invite codes and referrals,
+promotions, sponsored cards with aggregate daily statistics, rewarded video
+view tokens, the sponsored-card preference, and offer broadcasts. Routes live
+in `monetization-orchestrator.js`; `billing-conductor.js` handles Stripe and
+`monetization-conductor.js` the rest. `engines/payment-gateway.js` wraps the
+official Stripe SDK (tests inject a stand-in client) and maps subscription
+objects to plans and periods. The webhook route is registered in its own
+encapsulated Fastify scope whose JSON parser keeps the raw bytes for signature
+verification; no other route accepts raw JSON. Each event ID is inserted in the
+same transaction that applies it, so retries and concurrent deliveries apply
+once. Subscriptions become `user_entitlements` rows with source `stripe` and the
+subscription ID as reference; points Premium days use source `points`.
+
+`pointsRepository.adjust` locks the member's balance row, ignores a reference
+it already recorded, rejects negative balances, and appends the ledger entry
+in the caller's transaction. `engines/discovery-placements.js` runs after the
+organic announcement and profile searches: it ranks live promotions (area pins
+matched with the same haversine SQL as distance search, then boosts), re-runs
+them through the same search function and filters restricted to their IDs,
+keeps a per-page slice, and adds targeted sponsored cards with their positions,
+incrementing aggregate impression counters. `MonetizationJobs` runs every
+`MONETIZATION_JOB_INTERVAL_MINUTES` in each API process: rating rewards (rows
+leased with `SKIP LOCKED`), missed referral rewards, deletion in Stripe of
+customers whose account was deleted (`billing_customers.user_id` is set to
+null by the account deletion), and purging old webhook events and view tokens.
+Registration records an `inviteCode`, and email verification rewards the
+referral, with the job as a fallback.
 
 ## Operational boundaries and extension points
 

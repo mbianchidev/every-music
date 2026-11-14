@@ -19,6 +19,8 @@ const sections = [
     { id: 'your-pages', icon: 'feed', labelKey: 'organizations.nav.yours' },
     { id: 'profile', icon: 'user', label: 'Profile' },
     { id: 'analytics', icon: 'chart', label: 'Analytics' },
+    { id: 'store', icon: 'star', labelKey: 'monetization.nav.store' },
+    { id: 'invite', icon: 'people', labelKey: 'monetization.nav.invite' },
     { id: 'help', icon: 'help', label: 'Help' },
     { id: 'settings', icon: 'settings', label: 'Settings' },
   ] },
@@ -44,7 +46,8 @@ export default function Navigation({ routeName, unreadCount = 0, isAdmin = false
   }, []);
   const current = ({ musician: 'musicians', announcement: 'feed', 'edit-profile': 'profile', 'edit-announcement': 'my-posts',
     listing: 'marketplace', 'new-listing': 'marketplace', 'edit-listing': 'marketplace', 'my-listings': 'marketplace', 'saved-listings': 'marketplace',
-    organization: 'organizations', 'create-organization': 'your-pages', 'edit-organization': 'your-pages', 'organization-members': 'your-pages' })[routeName] || routeName;
+    organization: 'organizations', 'create-organization': 'your-pages', 'edit-organization': 'your-pages', 'organization-members': 'your-pages',
+    wallet: 'store' })[routeName] || routeName;
   const close = () => dialog.current.close();
   const navigate = event => {
     navigating.current = event.currentTarget.hash !== window.location.hash;

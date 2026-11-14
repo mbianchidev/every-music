@@ -685,6 +685,34 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .organization-card { padding: 18px; }
   .inline-list { gap: 8px 14px; }
 }
+/* w7-monetization */
+.tag-promoted { gap: 4px; margin: 0 0 10px; border: 1px solid currentColor; background: var(--surface); color: var(--brand-ink); }
+.tag-sponsored { border: 1px solid var(--control-border); background: var(--surface-raised); color: var(--paper); }
+.sponsored-card { border-style: dashed; border-color: var(--control-border); }
+.sponsored-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.sponsored-card .card-footer { flex-wrap: wrap; gap: 10px; }
+.store-plans, .store-packs, .wallet-videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px; margin: 16px 0; padding: 0; list-style: none; }
+.store-plans .card, .store-packs .card, .wallet-videos .card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; box-shadow: none; }
+.store-plans h3, .wallet-videos h3 { margin: 0; }
+.store-price { margin: 0; font-size: 20px; font-weight: 700; }
+.store-current { display: grid; gap: 8px; justify-items: start; margin-bottom: 20px; }
+.store-current p { margin: 0; }
+.wallet-balance { grid-template-columns: minmax(0, 320px); }
+.wallet-earn { display: grid; gap: 8px; padding-left: 20px; }
+.wallet-promotions li { flex-direction: column; align-items: flex-start; }
+.spend-summary { padding: 12px 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-raised); }
+.spend-summary p { margin: 0 0 4px; }
+.rewarded-video { display: block; width: 100%; max-height: 50vh; border-radius: 8px; background: #000; }
+.invite-link { display: grid; gap: 12px; }
+.invite-link p { margin: 0; }
+.monetization-console > .compact-actions { margin: 12px 0 16px; }
+.monetization-metrics { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.monetization-metrics dd { font-size: 22px; }
+.sponsored-form { margin: 16px 0; box-shadow: none; }
+@media (max-width: 480px) {
+  .store-price { font-size: 18px; }
+  .wallet-balance { grid-template-columns: minmax(0, 1fr); }
+}
 `;
 
 export default styles;

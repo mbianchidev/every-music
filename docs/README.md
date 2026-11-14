@@ -14,6 +14,7 @@
 | [API reference](api.md) | Integrate discovery, accounts, images, projects, messages, notifications, analytics, and live events |
 | [Messaging security and administration](messaging-security.md) | Understand E2EE/recovery limits, reports, admin roles, moderation and platform analytics |
 | [Organizations](organizations.md) | Understand band, venue, organizer, agency and label pages, memberships, permissions and claims |
+| [Monetization](monetization.md) | Set up Stripe plans and points packs, understand points, promotions, sponsored cards, fees and app-store limits |
 
 ## Developing Every.music
 

@@ -4,6 +4,7 @@ import ManagedImage from './ManagedImage.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
 import { useI18n } from '../lib/i18n.js';
 import OrganizationByline from './OrganizationByline.jsx';
+import PromotedLabel from './monetization/PromotedLabel.jsx';
 
 const AnnouncementCard = ({ post, actions, expanded = false }) => {
   const { t, formatNumber } = useI18n();
@@ -17,6 +18,7 @@ const AnnouncementCard = ({ post, actions, expanded = false }) => {
         {post.isCoverBand && <span className="tag tag-muted">Covers</span>}
       </div>}
       <OrganizationByline organization={post.organization} />
+      <PromotedLabel promotion={post.promotion} />
       <div className="call-card-heading">
         <h2 className="heading-md"><a href={`#announcement?id=${post.id}`}>{post.title}</a></h2>
         {post.pictureUrl && <ManagedImage className="call-thumbnail" src={post.pictureUrl} authenticated={post.isPublished === false} alt={`Announcement image: ${post.title}`} width="72" height="72" loading="lazy" />}

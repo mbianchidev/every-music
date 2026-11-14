@@ -10,6 +10,7 @@ import { placeFields, resolveLocation, validatePlaceId } from './discovery-condu
 import {
   CONTACT_VISIBILITY, PROFILE_LINK_TYPES, canSeeContacts, limitShown, normalizeContact, validateContact,
 } from '../engines/profile-policy.js';
+import { placeProfiles, withPromotion } from '../engines/discovery-placements.js';
 
 const contactFields = ['phone', 'telegramId', 'whatsapp', 'signal'];
 
@@ -188,11 +189,16 @@ export class MusicianConductor {
         limit: pagination.pageSize + 1,
       });
       const hasMore = profiles.length > pagination.pageSize;
+      const placed = await placeProfiles({
+        search: (...args) => musicianRepository.searchProfiles(...args), filters, page: pagination.page,
+        rows: profiles.slice(0, pagination.pageSize),
+      });
 
       return reply.code(200).send({
         success: true,
         data: {
-          profiles: profiles.slice(0, pagination.pageSize).map(p => this.transformBasicProfile(p)),
+          profiles: placed.rows.map(p => withPromotion(p, this.transformBasicProfile(p))),
+          sponsored: placed.sponsored,
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
