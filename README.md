@@ -6,7 +6,7 @@
 
 [![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
 
-Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, browse opportunities, and build a musician profile using a React web client backed by a Fastify API and PostgreSQL.
+Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, build a musician or band profile, join a community of bands, venues, and fans, find events and gear, and keep your band organized, using a React web client backed by a Fastify API and PostgreSQL.
 
 ## Contents
 
@@ -71,11 +71,11 @@ Compose initializes a new database volume with the schema and instrument/genre c
 
 ## Why Every.music
 
-Keep your musician profile, open calls, and bookmarked opportunities in one place. Announcements describe the collaborator you need, including whether remote collaboration is welcome. Self-hosting keeps the deployment and database under your control, at the cost of operating the API, PostgreSQL, and SMTP.
+Keep your musician profile, open calls, and bookmarked opportunities in one place. Announcements describe the collaborator you need, including whether remote collaboration is welcome. Self-hosting keeps the deployment and database under your control, at the cost of operating the API, PostgreSQL, and SMTP. The stack runs on Docker Compose for a local proof of concept and on any container host or Kubernetes cluster with managed PostgreSQL and S3-compatible storage; see [deployment](docs/deployment.md).
 
 ## How it works
 
-The React client calls the Fastify API under `/realm`; the API stores accounts, profiles, announcements, and bookmarks in PostgreSQL. Compose runs the database, API, and nginx web server together. The same client is wrapped by Tauri for native builds.
+The React client calls the Fastify API under `/realm`; the API stores all application data in PostgreSQL and media in PostgreSQL or an optional S3-compatible bucket. Compose runs the database, API, and nginx web server together, with an optional SeaweedFS object store. SMTP, Stripe, Twilio, Web Push, FCM, and APNs are optional integrations that stay off until configured. The same client is wrapped by Tauri for native builds.
 
 ### Stack and platforms
 
@@ -116,7 +116,7 @@ development packages; store signing is still a manual step.
 ## Implemented features
 
 - **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
-- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators and roles.
+- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators, roles, and the instruments you played.
 - **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
 - **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
@@ -125,7 +125,7 @@ development packages; store signing is still a manual step.
 - **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Languages:** the whole interface in English, Dutch, and Italian, chosen on the sign-in screen or in Settings, saved to the account, with localized dates, numbers, and server errors.
-- **Notification channels:** per-type in-app, push, and email choices, localized privacy-safe email, weekly statistics digests, and come-back/invite reminders.
+- **Notification channels:** per-type in-app, push, and email choices, privacy-safe email and push text in every supported language, weekly statistics digests, and come-back/invite reminders.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
 - **Marketplace:** buy, sell, and request gear, offer lessons and services, hire crew, and post endorsements, with filters, photos, saved listings, encrypted contact, reports, moderation, and expiry reminders; payments happen off-platform.
@@ -136,8 +136,7 @@ development packages; store signing is still a manual step.
 - **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
 - **Premium and points:** Stripe Checkout subscriptions and points packs (disabled without keys), a points wallet earned from invites, ratings, rewarded sponsored videos and events, paid boosts and area pins labelled as promoted, first-party sponsored cards, offer broadcasts, and an admin monetization console.
 - **Events:** concerts and festivals with linked lineups, organizers, venues with map links, time zones, capacity and tickets sold, external ticket links, search and filters, going/interested replies, calendar files, reminders, an attendee discussion, official organizer updates, past and next events on pages and profiles, and page verification requests.
-- **Band collaboration:** band and personal calendars with invitees, RSVPs, reminders, map links, ICS files and private Google/Apple Calendar feeds; an end-to-end encrypted band chat with encrypted audio and pictures; artist reviews approved by the artist; and anonymous star ratings.
-- **Finishing touches:** instruments played in each musical project, unread band chat counts next to Your pages, and every notification type localized in English, Dutch, and Italian in the app, email, and push.
+- **Band collaboration:** band and personal calendars with invitees, RSVPs, reminders, map links, ICS files and private Google/Apple Calendar feeds; an end-to-end encrypted band chat with encrypted audio and pictures and unread counts; artist reviews approved by the artist; and anonymous star ratings.
 
 ### Current limitations
 
