@@ -101,7 +101,8 @@ export class PushDispatcher {
       AND NOT EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)
       AND NOT EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)
       AND NOT EXISTS(SELECT 1 FROM organizations o WHERE o.picture_url = '/realm/media/' || m.id AND o.is_deleted = FALSE)
-      AND NOT EXISTS(SELECT 1 FROM organization_photos ph WHERE ph.url = '/realm/media/' || m.id)`);
+      AND NOT EXISTS(SELECT 1 FROM organization_photos ph JOIN organizations o ON o.id = ph.organization_id
+        WHERE ph.url = '/realm/media/' || m.id AND o.is_deleted = FALSE)`);
     this.lastMaintenance = Date.now();
   }
 
