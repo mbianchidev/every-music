@@ -173,8 +173,9 @@ The user can enable up to five browsers or disable all devices in Settings.
 Only Chrome/FCM, Mozilla, Apple, and Windows browser push endpoints are accepted;
 arbitrary webhook URLs and non-HTTPS services are rejected.
 
-Push payloads contain a generic event title and a protected app link, never
-message text. Delivery is best-effort, with up to three attempts; expired
+Push payloads contain generic text for the notification type in the
+recipient's language (English, Dutch, or Italian; English when no language is
+chosen) and a protected app link, never message text or other private content. Delivery is best-effort, with up to three attempts; expired
 subscriptions are removed. Check API logs for delivery errors. Google and push
 provider behavior needs live credentials/platform permission testing.
 
@@ -292,7 +293,7 @@ all of its settings are present; partial or malformed settings stop startup.
   Use `APNS_ENVIRONMENT=sandbox` for development-signed builds.
 
 Devices register through `POST /realm/push/devices`. Payloads contain the same
-generic title and app link as Web Push, never message text. Unregistered tokens
+localized generic title, body, and app link as Web Push, never message text. Unregistered tokens
 are removed automatically and failed deliveries are retried up to three times.
 The Tauri mobile shell does not register device tokens yet; see
 [mobile push](mobile.md#native-push-notifications).

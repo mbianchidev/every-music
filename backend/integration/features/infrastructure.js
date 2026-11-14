@@ -326,7 +326,9 @@ test('infrastructure: media storage drivers, encrypted blobs, and native push de
     await dispatcher.dispatch();
     assert.equal(sent.length, 2);
     for (const { payload } of sent) {
-      assert.deepEqual(payload, { title: 'Every.music', body: 'You have a new message', tag: notificationId, url: '#messages' });
+      assert.deepEqual(payload, {
+        title: 'You have a new message', body: 'A musician sent you a new message. Open Every.music to read it.', tag: notificationId, url: '#messages',
+      });
     }
     assert.equal((await realmConnector.execute('SELECT push_sent FROM notifications WHERE id = $1', [notificationId])).rows[0].push_sent, true);
     assert.deepEqual((await call('/push/devices', { actor: 1 })).devices.map(device => device.platform), ['android'], 'unregistered tokens are removed');

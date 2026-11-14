@@ -222,6 +222,12 @@ with a picture and an audio file between two real browser identities, reports
 a message with signed evidence, and approves a review and saves an anonymous
 rating, with axe and 320px checks. It mints sessions with the browser server's
 synthetic keys and seeds the published rating snapshot directly.
+`e2e/polish-backend.spec.js` picks and removes the instruments played in a
+musical project and checks them on the public profile, reads localized
+notification titles and preference labels in an Italian browser, and checks
+the unread band chat count next to **Your pages**, with axe and 320px checks.
+It seeds opaque synthetic band chat ciphertext only to count unread messages
+and mints sessions instead of using the sign-in form.
 The Google browser server is a loopback-only integration entrypoint requiring
 `REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
 not the production server and must never be exposed as one.
@@ -340,6 +346,10 @@ ratings. It is additive and idempotent; rolling back the application leaves
 the tables unused. Do not drop band chat messages or attachments as an
 automatic rollback.
 
+Migration `017_project_instruments.sql` adds `project_instruments`, the
+catalog instruments played in each musical project. It is additive and
+idempotent; rolling back the application leaves the table unused.
+
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.
 Legacy plaintext is retained and labelled; deleted tombstones are cleared.
@@ -388,7 +398,13 @@ seed and manifest together.
   automatically; missing translations fall back to English.
 - Create notifications with `notificationRepository` and a kind from
   `backend/src/engines/notification-catalog.js`; pass `params` so clients can
-  localize them.
+  localize them. A new kind also needs a `label`, `title`, and `detail` in
+  `frontend/src/locales/*/notifications.js` (with a group in
+  `frontend/src/lib/notification-text.js`) and an email and push `subject` and
+  `body` in `backend/src/engines/notification-email.js` for `en`, `nl`, and
+  `it`; backend and frontend unit tests fail until all of them exist. Email and
+  push text may use numeric params and the enumerated params in
+  `NOTIFICATION_SELECTORS`, never names, titles, or message text.
 - Check plan limits with `entitlementRepository` instead of hard-coding them.
 - Register publicly visible managed images in
   `backend/src/engines/media-references.js`.

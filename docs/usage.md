@@ -126,6 +126,9 @@ return to the requested detail after sign-in.
 
 In Edit profile, the separate **Musical projects** form creates, edits, and
 removes projects with music links, collaborator search, and individual roles.
+Under **Instruments played**, choose up to 10 instruments from **Add an
+instrument** and remove them with **Remove ... from this project**; your profile
+lists them on each project card.
 Projects save independently of the profile form. Profile and announcement
 images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
 uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
@@ -327,6 +330,10 @@ New members cannot read messages from before they joined, and leaving the
 band ends access. Use **Report message** to send one decrypted message to
 administrators; attachments are not shared with the report.
 
+Unread band chat messages show as a count next to **Your pages** in the
+navigation. **Your pages** also lists **Band chats** with the unread messages
+of each band and an **Open the ... chat** link; reading a chat clears its count.
+
 ### Reviews and anonymous ratings
 
 Artist profiles show **Reviews** and **Anonymous rating**. While you and an
@@ -381,7 +388,8 @@ follower and following counts. Notifications also include messages, comments,
 reactions, and optional daily profile-view alerts. The notification center has
 read controls and pagination. Settings controls categories and optional
 browser push; permission is requested only when you choose to enable it.
-Push is generic and excludes message text. Configure the
+Push uses short generic text in your chosen language and excludes message
+text, names, and other private content. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
 
 Under **Notification channels** in Settings (or **Manage notification settings**

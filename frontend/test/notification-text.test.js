@@ -4,7 +4,11 @@ import { registerCatalog, translate } from '../src/lib/i18n.js';
 import english from '../src/locales/en/notifications.js';
 import dutch from '../src/locales/nl/notifications.js';
 import italian from '../src/locales/it/notifications.js';
-import { groupNotificationKinds, notificationKindLabel, notificationText } from '../src/lib/notification-text.js';
+import {
+  NOTIFICATION_SELECTORS, groupNotificationKinds, notificationKindLabel, notificationText,
+} from '../src/lib/notification-text.js';
+import { notificationKinds } from '../../backend/src/engines/notification-catalog.js';
+import { NOTIFICATION_SELECTORS as SERVER_SELECTORS, notificationTemplates } from '../../backend/src/engines/notification-email.js';
 
 registerCatalog('en', 'notifications', english);
 registerCatalog('nl', 'notifications', dutch);
@@ -22,9 +26,12 @@ test('every locale translates the same notification keys and placeholders', () =
   for (const catalog of [dutch, italian]) {
     assert.deepEqual(shape(catalog), shape(english));
     for (const [kind, messages] of Object.entries(english.kinds)) {
+      const names = text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
       for (const key of ['title', 'detail']) {
-        const names = text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
         assert.deepEqual(names(catalog.kinds[kind][key]), names(messages[key]), `${kind}.${key}`);
+      }
+      for (const [value, title] of Object.entries(messages.cases ?? {})) {
+        assert.deepEqual(names(catalog.kinds[kind].cases[value]), names(title), `${kind}.cases.${value}`);
       }
     }
   }
@@ -50,4 +57,40 @@ test('preference kinds are grouped and unknown kinds stay visible', () => {
   ]);
   assert.equal(notificationKindLabel(i18n('en').t, 'brand_new_kind'), 'Brand new kind');
   assert.equal(notificationKindLabel(i18n('nl').t, 'come_back'), 'Herinnering na een lange pauze');
+});
+
+test('every server notification kind has client text, a preference label, and a group in every locale', () => {
+  for (const kind of Object.keys(notificationKinds)) {
+    for (const [locale, catalog] of [['en', english], ['nl', dutch], ['it', italian]]) {
+      const messages = catalog.kinds[kind];
+      assert.ok(messages, `${locale} notifications.kinds.${kind}`);
+      assert.ok(messages.label?.trim(), `${locale} ${kind} preference label`);
+      assert.ok(messages.title?.trim(), `${locale} ${kind} title`);
+      assert.equal(typeof messages.detail, 'string', `${locale} ${kind} detail`);
+    }
+    assert.notEqual(groupNotificationKinds([{ kind }])[0].group, 'other', `${kind} belongs to a preference group`);
+  }
+  assert.deepEqual(NOTIFICATION_SELECTORS, SERVER_SELECTORS, 'the client picks titles from the same params as email and push');
+  for (const kind of Object.keys(NOTIFICATION_SELECTORS)) {
+    assert.deepEqual(Object.keys(english.kinds[kind].cases).sort(), Object.keys(notificationTemplates.en.kinds[kind].cases).sort(), `${kind} cases`);
+  }
+});
+
+test('enumerated params pick a localized title and incomplete params fall back', () => {
+  assert.equal(notificationText(i18n('it'), {
+    kind: 'application_status', title: 'Your application was accepted', params: { status: 'accepted', title: 'Synthetic call' },
+  }).title, 'La tua candidatura è stata accettata');
+  assert.equal(notificationText(i18n('nl'), {
+    kind: 'organization_membership', title: 'x', params: { change: 'leader', organizationName: 'Synthetic band' },
+  }).title, 'Je bent nu de leider van Synthetic band');
+  assert.equal(notificationText(i18n('en'), {
+    kind: 'organization_membership', title: 'x', params: { response: 'accepted', name: null, organizationName: 'Synthetic band' },
+  }).title, 'Your membership of Synthetic band changed', 'a case missing a param uses the generic localized title');
+  assert.equal(notificationText(i18n('en'), {
+    kind: 'security_alert', title: 'Server title', params: { event: 'hasOwnProperty' },
+  }).title, 'Security alert for your account');
+  assert.equal(notificationText(i18n('en'), {
+    kind: 'organization_claim', title: 'Server title', params: { outcome: 'approved' },
+  }).title, 'Server title');
+  assert.equal(notificationKindLabel(i18n('it').t, 'security_alert'), 'Avvisi di sicurezza');
 });

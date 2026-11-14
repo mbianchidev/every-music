@@ -194,6 +194,14 @@ Project create/update accepts `name` (required on create, 1-255 characters),
 (HTTP/S URLs up to 2048), and `collaborators`. Collaborators are at most 20
 distinct `{ "userId": "<existing active user>", "role": "<1-100 characters>" }`
 objects. Omit collaborators to leave them unchanged; send `[]` to clear.
+`instrumentIds` lists the instruments played in the project: up to 10 distinct
+catalog instrument IDs (duplicates are merged). Omit it to leave the
+instruments unchanged and send `[]` to clear them; `null`, non-UUID values, or
+more than 10 instruments return 400 `VALIDATION_ERROR`, and IDs missing from
+`GET /realm/catalog/instruments` return 400 `INVALID_INSTRUMENT` without
+changing the project. Create/update responses and every profile's `projects`
+include `instruments`: `[{ "instrument_id", "name", "category" }]` sorted by
+name.
 Create returns 201; update/delete return 200. Foreign projects return 404.
 
 Profiles also return `accountKind` (`artist` or `music_lover`), which
@@ -636,7 +644,8 @@ All require authentication. Notification objects contain `id`, `kind`,
 fallback; clients localize from `kind` and the `params` object. Kinds and their
 in-app/push/email defaults are defined in
 `backend/src/engines/notification-catalog.js`; kinds without an in-app channel
-are never listed. Preferences are `messages`,
+are never listed. The web client has localized text for every kind; see
+[notification text](#notification-text). Preferences are `messages`,
 `announcements`, `engagements` (default true), `profileViews`, `push`, and
 `analytics`, and `platformAnalytics` (default false), plus the optional
 interface `locale` (`en`, `nl`, or `it`; `null` until chosen). Platform consent requires
@@ -723,6 +732,26 @@ inactive users at most once per inactivity period, and `invite_friends`
 [configuration](configuration.md#notification-email-and-scheduled-notifications)
 for intervals and thresholds.
 
+### Notification text
+
+Every kind in `backend/src/engines/notification-catalog.js` has English, Dutch,
+and Italian text in three places, and unit tests fail when one is missing:
+
+- the web client (`frontend/src/locales/<locale>/notifications.js`): a
+  preference `label`, an in-app `title`, and an optional `detail`, filled from
+  `params` (names and titles may appear in the app);
+- email and push (`backend/src/engines/notification-email.js`): a `subject`
+  and `body` filled only from numeric `params`.
+
+A few params pick a more specific text from a fixed list, both in the client
+and in email and push: `application_status.status`, `security_alert.event`,
+`verification_requested.subjectType`, `verification_decided.decision`,
+`organization_membership.response` or `change`, `organization_update.source`,
+`organization_relation.status`, `organization_claim.outcome`,
+`event_communication.communicationKind`, and `calendar_invite.change`. Other
+values use the kind's generic text, so free text never reaches an email or a
+push provider. Kinds unknown to an older client fall back to the English `title`.
+
 ## Mobile push devices
 
 | Method | Path | Contract |
@@ -742,11 +771,13 @@ Registering an existing token moves it to the caller,
 refreshes `updatedAt`, and enables the `push` preference. Tokens are never
 returned. Disabling `push` in preferences removes every device.
 
-Native and browser push share one delivery worker and payload: a generic
-`Every.music` title, the notification's English fallback title as body, the
-notification ID, and its app link. Message text is never sent. Tokens that the
-provider reports as unregistered are deleted; other failures are retried up to
-three times.
+Native and browser push share one delivery worker and payload: a `title` and
+`body` built from the notification kind in the recipient's language
+(`user_preferences.locale`, English when unset), the notification ID, and its
+app link. They use the same generic templates as notification email, never the
+stored English title, names, message text, or other private content. Tokens
+that the provider reports as unregistered are deleted; other failures are
+retried up to three times.
 
 ## Plans and limits
 
@@ -1275,8 +1306,9 @@ text only for legacy unencrypted messages you sent), public `messagingKeys`,
 `entitlements`, `pushSubscriptions` (service origin only), and
 `verificationRequests`, plus the feature sections of the export registry, such
 as `eventsCreated`, `eventLineupEntries`, `eventAttendance`, `eventReminders`,
-`eventPostsWritten`, `eventCommunicationsWritten`, and
-`organizationVerificationRequests`. It never contains password or token hashes, recovery
+`eventPostsWritten`, `eventCommunicationsWritten`,
+`organizationVerificationRequests`, and `projectInstruments` (project ID and
+name with each instrument played). It never contains password or token hashes, recovery
 code hashes, encrypted message ciphertext, encrypted key backups, received
 message contents, other people's email addresses, or reports filed about you.
 
@@ -1424,7 +1456,7 @@ their current period.
 
 | Method | Path | Contract |
 |---|---|---|
-| GET | `/realm/band-chats` | Your bands' chats with `unreadCount` and `lastMessageAt` |
+| GET | `/realm/band-chats` | Your bands' chats with `organizationId`, `name`, `slug`, `pictureUrl`, `unreadCount`, and `lastMessageAt`; the web client shows the unread total next to **Your pages** and per band on that page |
 | GET | `/realm/organizations/:organizationId/chat` | Paged `messages` (newest first), sender `keys`, and `chat: { organizationId, name, joinedAt, readAt, unreadCount, members, limits }`; members list `userId`, `name`, current `key` (or `null`) and `canReceive` |
 | PATCH | `/realm/organizations/:organizationId/chat` | `{ "read": true }` marks the chat and its `band_message` notifications read |
 | POST | `/realm/organizations/:organizationId/chat/messages` | `{ clientId, ciphertext, senderKeyId, recipientKeyIds, attachmentIds? }`, 201; 60 per minute |

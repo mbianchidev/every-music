@@ -244,4 +244,11 @@ export const exportSections = [
         published_at AS "publishedAt"
       FROM profile_rating_stats WHERE subject_id = $1`,
   },
+  {
+    key: 'projectInstruments', sql: `
+      SELECT pr.id AS "projectId", pr.name AS "projectName", i.name AS "instrument", pi.created_at AS "createdAt"
+      FROM project_instruments pi JOIN projects pr ON pr.id = pi.project_id JOIN profiles p ON p.id = pr.profile_id
+      JOIN instruments i ON i.id = pi.instrument_id
+      WHERE p.user_id = $1 ORDER BY pr.created_at, pr.id, i.name`,
+  },
 ];

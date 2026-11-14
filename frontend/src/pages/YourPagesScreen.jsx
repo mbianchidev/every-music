@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.jsx';
 import OrganizationCard from '../components/OrganizationCard.jsx';
 import { PostList } from '../components/OrganizationPosts.jsx';
 import Icon from '../components/Icon.jsx';
+import BandChatUnreadList from '../components/BandChatUnreadList.jsx';
 
 export default function YourPagesScreen() {
   const { t } = useI18n();
@@ -84,6 +85,7 @@ export default function YourPagesScreen() {
           </OrganizationCard>)}</div>}
         </section>
       </>}
+      <BandChatUnreadList />
       <section className="detail-section" aria-labelledby="updates-heading">
         <h2 className="heading-md" id="updates-heading" tabIndex="-1">{t('organizations.yours.updates')}</h2>
         {updates.error && <ErrorState message={updates.error} onRetry={updates.reload} />}

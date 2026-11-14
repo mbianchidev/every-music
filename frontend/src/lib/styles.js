@@ -802,6 +802,16 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .band-chat-log { padding: 8px; }
   .rsvp-option { flex: 1 1 auto; justify-content: center; }
 }
+/* polish-backend */
+.project-instrument-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.project-instrument-choices li { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.project-list ul.tag-list { padding: 0; list-style: none; }
+.band-chat-nav-badge { flex: none; }
+.band-chat-unread-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.band-chat-unread-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
+.band-chat-unread-list li.has-unread { border-color: var(--brand-ink); background: var(--brand-soft); }
+.band-chat-unread-list a { font-weight: 600; }
+.band-chat-count { color: var(--brand-ink); font-weight: 700; }
 `;
 
 export default styles;

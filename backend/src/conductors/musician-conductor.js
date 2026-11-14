@@ -1,4 +1,4 @@
-import { musicianRepository } from '../repositories/musician-repository.js';
+import { MAX_PROJECT_INSTRUMENTS, musicianRepository } from '../repositories/musician-repository.js';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { communityRepository, publishEvent } from '../repositories/community-repository.js';
@@ -277,6 +277,10 @@ export class MusicianConductor {
       InputValidator.validateUrl(projectData.soundcloudLink),
       InputValidator.validateUrl(projectData.websiteLink),
       InputValidator.validateCollaborators(projectData.collaborators),
+      InputValidator.validateUuidArray(projectData.instrumentIds, 'Instrument IDs'),
+      Array.isArray(projectData.instrumentIds) && new Set(projectData.instrumentIds.map(id => String(id).toLowerCase())).size > MAX_PROJECT_INSTRUMENTS
+        ? { valid: false, message: `Choose at most ${MAX_PROJECT_INSTRUMENTS} instruments for a project` } : { valid: true },
+      projectData.instrumentIds === null ? { valid: false, message: 'Use an empty list to clear instruments' } : { valid: true },
     );
 
     if (validations) {
@@ -319,8 +323,11 @@ export class MusicianConductor {
           ? await musicianRepository.updateProject(projectId, profile.id, projectData, executor)
           : await musicianRepository.addProject(profile.id, projectData, executor);
         if (!saved) throw requestError(404, 'PROJECT_NOT_FOUND', 'Project not found or does not belong to you');
+        if (projectData.instrumentIds !== undefined) {
+          await musicianRepository.attachProjectInstruments(saved.id, projectData.instrumentIds, executor);
+        }
         await publishEvent(executor, 'profiles.changed', { id: userId });
-        return saved;
+        return { ...saved, instruments: await musicianRepository.projectInstruments(saved.id, executor) };
       });
 
       return reply.code(projectId ? 200 : 201).send({

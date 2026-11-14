@@ -2,11 +2,16 @@ import { realmConnector } from './realm-connector.js';
 import { placeJoinColumns } from './place-repository.js';
 import { blockedBetween } from './social-repository.js';
 import { proximity } from '../engines/geo.js';
+import { requestError } from '../engines/request-error.js';
 
 export const activeAnnouncementOf = column => `EXISTS (SELECT 1 FROM announcements oa
   WHERE oa.user_id = ${column} AND oa.is_published = TRUE AND oa.is_deleted = FALSE
     AND (oa.expires_at IS NULL OR oa.expires_at > NOW()))`;
 const openToProjects = `(p.open_to_projects OR ${activeAnnouncementOf('p.user_id')})`;
+export const MAX_PROJECT_INSTRUMENTS = 10;
+const projectInstruments = alias => `COALESCE((SELECT jsonb_agg(jsonb_build_object(
+    'instrument_id', i.id, 'name', i.name, 'category', i.category) ORDER BY i.name, i.id)
+  FROM project_instruments pi JOIN instruments i ON i.id = pi.instrument_id WHERE pi.project_id = ${alias}.id), '[]'::jsonb)`;
 
 export class MusicianRepository {
   async findByUserId(userId, executor = realmConnector, viewerId = null) {
@@ -43,7 +48,8 @@ export class MusicianRepository {
                  SELECT jsonb_agg(c.value || jsonb_build_object('artistName', COALESCE(cp.artist_name, 'Musician')))
                  FROM jsonb_array_elements(pr.collaborators) c
                  LEFT JOIN profiles cp ON cp.user_id = (c.value->>'userId')::uuid
-               ), '[]'::jsonb)
+               ), '[]'::jsonb),
+               'instruments', ${projectInstruments('pr')}
              ) ORDER BY pr.created_at DESC, pr.id) FROM projects pr WHERE pr.profile_id = p.id) AS projects
       FROM profiles p
       JOIN users u ON u.id = p.user_id
@@ -333,6 +339,30 @@ export class MusicianRepository {
       WHERE id = $1 AND profile_id = $2 RETURNING *`,
     [projectId, profileId, ...entries.map(([key]) => key === 'collaborators' ? JSON.stringify(data[key]) : data[key])]);
     return rows[0] || null;
+  }
+
+  // Replaces the project's instruments; callers skip this when the field was
+  // omitted. Unknown catalog IDs are rejected so nothing is silently dropped.
+  async attachProjectInstruments(projectId, instrumentIds, executor = realmConnector) {
+    const ids = [...new Set(instrumentIds.map(id => id.toLowerCase()))];
+    if (ids.length) {
+      const { rows: [{ count }] } = await executor.execute(
+        'SELECT COUNT(*)::int AS count FROM instruments WHERE id = ANY($1::uuid[])', [ids]);
+      if (count !== ids.length) {
+        throw requestError(400, 'INVALID_INSTRUMENT', 'Choose instruments from the catalog');
+      }
+    }
+    await executor.execute('DELETE FROM project_instruments WHERE project_id = $1 AND NOT (instrument_id = ANY($2::uuid[]))', [projectId, ids]);
+    if (ids.length) {
+      await executor.execute(`
+        INSERT INTO project_instruments (project_id, instrument_id) SELECT $1, unnest($2::uuid[])
+        ON CONFLICT DO NOTHING`, [projectId, ids]);
+    }
+  }
+
+  async projectInstruments(projectId, executor = realmConnector) {
+    const { rows: [row] } = await executor.execute(`SELECT ${projectInstruments('pr')} AS instruments FROM projects pr WHERE pr.id = $1`, [projectId]);
+    return row?.instruments ?? [];
   }
 
   async removeProject(projectId, profileId, executor = realmConnector) {
