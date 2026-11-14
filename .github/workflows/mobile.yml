@@ -1,0 +1,137 @@
+name: Mobile packages
+
+# Unsigned Android and iOS development builds. They run on manual dispatch and
+# version tags only, never on ordinary pushes or pull requests.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Absolute packaged API URL ending in /realm (defaults to MOBILE_API_BASE_URL, then DESKTOP_API_BASE_URL)"
+        required: false
+        type: string
+      platforms:
+        description: "Platforms to package"
+        required: true
+        type: choice
+        default: all
+        options: [all, android, ios]
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "26.12.1"
+  VITE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || vars.DESKTOP_API_BASE_URL }}
+
+jobs:
+  android:
+    name: Android APK and AAB (unsigned)
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms != 'ios'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANDROID_NDK_VERSION: "28.2.13676358"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Validate the packaged API URL
+        run: node --input-type=module -e "import { validateApiBase } from './scripts/release.mjs'; validateApiBase(process.env.VITE_API_BASE_URL);"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android SDK platform and NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-36" "build-tools;36.0.0" "ndk;${ANDROID_NDK_VERSION}" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+          key: android
+      - run: npm ci
+        working-directory: frontend
+      - name: Build unsigned APK and AAB
+        working-directory: frontend
+        run: npx --no-install tauri android build --ci --apk --aab
+      - name: Collect packages and checksums
+        run: |
+          mkdir -p artifacts/android
+          find frontend/src-tauri/gen/android/app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) \
+            -exec cp {} artifacts/android/ \;
+          ls artifacts/android/*.apk artifacts/android/*.aab
+          (cd artifacts/android && sha256sum -- *.apk *.aab > SHA256SUMS)
+      - name: Upload Android packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: everymusic-android-${{ github.sha }}
+          path: artifacts/android/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  ios:
+    name: iOS simulator app and unsigned IPA
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms != 'android'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Validate the packaged API URL
+        run: node --input-type=module -e "import { validateApiBase } from './scripts/release.mjs'; validateApiBase(process.env.VITE_API_BASE_URL);"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+          key: ios
+      - name: Install XcodeGen
+        run: brew list xcodegen > /dev/null 2>&1 || brew install xcodegen
+      - run: npm ci
+        working-directory: frontend
+      # The Xcode project is generated in CI and not tracked; see docs/mobile.md.
+      - name: Generate the Xcode project
+        working-directory: frontend
+        run: npx --no-install tauri ios init --ci
+      - name: Build simulator app and unsigned device IPA
+        working-directory: frontend
+        run: |
+          npx --no-install tauri ios build --ci --target aarch64-sim --no-sign
+          npx --no-install tauri ios build --ci --target aarch64 --no-sign
+      - name: Collect packages and checksums
+        run: |
+          mkdir -p artifacts/ios
+          build=frontend/src-tauri/gen/apple/build
+          app=$(find "$build/arm64-sim" -maxdepth 1 -name '*.app' -print -quit)
+          test -n "$app"
+          ditto -c -k --keepParent "$app" artifacts/ios/everymusic-ios-simulator.zip
+          find "$build/arm64" -maxdepth 1 -name '*.ipa' -exec cp {} artifacts/ios/everymusic-ios-unsigned.ipa \;
+          test -s artifacts/ios/everymusic-ios-unsigned.ipa
+          (cd artifacts/ios && shasum -a 256 -- *.zip *.ipa > SHA256SUMS)
+      - name: Upload iOS packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: everymusic-ios-${{ github.sha }}
+          path: artifacts/ios/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
