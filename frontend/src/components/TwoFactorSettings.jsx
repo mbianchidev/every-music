@@ -94,11 +94,12 @@ export default function TwoFactorSettings({ security, onChanged }) {
         {heading('choose', t('accountSecurity.twoStep.setUp'))}
         <fieldset disabled={busy}>
           <legend>{t('accountSecurity.twoStep.chooseMethod')}</legend>
-          {security.availableMethods.map(option => <label className="method-choice" key={option}>
-            <span className="checkbox-label"><input type="radio" name="two-step-method" value={option} checked={method === option} onChange={() => setMethod(option)} />
-              {t(`accountSecurity.twoStep.choices.${option}`)}</span>
-            <span className="field-hint">{t(`accountSecurity.twoStep.descriptions.${option}`, { email: security.email })}</span>
-          </label>)}
+          {security.availableMethods.map(option => <div className="method-choice" key={option}>
+            <label className="checkbox-label"><input type="radio" name="two-step-method" value={option} checked={method === option}
+              onChange={() => setMethod(option)} aria-describedby={`two-step-method-${option}-hint`} />
+              {t(`accountSecurity.twoStep.choices.${option}`)}</label>
+            <p className="field-hint" id={`two-step-method-${option}-hint`}>{t(`accountSecurity.twoStep.descriptions.${option}`, { email: security.email })}</p>
+          </div>)}
         </fieldset>
         {method === 'sms' && <FormField id="two-step-phone" label={t('accountSecurity.twoStep.phoneLabel')} hint={t('accountSecurity.twoStep.phoneHint')} required>
           <input className="input" type="tel" autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} disabled={busy} />

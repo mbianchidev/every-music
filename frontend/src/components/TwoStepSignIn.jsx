@@ -14,9 +14,9 @@ export default function TwoStepSignIn({ challenge, onCancel }) {
   const [message, setMessage] = useState('');
   const heading = useRef(null);
   const input = useRef(null);
-  const toggled = useRef(false);
+  const [refocus, setRefocus] = useState(0);
   useEffect(() => { heading.current?.focus(); }, []);
-  useEffect(() => { if (toggled.current) input.current?.focus(); }, [recovery]);
+  useEffect(() => { if (refocus) input.current?.focus(); }, [refocus]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -29,7 +29,7 @@ export default function TwoStepSignIn({ challenge, onCancel }) {
     } catch (failure) {
       setError(failure.message);
       setBusy(false);
-      input.current?.focus();
+      setRefocus(value => value + 1);
     }
   };
   const resend = async () => {
@@ -42,7 +42,7 @@ export default function TwoStepSignIn({ challenge, onCancel }) {
     } catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   };
-  const toggle = () => { toggled.current = true; setRecovery(value => !value); setCode(''); setError(''); };
+  const toggle = () => { setRecovery(value => !value); setCode(''); setError(''); setRefocus(value => value + 1); };
 
   return (
     <section className="two-step" aria-labelledby="two-step-heading">
