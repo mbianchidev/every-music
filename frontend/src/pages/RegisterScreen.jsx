@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
+import { t } from '../lib/i18n.js';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import GoogleSignIn from '../components/GoogleSignIn.jsx';
@@ -14,8 +15,26 @@ class RegisterScreen extends Component {
       error: '',
       loading: false,
       successMessage: '',
+      acceptTerms: false,
+      termsVersion: '',
+      termsError: '',
     };
   }
+
+  componentDidMount() {
+    this.loadTerms();
+  }
+
+  loadTerms = async () => {
+    this.setState({ termsError: '' });
+    try {
+      const legal = await conduit.transmit('/legal');
+      this.setState({ termsVersion: legal.termsVersion });
+    } catch (error) {
+      console.error('The current Terms of Use could not be loaded', error);
+      this.setState({ termsError: error.message });
+    }
+  };
 
   validate() {
     const { email, password, confirmPassword } = this.state;
@@ -26,6 +45,7 @@ class RegisterScreen extends Component {
       return 'Password needs uppercase, lowercase, and a number.';
     }
     if (password !== confirmPassword) return 'Passwords do not match.';
+    if (!this.state.acceptTerms) return t('legal.register.required');
     return '';
   }
 
@@ -46,6 +66,7 @@ class RegisterScreen extends Component {
         body: {
           email: this.state.email,
           password: this.state.password,
+          acceptedTermsVersion: this.state.termsVersion,
         },
       });
       this.setState({
@@ -54,6 +75,7 @@ class RegisterScreen extends Component {
       });
     } catch (error) {
       this.setState({ error: error.message, loading: false });
+      if (error.code === 'TERMS_VERSION_CHANGED') this.setState({ acceptTerms: false }, this.loadTerms);
     }
   };
 
@@ -73,7 +95,10 @@ class RegisterScreen extends Component {
   }
 
   render() {
-    const { email, password, confirmPassword, error, loading, successMessage } = this.state;
+    const { email, password, confirmPassword, error, loading, successMessage, acceptTerms, termsVersion, termsError } = this.state;
+    const newTab = (href, label) => <a href={href} target="_blank" rel="noopener">{label}<span className="sr-only"> {t('legal.newTab')}</span></a>;
+    const [beforeTerms, afterTerms = ''] = t('legal.register.read').split('{terms}');
+    const [betweenLinks, afterPrivacy = ''] = afterTerms.split('{privacy}');
 
     if (successMessage) {
       return this.renderSuccess();
@@ -130,7 +155,23 @@ class RegisterScreen extends Component {
               />
             </FormField>
 
-            <button className="btn btn-primary" type="submit" disabled={loading}>
+            <div className="consent-field">
+              {termsError ? <p className="field-error" role="alert">
+                {t('legal.register.unavailable')} {termsError}{' '}
+                <button className="text-link" type="button" onClick={this.loadTerms}>{t('legal.register.retry')}</button>
+              </p> : <>
+                <label className="checkbox-label" htmlFor="register-terms">
+                  <input id="register-terms" type="checkbox" checked={acceptTerms} disabled={loading || !termsVersion}
+                    aria-describedby="register-terms-hint" onChange={(event) => this.setState({ acceptTerms: event.target.checked })} />
+                  {t('legal.register.accept', { version: termsVersion || '...' })}
+                </label>
+                <p className="field-hint" id="register-terms-hint">
+                  {beforeTerms}{newTab('#legal?page=terms', t('legal.register.terms'))}{betweenLinks}{newTab('#legal?page=privacy', t('legal.register.privacy'))}{afterPrivacy}
+                </p>
+              </>}
+            </div>
+
+            <button className="btn btn-primary" type="submit" disabled={loading || !termsVersion}>
               {loading ? 'Creating account...' : 'Create account'}
             </button>
 

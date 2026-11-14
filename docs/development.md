@@ -161,6 +161,18 @@ search alerts, private reactions, blocks, report categories, Premium
 statistics and profile visits, and "near me" with a granted, synthetic browser
 geolocation. It mints sessions for synthetic users with the browser fixture's
 test signing keys, so it does not use the password sign-in rate limit.
+
+`e2e/help-onboarding.spec.js` covers signed-out help and legal pages, bug
+reports without consented diagnostics, terms acceptance at registration and
+after a terms change, the keyboard and narrow-screen welcome tour, the admin
+help desk reply notification, ratings, version notices (with a stubbed
+`/realm/app/version` response), and back navigation. It mints sessions with the
+browser server's synthetic signing keys instead of signing in, so it does not
+consume the shared sign-in rate limit used by `community.spec.js`. The browser
+server treats SQL-seeded fixture accounts that have no terms record as having
+accepted the current terms, so other suites are not interrupted by the terms
+prompt; seed an older `terms_acceptances` row to exercise the prompt. Seeded
+accounts also have no pending tour unless a `user_onboarding` row is inserted.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget

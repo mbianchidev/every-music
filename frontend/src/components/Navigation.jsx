@@ -17,6 +17,7 @@ const sections = [
     { id: 'saved', icon: 'bookmark', label: 'Saved' },
     { id: 'profile', icon: 'user', label: 'Profile' },
     { id: 'analytics', icon: 'chart', label: 'Analytics' },
+    { id: 'help', icon: 'help', label: 'Help' },
     { id: 'settings', icon: 'settings', label: 'Settings' },
   ] },
 ];

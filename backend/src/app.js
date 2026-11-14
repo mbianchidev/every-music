@@ -17,6 +17,7 @@ import { marketplaceOrchestrator } from './orchestrators/marketplace-orchestrato
 import { accountTrustOrchestrator } from './orchestrators/account-trust-orchestrator.js';
 import { placeOrchestrator } from './orchestrators/place-orchestrator.js';
 import { discoveryOrchestrator } from './orchestrators/discovery-orchestrator.js';
+import { helpOrchestrator } from './orchestrators/help-orchestrator.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
@@ -170,6 +171,7 @@ export async function buildNexus({
   await nexus.register(accountTrustOrchestrator, { prefix: '/realm', config });
   await nexus.register(placeOrchestrator, { prefix: '/realm/catalog' });
   await nexus.register(discoveryOrchestrator, { prefix: '/realm' });
+  await nexus.register(helpOrchestrator, { prefix: '/realm', config, backgroundJobs });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });

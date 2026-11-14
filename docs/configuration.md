@@ -31,7 +31,7 @@ startup. Mail settings are mandatory in production.
 |---|---|---|
 | `REALM_ENV` | `NODE_ENV`, then `development` | `development`, `test`, or `production` |
 | `NODE_ENV` | Unset | Fallback runtime environment |
-| `APP_VERSION` | `1.0.0` | Version returned by `/nexus-info` |
+| `APP_VERSION` | `1.0.0` | Version returned by `/nexus-info` and `/realm/app/version`; see [app versions](#help-center-legal-pages-and-app-versions) |
 | `NEXUS_HOST` | `0.0.0.0` | API listen address; use `127.0.0.1` for local-only development |
 | `NEXUS_PORT` | `8080` (1-65535) | API listen port |
 | `TRUST_PROXY` | `false` | Accept `true`/`false` or `1`/`0`; enable only behind a trusted proxy |
@@ -198,6 +198,40 @@ Weekly digests require personal analytics consent, a chosen push or email
 channel for that digest, and a plan whose `SEE_ADS_STATS` (announcement
 statistics) or `SEE_PROFILE_VISITS` (profile statistics) switch is on.
 
+### Help center, legal pages, and app versions
+
+These settings are optional. Unset operator details appear as clearly marked
+placeholders in the legal templates, which the operator must review before
+relying on them. Values are public: they are returned by `GET /realm/legal`
+and `GET /realm/app/version`.
+
+| Variable | Default / format | Purpose |
+|---|---|---|
+| `OPERATOR_NAME` | Unset; one line, up to 200 characters | Data controller and operator named in the legal pages |
+| `OPERATOR_CONTACT_EMAIL` | Unset; email address | Privacy and legal contact shown in the legal pages |
+| `OPERATOR_JURISDICTION` | Unset; up to 120 characters | Governing law and supervisory authority context |
+| `LEGAL_EFFECTIVE_DATE` | Unset; `YYYY-MM-DD` | Effective date shown on the policies |
+| `TERMS_VERSION` | `1`; 1-32 letters, digits, `.`, `-`, `_` | Current Terms of Use version; registration must accept it, and changing it asks existing accounts once after sign-in |
+| `SUPPORT_EMAIL` | Unset; email address | Optional mailbox that receives a copy of each help request through the SMTP settings above |
+| `CLIENT_MIN_VERSION` | Unset; `MAJOR.MINOR.PATCH` | Clients older than this show a blocking update screen |
+| `CLIENT_LATEST_VERSION` | Unset; `MAJOR.MINOR.PATCH`, not older than the minimum | Clients older than this show a dismissible update notice |
+| `CLIENT_UPDATE_URL` | Unset; `http(s)` URL | Download page shown in desktop and Android update instructions |
+
+Help requests are always stored for the admin inbox. With `SUPPORT_EMAIL` and
+working SMTP, each request is also forwarded, with the requester's email as
+`Reply-To`; forwarding failures are logged and the request stays in the inbox.
+Answered and closed requests are deleted 365 days after their last update.
+
+The web client's version is the `version` in `frontend/package.json`, embedded at
+build time. On startup, the API records `APP_VERSION` in `app_releases`. When
+its major or minor number increases over the highest recorded version, every
+active account receives one `app_update_major` or `app_update_minor`
+notification; a transaction-level advisory lock and unique keys keep this to
+exactly once across API processes. Patch releases, rollbacks, repeated starts,
+and non-`MAJOR.MINOR.PATCH` values notify nobody. Ratings are accepted for
+released versions between `CLIENT_MIN_VERSION` and the newer of
+`CLIENT_LATEST_VERSION` and `APP_VERSION`.
+
 ## Plans and limits
 
 Freemium limits use the product plan names. Set `FREE_<NAME>` or
@@ -247,8 +281,9 @@ API, and web host bindings are local by default.
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
 SMTP, pool, rate-limit, body-size, application-retention, two-step key,
-verification retention, and Twilio settings listed above, plus the
-[scheduled notification settings](#notification-email-and-scheduled-notifications). Its default
+verification retention, and Twilio settings listed above, plus `APP_VERSION`,
+the [scheduled notification settings](#notification-email-and-scheduled-notifications),
+and the help center, legal, and client version settings. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.

@@ -1,5 +1,6 @@
 import { identityRepository } from '../repositories/identity-repository.js';
 import { musicianRepository } from '../repositories/musician-repository.js';
+import { onboardingRepository } from '../repositories/onboarding-repository.js';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { cipherEngine } from '../engines/cipher-engine.js';
 import { mailDispatcher } from '../engines/mail-dispatcher.js';
@@ -61,6 +62,16 @@ export class AuthenticationConductor {
       return sendValidationError(reply, validations);
     }
 
+    const termsVersion = realmConfig.legal.termsVersion;
+    if (body.acceptedTermsVersion !== termsVersion) {
+      return reply.code(body.acceptedTermsVersion ? 409 : 400).send({
+        success: false,
+        error: body.acceptedTermsVersion
+          ? { code: 'TERMS_VERSION_CHANGED', message: 'The Terms of Use changed. Review the current version and accept it again.' }
+          : { code: 'TERMS_NOT_ACCEPTED', message: 'Accept the Terms of Use to create an account' },
+      });
+    }
+
     try {
       const existingIdentity = await identityRepository.findByEmail(email);
       if (existingIdentity) {
@@ -84,6 +95,7 @@ export class AuthenticationConductor {
           executor,
         );
         await musicianRepository.createProfile(identity.id, {}, executor);
+        await onboardingRepository.acceptTerms(executor, identity.id, termsVersion, 'registration');
         return identity;
       });
       const verificationEmailSent = await mailDispatcher.dispatchVerification(

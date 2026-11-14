@@ -20,6 +20,21 @@ VITE_API_BASE_URL=https://api.example.com/realm npm run desktop:build
 
 Add the client origins to `PORTAL_ORIGINS` and keep the Tauri `connect-src` policy aligned with the deployed API.
 
+## Brand assets
+
+The brand is the Every.music name with a purple dot, the wave emblem, the
+purple palette in `frontend/src/lib/styles.js` (`--brand` `#6554c0` light,
+`#bcaff9` dark, on `#f6f7fb` / `#11131a` backgrounds), and the platform system
+font stack, so no font files are downloaded. The app icon source is
+`frontend/brand/app-icon.svg` (purple rounded square with the white wave emblem). Regenerate the desktop and Android launcher icons with
+`npx tauri icon <1024px PNG rendered from that SVG>` from `frontend/`, then
+remove the iOS and adaptive-icon extras it creates unless you are changing those
+platform integrations. Web icons in `frontend/public/icons/` and
+`frontend/public/favicon.svg` come from the same sources (`maskable.svg` is the
+full-bleed variant for maskable and Apple touch icons). The desktop window opens
+with the dark `#11131a` background used by the web splash, avoiding a white flash
+before the web view paints.
+
 ## Desktop
 
 ```bash

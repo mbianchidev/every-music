@@ -55,7 +55,10 @@ One shared shell owns desktop/sidebar and mobile/bottom navigation, theme,
 connection status, installation, and the live-update connection.
 Screens use shared components and `lib/conduit.js` for API requests.
 `lib/nucleus.js` stores the current persona and tokens in `sessionStorage`,
-not permanent local storage. Theme preference alone uses `localStorage`.
+not permanent local storage. `localStorage` holds only preferences and
+device records: theme, language, verified messaging fingerprints, the tour
+completion fallback, and the dismissed update notice. The Cookie policy page
+lists every key; the app sets no cookies of its own.
 
 The default fetch transport is bound to the browser global receiver. Tests can
 inject a custom transport. Requests time out after 12 seconds and produce typed
@@ -73,6 +76,17 @@ results and refresh responses, preventing one account's late response from
 overwriting the next account. Route changes move focus to main content at the
 React commit, not a delayed frame that could interrupt a newly focused input;
 background refreshes do not steal focus.
+
+`components/ShellGate.jsx` wraps every routed screen. It checks
+`/realm/app/version` against the build version injected from
+`frontend/package.json` (blocking screen below the minimum, dismissible notice
+below the latest), shows the terms acceptance prompt for signed-in accounts
+whose accepted version differs from `TERMS_VERSION`, and mounts the welcome tour
+(`components/ProductTour.jsx`), a native modal dialog that spotlights sidebar or
+mobile navigation targets. Help and legal routes stay reachable through both
+gates. `components/BackButton.jsx` uses the Navigation API to go back only to
+an earlier in-app entry, otherwise to a parent route. A footer with help and
+legal links follows every screen.
 
 The UI includes discovery/filter/sort/page controls, profile/catalog/project
 editors, full detail and announcement editing/comment/reaction actions,
@@ -185,6 +199,17 @@ to supported push providers. Payloads are generic; gone subscriptions are
 deleted. Notifications created while push is off are not replayed on opt-in.
 Hourly maintenance removes expired challenges, unreferenced media after a day,
 notifications after 90 days, and aggregates outside the 30-day reporting window.
+A separate help job (`engines/help-jobs.js`) deletes answered/closed support
+requests 365 days after their last update. On listen it records `APP_VERSION`
+in `app_releases` under a transaction advisory lock and fans out a single
+`app_update_major` or `app_update_minor` notification per active account when
+the major or minor number increases.
+
+Migration `010_help_onboarding.sql` adds `support_requests`,
+`terms_acceptances` (one row per accepted version), `user_onboarding` (tour
+status), `app_releases`, and `app_ratings` (unique per account and version, with
+`rewarded_at` for a later rewards worker). Support requests, acceptances,
+onboarding, and ratings are removed with their account row.
 
 Per-kind channel choices live in `notification_channel_preferences`; a missing
 row or `NULL` column means the catalog default. `notificationRepository` decides

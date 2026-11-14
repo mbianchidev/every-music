@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination.jsx';
 import ActivityReport from '../components/ActivityReport.jsx';
 import MarketplaceModeration from '../components/marketplace/MarketplaceModeration.jsx';
 import VerificationReviewQueue from '../components/VerificationReviewQueue.jsx';
+import HelpDesk from '../components/HelpDesk.jsx';
 
 const operations = { review: 'Mark reviewed', dismiss: 'Dismiss report', remove_message: 'Remove reported message', suspend_user: 'Suspend reported account' };
 
@@ -97,5 +98,6 @@ export default function AdministrationScreen({ route }) {
       </>}
     </>}
     {tab === 'overview' && data && <VerificationReviewQueue />}
+    <HelpDesk route={route} />
   </div>;
 }

@@ -30,6 +30,11 @@ import ListingScreen from './pages/ListingScreen.jsx';
 import ListingEditorScreen from './pages/ListingEditorScreen.jsx';
 import MyListingsScreen from './pages/MyListingsScreen.jsx';
 import SavedSearchesScreen from './pages/SavedSearchesScreen.jsx';
+import HelpScreen from './pages/HelpScreen.jsx';
+import LegalScreen from './pages/LegalScreen.jsx';
+import ShellGate from './components/ShellGate.jsx';
+import BackButton from './components/BackButton.jsx';
+import SiteFooter from './components/SiteFooter.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -62,6 +67,8 @@ const ROUTES = {
   'my-listings': { screen: MyListingsScreen, props: { mode: 'own' }, get title() { return t('marketplace.routes.myListings'); }, protected: true },
   'saved-listings': { screen: MyListingsScreen, props: { mode: 'saved' }, get title() { return t('marketplace.routes.savedListings'); }, protected: true },
   'saved-searches': { screen: SavedSearchesScreen, title: 'Saved searches', protected: true },
+  help: { screen: HelpScreen, title: 'Help center' },
+  legal: { screen: LegalScreen, title: 'Legal information' },
 };
 
 function readRoute() {
@@ -140,7 +147,10 @@ class Orchestrator extends Component {
       <div className={`application ${session.authorized ? 'is-authenticated' : 'is-guest'}`}>
         <AppStatus session={session} routeName={route.name} pageTitle={definition?.title || 'Page not found'} />
         <main id="main-content" tabIndex="-1">
-        {waitingForSignIn ? <BootScreen /> : Screen ? <Screen key={this.state.navigation} route={route} {...definition.props} /> : <div className="container-narrow center-content">
+        {waitingForSignIn ? <BootScreen /> : Screen ? <ShellGate route={route} session={session}>
+          <BackButton route={route} authorized={session.authorized} />
+          <Screen key={this.state.navigation} route={route} {...definition.props} />
+        </ShellGate> : <div className="container-narrow center-content">
           <div className="card">
             <p className="eyebrow">404</p>
             <h1 className="heading-lg">Page not found</h1>
@@ -150,6 +160,7 @@ class Orchestrator extends Component {
           </div>
         </div>}
         </main>
+        <SiteFooter routeName={route.name} page={route.query.get('page')} />
       </div>
     );
   }

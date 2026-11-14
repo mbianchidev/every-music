@@ -37,6 +37,7 @@ Edit `.env` before starting:
 - Set `CIPHER_PRIMARY_KEY` and `CIPHER_REFRESH_KEY` to **different random values of at least 32 characters**.
 - Configure `MAIL_GATEWAY`, `MAIL_PORT`, `MAIL_IDENTITY`, `MAIL_CREDENTIAL`, and `MAIL_SENDER_ALIAS` for your SMTP service. The example credentials do not send mail.
 - Keep `http://localhost` first in `PORTAL_ORIGINS` for this setup. Verification and password-reset links use the first configured origin.
+- Set `OPERATOR_NAME`, `OPERATOR_CONTACT_EMAIL`, `OPERATOR_JURISDICTION`, and `LEGAL_EFFECTIVE_DATE`, then review the legal templates under Help before inviting users.
 
 Do not commit `.env`. Build and start the stack:
 
@@ -61,7 +62,7 @@ Compose initializes a new database volume with the schema and instrument/genre c
 
 ### First use
 
-1. Open <http://localhost> and create an account. Passwords need at least eight characters, uppercase, lowercase, and a number.
+1. Open <http://localhost> and create an account, accepting the Terms of Use. Passwords need at least eight characters, uppercase, lowercase, and a number.
 2. Follow the verification link in your email, then sign in.
 3. Open your profile and fill in your artist name, first and last name, city, and biography.
 4. Publish an announcement, browse the feed, and save opportunities. Use the navigation to manage your own announcements and bookmarks.
@@ -129,6 +130,7 @@ not packaged by desktop CI.
 - **Marketplace:** buy, sell, and request gear, offer lessons and services, hire crew, and post endorsements, with filters, photos, saved listings, encrypted contact, reports, moderation, and expiry reminders; payments happen off-platform.
 - **Account trust:** two-step sign-in (authenticator app, email, or optional SMS) with recovery codes, sign-out everywhere, GDPR data export and account deletion, opt-in find-by-email with hashed contacts, and administrator-reviewed profile verification with a blue tick.
 - **Places and plans:** GeoNames city picker, distance/region/cover-band/open-to discovery, opt-in "near me", saved searches with alerts, contacts with visibility, profile links, follow alerts, profile blocks, owner-only reactions, and free-plan limits with Premium statistics and profile visitors.
+- **Help and onboarding:** help center with bug/contact/job forms and an admin inbox, operator-configured legal templates with terms acceptance, a skippable welcome tour, Back controls, update notices, in-app ratings, and branded icons and splash screens.
 
 ### Current limitations
 

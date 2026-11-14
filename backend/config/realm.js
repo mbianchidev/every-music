@@ -91,6 +91,45 @@ export function validateAccountTrust(accountTrust) {
   }
 }
 
+const CLIENT_VERSION = /^\d{1,6}\.\d{1,6}\.\d{1,6}$/;
+const versionCore = value => value.split('.').map(Number);
+const versionAtMost = (left, right) => {
+  const [a, b] = [versionCore(left), versionCore(right)];
+  const index = a.findIndex((part, position) => part !== b[position]);
+  return index === -1 || a[index] < b[index];
+};
+
+// Help center, legal templates and client version notices (w3-help-onboarding).
+function createHelpConfig(env) {
+  const optional = (name, pattern, message) => {
+    const value = env[name]?.trim() || '';
+    if (value && !pattern.test(value)) throw new Error(`${name} ${message}`);
+    return value || null;
+  };
+  const email = /^[^\s@<>]{1,64}@[^\s@<>]{1,190}\.[^\s@<>]{2,}$/;
+  const clientVersions = {
+    minimum: optional('CLIENT_MIN_VERSION', CLIENT_VERSION, 'must be a MAJOR.MINOR.PATCH version'),
+    latest: optional('CLIENT_LATEST_VERSION', CLIENT_VERSION, 'must be a MAJOR.MINOR.PATCH version'),
+    updateUrl: optional('CLIENT_UPDATE_URL', /^https?:\/\/[^\s]{1,2040}$/, 'must be an http(s) URL'),
+  };
+  if (clientVersions.minimum && clientVersions.latest && !versionAtMost(clientVersions.minimum, clientVersions.latest)) {
+    throw new Error('CLIENT_MIN_VERSION cannot be newer than CLIENT_LATEST_VERSION');
+  }
+  const effectiveDate = optional('LEGAL_EFFECTIVE_DATE', /^\d{4}-\d{2}-\d{2}$/, 'must be a YYYY-MM-DD date');
+  if (effectiveDate && Number.isNaN(Date.parse(`${effectiveDate}T00:00:00Z`))) throw new Error('LEGAL_EFFECTIVE_DATE must be a valid date');
+  return {
+    legal: {
+      operatorName: optional('OPERATOR_NAME', /^[^\n\r]{1,200}$/, 'must be one line of at most 200 characters'),
+      operatorContactEmail: optional('OPERATOR_CONTACT_EMAIL', email, 'must be an email address'),
+      operatorJurisdiction: optional('OPERATOR_JURISDICTION', /^[^\n\r]{1,120}$/, 'must be one line of at most 120 characters'),
+      effectiveDate,
+      termsVersion: optional('TERMS_VERSION', /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/, 'must use 1-32 letters, digits, dots, dashes, or underscores') || '1',
+    },
+    support: { email: optional('SUPPORT_EMAIL', email, 'must be an email address') },
+    clientVersions,
+  };
+}
+
 function parseOrigins(value) {
   return (value || 'http://localhost:3000')
     .split(',')
@@ -203,6 +242,7 @@ export function createRealmConfig(env = process.env) {
       expiryReminderDays: parseInteger(env.MARKETPLACE_EXPIRY_REMINDER_DAYS, 3, 'MARKETPLACE_EXPIRY_REMINDER_DAYS', { minimum: 1, maximum: 30 }),
     },
     accountTrust: createAccountTrust(env),
+    ...createHelpConfig(env),
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),

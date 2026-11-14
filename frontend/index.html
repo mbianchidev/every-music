@@ -5,13 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#11131a">
   <meta name="description" content="Find musicians, collaborators, and your next band with Every.music.">
+  <meta name="application-name" content="Every.music">
+  <meta name="apple-mobile-web-app-title" content="Every.music">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/app-icon.png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <script src="/theme.js"></script>
+  <style>
+    .boot-splash { position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; color: #202533; font: 750 26px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -0.7px; }
+    .boot-splash-emblem { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 18px; background: linear-gradient(135deg, #7464d3, #5542ae); color: #ffffff; box-shadow: 0 10px 30px #5542ae40; animation: boot-splash-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate; }
+    .boot-splash-dot { color: #5542ae; }
+    .boot-splash-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+    [data-theme="dark"] .boot-splash { color: #edf0f7; }
+    [data-theme="dark"] .boot-splash-dot { color: #d3c8ff; }
+    @keyframes boot-splash-pulse { from { transform: scale(1); } to { transform: scale(0.92); } }
+    @media (prefers-reduced-motion: reduce) { .boot-splash-emblem { animation: none; } }
+  </style>
   <title>Every.music - Find Your Bandmates</title>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="boot-splash" role="status">
+      <span class="boot-splash-emblem" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 9v6M7.5 5v14M12 2v20M16.5 6v12M21 10v4"/></svg>
+      </span>
+      <span aria-hidden="true">Every<span class="boot-splash-dot">.</span>music</span>
+      <span class="boot-splash-label">Starting Every.music</span>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

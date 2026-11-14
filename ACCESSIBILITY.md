@@ -70,6 +70,11 @@ screen reader. The QR code has a text alternative and a typed setup key.
 Recovery codes, account deletion, contact search results, and the verification
 request/review queue need the same keyboard, zoom, and announcement checks.
 
+The welcome tour is a modal dialog: check its announcements per step, Escape to
+skip, focus return, reduced motion, and that spotlighted targets stay visible at
+320px. Also check the terms prompt, update screens, help forms (including the
+diagnostics consent text), star rating radios, Back controls, and footer links.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

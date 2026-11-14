@@ -42,7 +42,7 @@ self.addEventListener('push', event => {
       icon: '/app-icon.png',
       badge: '/app-icon.png',
       tag: typeof payload?.tag === 'string' ? payload.tag : undefined,
-      data: { url: typeof payload?.url === 'string' && /^#(?:messages|announcement|analytics)(?:\?|$)/.test(payload.url) ? payload.url : '#notifications' },
+      data: { url: typeof payload?.url === 'string' && /^#(?:messages|announcement|analytics|help)(?:\?|$)/.test(payload.url) ? payload.url : '#notifications' },
     });
   })());
 });
