@@ -19,21 +19,24 @@ function statusKey(status) {
 }
 
 // Turns a failed request (ApiError from lib/conduit.js) or any thrown error
-// into the text screens show. Known codes are localized; unknown codes keep the
-// server's own message, and nothing is ever reduced to an empty string.
+// into the text screens show. Known API codes are localized; unknown codes keep
+// the server's own message. Client-side errors (no HTTP status) are already
+// written in the interface language, so their message is kept as is.
+// Nothing is ever reduced to an empty string.
 export function errorText(error, locale = getLocale()) {
   if (!error) return '';
   if (typeof error === 'string') return error;
   const server = typeof error.message === 'string' ? error.message.trim() : '';
   const code = typeof error.code === 'string' ? error.code : '';
   const key = `errors.codes.${code}`;
-  if (code && hasTranslation(key)) {
+  const fromApi = typeof error.status === 'number';
+  if (code && (fromApi || !server) && hasTranslation(key)) {
     const message = translate(locale, key);
     if (!SPECIFIC_IN_ENGLISH.has(code) || !server || GENERIC_VALIDATION.has(server)) return message;
     if (locale === DEFAULT_LOCALE) return server;
     return code === 'VALIDATION_ERROR' ? translate(locale, 'errors.withDetail', { message, detail: server }) : message;
   }
-  if ((!code || GENERIC_CODES.has(code)) && statusKey(error.status) && (!server || code === 'INTERNAL_ERROR' || locale !== DEFAULT_LOCALE)) {
+  if (fromApi && (!code || GENERIC_CODES.has(code)) && statusKey(error.status) && (!server || code === 'INTERNAL_ERROR' || locale !== DEFAULT_LOCALE)) {
     return translate(locale, statusKey(error.status));
   }
   return server || translate(locale, 'errors.unknown');

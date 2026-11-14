@@ -4,8 +4,11 @@ import { messageVault, useMessageVault } from '../lib/message-vault.js';
 import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
+import { useI18n } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 export default function MessagingKeys({ neededKeyId, onCurrent }) {
+  const { t, formatDate } = useI18n();
   const resource = useResource('/encryption/me?pageSize=20', { events: 'keys.changed' });
   const vault = useMessageVault();
   const current = resource.data?.keys.find(key => key.isCurrent);
@@ -28,7 +31,7 @@ export default function MessagingKeys({ neededKeyId, onCurrent }) {
     try {
       const { generateRecoveryKey } = await import('../lib/message-crypto.js');
       setRecovery(generateRecoveryKey()); setSaved(false);
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
   };
   const submit = async event => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
@@ -38,51 +41,53 @@ export default function MessagingKeys({ neededKeyId, onCurrent }) {
         onCurrent?.(record);
         setSelected(record.id); setCreating(false); resource.reload();
       } else await messageVault.unlock(keyId, recovery);
-      setRecovery(''); setSaved(false); setMessage('Encrypted messaging is ready in this tab.');
-    } catch (failure) { setError(failure.message); resource.reload(); }
+      setRecovery(''); setSaved(false); setMessage(t('messages.keys.ready'));
+    } catch (failure) { setError(errorText(failure)); resource.reload(); }
     finally { setBusy(false); }
   };
   return <section className="card encryption-panel" aria-labelledby="encryption-heading">
-    <h2 className="heading-md" id="encryption-heading">Encrypted messaging</h2>
+    <h2 className="heading-md" id="encryption-heading">{t('messages.keys.heading')}</h2>
     {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
     {error && <p className="field-error" role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
-    {!resource.data && !resource.error ? <Spinner label="Loading messaging keys" /> : resource.data && <>
+    {!resource.data && !resource.error ? <Spinner label={t('messages.keys.loading')} /> : resource.data && <>
       {current && unlocked && !creating ? <div className="encryption-summary">
-        <p className="field-hint">Keys are unlocked in this tab only. New messages are encrypted before leaving your device.</p>
-        <button className="text-link" type="button" onClick={() => { messageVault.lock(); setMessage('Messaging locked. Your recovery key is needed to read encrypted history.'); }}>Lock messaging</button>
+        <p className="field-hint">{t('messages.keys.unlockedHint')}</p>
+        <button className="text-link" type="button" onClick={() => { messageVault.lock(); setMessage(t('messages.keys.locked')); }}>{t('messages.keys.lock')}</button>
       </div> : <form className="form-stack" onSubmit={submit}>
         {(!current || creating) ? <>
-          <p className="field-hint">Generate and save a recovery key in your password manager. It never goes to the server. Without it, encrypted history cannot be recovered.</p>
-          {creating && <p className="status-message">Resetting creates a new identity. Other musicians must compare its fingerprint. Old history still needs your old recovery key; it is not erased.</p>}
-          <button className="btn btn-secondary" type="button" onClick={generate} disabled={busy}>Generate recovery key</button>
+          <p className="field-hint">{t('messages.keys.generateHint')}</p>
+          {creating && <p className="status-message">{t('messages.keys.resetNotice')}</p>}
+          <button className="btn btn-secondary" type="button" onClick={generate} disabled={busy}>{t('messages.keys.generate')}</button>
           {recovery && <>
-            <FormField id="new-messaging-recovery" label="Generated recovery key"><input className="input recovery-value" value={recovery} readOnly autoComplete="off" /></FormField>
-            <label className="checkbox-label"><input type="checkbox" checked={saved} onChange={event => setSaved(event.target.checked)} required disabled={busy} />I saved this recovery key outside the app</label>
-            <button className="btn btn-primary" type="submit" disabled={busy || !saved}>{busy ? 'Creating encryption keys...' : 'Enable encrypted messaging'}</button>
+            <FormField id="new-messaging-recovery" label={t('messages.keys.generated')}><input className="input recovery-value" value={recovery} readOnly autoComplete="off" /></FormField>
+            <label className="checkbox-label"><input type="checkbox" checked={saved} onChange={event => setSaved(event.target.checked)} required disabled={busy} />{t('messages.keys.savedConfirm')}</label>
+            <button className="btn btn-primary" type="submit" disabled={busy || !saved}>{busy ? t('messages.keys.creating') : t('messages.keys.enable')}</button>
           </>}
         </> : <>
-          <p className="field-hint">Enter your saved recovery key to unlock messages on this device. Your sign-in password cannot replace it.</p>
-          <FormField id="messaging-unlock" label="Recovery key" required><input className="input" type="password" autoComplete="off" value={recovery} maxLength="100" onChange={event => setRecovery(event.target.value)} disabled={busy} /></FormField>
-          <button className="btn btn-primary" type="submit" disabled={busy || !recovery.trim()}>{busy ? 'Unlocking...' : 'Unlock messages'}</button>
+          <p className="field-hint">{t('messages.keys.unlockHint')}</p>
+          <FormField id="messaging-unlock" label={t('messages.keys.recovery')} required><input className="input" type="password" autoComplete="off" value={recovery} maxLength="100" onChange={event => setRecovery(event.target.value)} disabled={busy} /></FormField>
+          <button className="btn btn-primary" type="submit" disabled={busy || !recovery.trim()}>{busy ? t('messages.keys.unlocking') : t('messages.keys.unlock')}</button>
         </>}
       </form>}
       {current && <details className="key-management">
-        <summary>Keys and recovery</summary>
-        <p className="field-hint">Reloading or signing out locks keys. Keep every recovery key you still need for old history. Fingerprints identify keys, not verified real-world identities.</p>
-        <FormField id="messaging-key-selection" label="Messaging key">
+        <summary>{t('messages.keys.management')}</summary>
+        <p className="field-hint">{t('messages.keys.managementHint')}</p>
+        <FormField id="messaging-key-selection" label={t('messages.keys.key')}>
           <select className="input" value={keyId || ''} onChange={event => { setSelected(event.target.value); setCreating(false); setRecovery(''); setMessage(''); }}>
-            {resource.data.keys.map(key => <option value={key.id} key={key.id}>{key.isCurrent ? 'Current' : 'Older'}: {key.fingerprint.slice(0, 12)} / {new Date(key.createdAt).toLocaleDateString()}</option>)}
-            {keyId && !resource.data.keys.some(key => key.id === keyId) && <option value={keyId}>Older key selected from message: {keyId}</option>}
+            {resource.data.keys.map(key => <option value={key.id} key={key.id}>{t(key.isCurrent ? 'messages.keys.currentOption' : 'messages.keys.olderOption', {
+              fingerprint: key.fingerprint.slice(0, 12), date: formatDate(key.createdAt),
+            })}</option>)}
+            {keyId && !resource.data.keys.some(key => key.id === keyId) && <option value={keyId}>{t('messages.keys.fromMessage', { id: keyId })}</option>}
           </select>
         </FormField>
-        <p className="field-hint">Current fingerprint: <code className="fingerprint">{current.fingerprint}</code></p>
-        {selectedRecord && selectedRecord.id !== current.id && <p className="field-hint">Selected older fingerprint: <code className="fingerprint">{selectedRecord.fingerprint}</code></p>}
+        <p className="field-hint">{t('messages.keys.currentFingerprint')} <code className="fingerprint">{current.fingerprint}</code></p>
+        {selectedRecord && selectedRecord.id !== current.id && <p className="field-hint">{t('messages.keys.olderFingerprint')} <code className="fingerprint">{selectedRecord.fingerprint}</code></p>}
         <button className="text-link" type="button" disabled={busy} onClick={() => {
-          if (!window.confirm('Create a new messaging identity? Existing messages will still require their old recovery keys, and contacts will see a changed fingerprint.')) return;
+          if (!window.confirm(t('messages.keys.confirmReset'))) return;
           setCreating(true); setRecovery(''); setSaved(false); setMessage('');
-        }}>Reset messaging identity</button>
-        {creating && <button className="text-link" type="button" disabled={busy} onClick={() => { setCreating(false); setRecovery(''); }}>Cancel key reset</button>}
+        }}>{t('messages.keys.reset')}</button>
+        {creating && <button className="text-link" type="button" disabled={busy} onClick={() => { setCreating(false); setRecovery(''); }}>{t('messages.keys.cancelReset')}</button>}
       </details>}
     </>}
   </section>;
