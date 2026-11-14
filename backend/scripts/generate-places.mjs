@@ -1,5 +1,6 @@
 // Builds backend/database/seeds/places.tsv.gz from the GeoNames cities15000,
 // admin1 and country exports (CC BY 4.0, https://www.geonames.org/).
+// Historical, abandoned and destroyed places are skipped.
 //
 //   node scripts/generate-places.mjs                 # download current exports
 //   node scripts/generate-places.mjs --source DIR    # reuse pinned local copies
@@ -53,6 +54,7 @@ export function buildPlaces({ cities, admin1, countries }) {
   const rows = [];
   for (const columns of tsv(cities)) {
     const [id, name, asciiName, alternates, latitude, longitude] = columns;
+    if (['PPLH', 'PPLQ', 'PPLW'].includes(columns[7])) continue;
     const countryCode = columns[8];
     const regionCode = columns[10] || '';
     const population = Number.parseInt(columns[14] || '0', 10) || 0;

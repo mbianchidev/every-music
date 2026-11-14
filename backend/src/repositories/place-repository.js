@@ -42,8 +42,8 @@ class PlaceRepository {
     const { rows } = await executor.execute(`
       SELECT ${columns} FROM places
       WHERE search_names LIKE $1 AND ($4::text IS NULL OR country_code = $4)
-      ORDER BY (search_names LIKE $2) DESC, (search_names LIKE $3) DESC, population DESC, id
-      LIMIT $5`, [`%|${folded}%`, `|${folded}|%`, `|${folded}%`, country ?? null, limit]);
+      ORDER BY (search_names LIKE $2) DESC, (search_names LIKE $6) DESC, (search_names LIKE $3) DESC, population DESC, id
+      LIMIT $5`, [`%|${folded}%`, `|${folded}|%`, `|${folded}%`, country ?? null, limit, `%|${folded}|%`]);
     return rows.map(placeView);
   }
 
@@ -53,14 +53,21 @@ class PlaceRepository {
     return placeView(rows[0]);
   }
 
+  // The closest city, preferring a more populous one that is nearly as close
+  // so a point in central Milan resolves to Milan rather than a neighbourhood.
   async nearest({ latitude, longitude }, executor = realmConnector) {
     for (const degrees of [0.5, 2, 6]) {
       const { rows } = await executor.execute(`
-        SELECT ${columns} FROM places
-        WHERE latitude BETWEEN $1::float8 - $3 AND $1::float8 + $3
-          AND longitude BETWEEN $2::float8 - $4 AND $2::float8 + $4
-        ORDER BY ${distanceSql('latitude', 'longitude', '$1::float8', '$2::float8')}, population DESC
-        LIMIT 1`, [latitude, longitude, degrees, Math.min(180, degrees / Math.max(0.05, Math.cos((latitude * Math.PI) / 180)))]);
+        WITH nearby AS (
+          SELECT ${columns}, population, ${distanceSql('latitude', 'longitude', '$1::float8', '$2::float8')} AS distance
+          FROM places
+          WHERE latitude BETWEEN $1::float8 - $3 AND $1::float8 + $3
+            AND longitude BETWEEN $2::float8 - $4 AND $2::float8 + $4
+          ORDER BY distance LIMIT 25
+        )
+        SELECT ${columns} FROM nearby WHERE distance <= (SELECT MIN(distance) FROM nearby) * 1.5 + 5
+        ORDER BY population DESC, distance LIMIT 1`,
+      [latitude, longitude, degrees, Math.min(180, degrees / Math.max(0.05, Math.cos((latitude * Math.PI) / 180)))]);
       if (rows.length) return placeView(rows[0]);
     }
     return null;
