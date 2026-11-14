@@ -264,6 +264,38 @@ after encrypted writes, dropping these fields is not a safe rollback.
 See the [messaging security guide](messaging-security.md) for recovery, trust,
 retention, provisioning and cryptographic limitations.
 
+Migration `008_profiles_ads_discovery.sql` adds the `places` and
+`place_datasets` tables, place links on profiles and announcements, profile
+contact visibility, open-to-projects and content links, saved searches,
+consented profile visits and the `inappropriate_language`/`fake_profile`
+report categories. It is additive; legacy free-text cities stay readable.
+
+### Places dataset
+
+`backend/database/seeds/places.tsv.gz` holds the GeoNames `cities15000`
+export (cities above 15,000 people, without historical or abandoned places)
+joined with admin1 region and country names, plus Latin-script exonyms for
+search. `places.manifest.json` records the input checksums, row count and
+content checksum. GeoNames data is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); keep the attribution
+in the client Settings, `frontend/public/third-party-notices.txt` and these docs.
+
+`npm run bootstrap` and every `npm run migrate` (including container startup)
+load the seed after the SQL migrations. Loading upserts by GeoNames ID under an
+advisory lock, never deletes places that profiles or calls may reference, and
+is skipped when the stored content checksum matches. To refresh the dataset:
+
+```bash
+cd backend
+node scripts/generate-places.mjs                       # download current exports
+node scripts/generate-places.mjs --source DIR          # or reuse pinned copies of
+                                                        # cities15000.zip, admin1CodesASCII.txt, countryInfo.txt
+npm run migrate
+```
+
+The generator is deterministic for the same inputs. Commit the regenerated
+seed and manifest together.
+
 ## Coding conventions
 
 - Put user-facing client text in `frontend/src/locales/<locale>/<namespace>.js`

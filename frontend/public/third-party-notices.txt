@@ -22,3 +22,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+GeoNames place data
+https://www.geonames.org/
+
+City, region and country names and coordinates in the Every.music place
+catalog are derived from the GeoNames cities15000, admin1CodesASCII and
+countryInfo exports, licensed under the Creative Commons Attribution 4.0
+International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+The data was filtered (historical and abandoned places removed), joined and
+reformatted for search. GeoNames provides the data "as is" without warranty.

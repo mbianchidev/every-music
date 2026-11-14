@@ -124,12 +124,14 @@ not packaged by desktop CI.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Places and plans:** GeoNames city picker, distance/region/cover-band/open-to discovery, opt-in "near me", saved searches with alerts, contacts with visibility, profile links, follow alerts, profile blocks, owner-only reactions, and free-plan limits with Premium statistics and profile visitors.
 
 ### Current limitations
 
 - Google sign-in needs a configured web OAuth client; browser push needs HTTPS, VAPID keys, browser support, and permission. Native WebViews use email/password, not embedded Google sign-in.
 - Legacy history and voluntarily reported excerpts remain server-readable. New-message E2EE has no ratchet/forward secrecy or independent security audit; recovery keys and trusted clients matter. See [messaging security and administration](docs/messaging-security.md).
 - Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
+- Distance, region and country filters use city-level GeoNames coordinates for cities above 15,000 people; towns typed as free text are shown but not found by those filters.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.

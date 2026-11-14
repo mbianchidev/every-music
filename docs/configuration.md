@@ -204,6 +204,16 @@ an absolute URL. Use HTTPS for deployed clients; the release wrapper only accept
 plain HTTP for loopback development. Align API CORS and the Tauri CSP with the
 embedded URL. Changing a `VITE_*` value after building requires rebuilding.
 
+The nginx web server sends `Permissions-Policy: geolocation=(self)` so the
+optional **Use my location** search can ask the browser for a position, and
+the Tauri shell sets the same header. The API keeps `geolocation=()`. If you
+serve the web client from another server, allow geolocation for its own
+origin in that server's Permissions-Policy, or the feature reports that
+location is unavailable and users can still choose a city. Native WebViews may
+additionally need platform location permissions (for example a usage
+description on Apple platforms); without them the same fallback applies. The
+location opt-in itself is stored only in the browser (`localStorage`).
+
 When running the smoke test, use an isolated synthetic database and matching
 API: it creates accounts and announcements and deletes its own test user.
 See [development](development.md#integration-smoke-test) and
