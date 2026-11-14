@@ -802,6 +802,11 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .band-chat-log { padding: 8px; }
   .rsvp-option { flex: 1 1 auto; justify-content: center; }
 }
+/* i18n-ui */
+.language-select { display: grid; gap: 6px; max-width: 320px; }
+.language-select.is-compact { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; max-width: none; margin-bottom: 12px; }
+.language-select.is-compact .input { width: auto; min-width: 9rem; }
+.language-select.is-compact .field-error { flex-basis: 100%; text-align: end; }
 `;
 
 export default styles;
