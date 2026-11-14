@@ -215,6 +215,10 @@ test('events: lineups, discovery, attendance, reminders, discussion, communicati
     assert.equal(reminders.length, 1);
     assert.equal(reminders[0].params.eventId, festival.id);
     assert.equal(reminders[0].params.offsetMinutes, 1440);
+    const kept = await call(`/gigs/${festival.id}/reminders`, { actor: 3, method: 'PUT', body: { offsets: [1440, 15] } });
+    assert.deepEqual(kept.reminders, [15, 1440], 'a reminder that already fired can stay selected');
+    assert.equal((await job.runOnce()).sent, 0, 'kept reminders do not fire again');
+    await call(`/gigs/${festival.id}/reminders`, { actor: 3, method: 'PUT', body: { offsets: [1440, 60] } });
     const moved = await call(`/gigs/${festival.id}`, { actor: 1, method: 'PATCH', body: { startsAt: rome(12 * DAY), endsAt: rome(13 * DAY) } });
     assert.equal(moved.local.startsAt, rome(12 * DAY));
     const { rows } = await realmConnector.execute(
@@ -242,9 +246,19 @@ test('events: lineups, discovery, attendance, reminders, discussion, communicati
     const detail = await call(`/admin/reports/${report.id}`, { actor: 4 });
     assert.equal(detail.evidence, 'A synthetic rude remark');
     assert.equal(detail.reportedUserId, users[5]);
-    await call(`/gigs/${festival.id}/posts/${rude.id}`, { actor: 1, method: 'DELETE' });
-    const { rows } = await realmConnector.execute('SELECT status, event_post_id FROM user_reports WHERE id = $1', [report.id]);
-    assert.deepEqual([rows[0].status, rows[0].event_post_id], ['actioned', null]);
+    const second = await call(`/gigs/${festival.id}/posts`, { actor: 5, method: 'POST', status: 201, body: { body: 'Another synthetic remark' } });
+    const secondReport = await call(`/gigs/${festival.id}/posts/${second.id}/reports`, {
+      actor: 3, method: 'POST', status: 201, body: { category: 'spam', details: 'Synthetic spam report', consent: true },
+    });
+    await call(`/gigs/${festival.id}/posts/${second.id}`, { actor: 5, method: 'DELETE' });
+    await call(`/gigs/${festival.id}/posts/${rude.id}`, { actor: 4, method: 'DELETE' });
+    const { rows } = await realmConnector.execute(
+      'SELECT id, status, event_post_id FROM user_reports WHERE id = ANY($1::uuid[])', [[report.id, secondReport.id]]);
+    const statusOf = id => rows.find(row => row.id === id);
+    assert.deepEqual([statusOf(report.id).status, statusOf(report.id).event_post_id], ['actioned', null], 'administrator removal resolves reports');
+    assert.equal(statusOf(secondReport.id).status, 'open', 'an author deleting a reported post does not close the report');
+    const audit = await realmConnector.execute("SELECT 1 FROM admin_audit WHERE actor_id = $1 AND action = 'event_post_removed'", [users[4]]);
+    assert.equal(audit.rowCount, 1);
     await call(`/gigs/${festival.id}/reports`, {
       actor: 5, method: 'POST', status: 201, body: { category: 'other', details: 'This synthetic event looks fake', consent: true },
     });
@@ -273,7 +287,8 @@ test('events: lineups, discovery, attendance, reminders, discussion, communicati
     assert.deepEqual(detail.communications.map(item => [item.kind, item.automatic]), [['cancellation', true], ['door_open', false]]);
     assert.equal((await kinds(3, 'event_communication')).length, 2);
     await call(`/gigs/${festival.id}/attendance`, { actor: 6, method: 'PUT', status: 409, body: { status: 'going' } });
-    await call(`/gigs/${festival.id}/reminders`, { actor: 3, method: 'PUT', status: 409, body: { offsets: [60] } });
+    await call(`/gigs/${festival.id}/reminders`, { actor: 3, method: 'PUT', status: 409, body: { offsets: [60, 120] } });
+    await call(`/gigs/${festival.id}/reminders`, { actor: 3, method: 'PUT', body: { offsets: [] } });
     const ics = await call(`/gigs/${festival.id}/calendar.ics`, { actor: null });
     assert.match(ics.body, /STATUS:CANCELLED/);
   });
@@ -285,6 +300,20 @@ test('events: lineups, discovery, attendance, reminders, discussion, communicati
     assert.equal((await call(`/gigs/${festival.id}`, { actor: 0 })).lineup.length, 2);
     await call(`/gigs/${festival.id}`, { actor: 1, method: 'DELETE' });
     await call(`/gigs/${festival.id}`, { actor: 3, status: 404 });
+  });
+
+  await t.test('deleted organizer pages can be dropped, and events left without organizers are hidden', async () => {
+    const other = await call('/organizations', { actor: 1, method: 'POST', status: 201, body: { kind: 'organizer', name: `${marker} Side Stage` } });
+    organizations.push(other.id);
+    const base = { timezone: 'Europe/Rome', startsAt: rome(30 * DAY), visibility: 'published' };
+    const shared = await call('/gigs', { actor: 1, method: 'POST', status: 201, body: { ...base, title: `${marker} co-hosted`, organizerIds: [organizer.id, other.id] } });
+    const orphan = await call('/gigs', { actor: 1, method: 'POST', status: 201, body: { ...base, title: `${marker} side stage only`, organizerIds: [other.id] } });
+    await call(`/organizations/${other.id}`, { actor: 1, method: 'DELETE' });
+    assert.deepEqual((await call(`/gigs/${shared.id}`, { actor: 5 })).organizers.map(item => item.id), [organizer.id]);
+    const saved = await call(`/gigs/${shared.id}`, { actor: 1, method: 'PATCH', body: { title: `${marker} co-hosted night`, organizerIds: [organizer.id] } });
+    assert.equal(saved.title, `${marker} co-hosted night`);
+    await call(`/gigs/${orphan.id}`, { actor: 5, status: 404 });
+    assert.ok(!(await search({})).events.some(item => item.id === orphan.id));
   });
 
   await t.test('page leaders request verification and administrators decide in the shared queue', async () => {

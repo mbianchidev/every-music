@@ -78,7 +78,8 @@ class EventDiscussionRepository {
   }
 
   // Authors delete their own posts; organizers and administrators moderate
-  // the board. Administrator removals of someone else's post are audited.
+  // the board. Only administrators resolve open reports about the post, and
+  // their removals of someone else's post are audited.
   async removePost(userId, eventId, postId, admin = false) {
     return realmConnector.transaction(async executor => {
       const { rows } = await executor.execute(`
@@ -89,10 +90,10 @@ class EventDiscussionRepository {
       if (post.author_id !== userId && !post.editor && !admin) {
         throw requestError(403, 'EVENT_PERMISSION_REQUIRED', 'Only the author, organizers, or administrators can remove this post');
       }
-      const { rowCount: resolved } = await executor.execute(`
+      const { rowCount: resolved } = admin ? await executor.execute(`
         UPDATE user_reports SET status = 'actioned', moderator_id = $2, reviewed_at = NOW(),
           moderator_note = COALESCE(moderator_note, 'The reported post was removed')
-        WHERE event_post_id = $1 AND status = 'open'`, [post.id, userId]);
+        WHERE event_post_id = $1 AND status = 'open'`, [post.id, userId]) : { rowCount: 0 };
       await executor.execute('DELETE FROM event_posts WHERE id = $1', [post.id]);
       if (admin && post.author_id !== userId && !post.editor) {
         await administrationRepository.audit(executor, userId, 'event_post_removed', post.author_id);

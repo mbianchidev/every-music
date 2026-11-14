@@ -16,8 +16,10 @@ export const publicMediaReferences = [
   `EXISTS(SELECT 1 FROM organization_photos ph JOIN organizations o ON o.id = ph.organization_id
     WHERE ph.url = $2 AND o.is_deleted = FALSE)`,
   `EXISTS(SELECT 1 FROM event_images ei JOIN events e ON e.id = ei.event_id
-    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND e.visibility = 'published'
-    AND (e.owner_user_id IS NULL OR EXISTS(SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted)))`,
+    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND e.visibility = 'published' AND CASE WHEN e.owner_user_id IS NOT NULL
+      THEN EXISTS(SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted)
+      ELSE EXISTS(SELECT 1 FROM event_organizers vo JOIN organizations vg ON vg.id = vo.organization_id AND NOT vg.is_deleted
+        WHERE vo.event_id = e.id) END)`,
 ];
 
 // SQL predicates granting one signed-in viewer (bound as $3) access to managed

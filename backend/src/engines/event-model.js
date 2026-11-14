@@ -17,6 +17,7 @@ export const REMINDER_RANGE = { minimum: 5, maximum: 20160 };
 export const DEFAULT_DURATION_HOURS = 4;
 export const LOCAL_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 const formatters = new Map();
 
@@ -53,18 +54,19 @@ export function offsetMinutes(instant, timeZone) {
 }
 
 // Converts "YYYY-MM-DDTHH:mm" wall-clock time in `timeZone` to a UTC Date.
-// Returns null for malformed or impossible dates. Times skipped by a daylight
-// saving change resolve to the instant after the gap.
+// Returns null for malformed or impossible dates. Offsets a day before and
+// after bracket any daylight saving change: a time that occurs twice resolves
+// to its first occurrence, and a time skipped by the change to the instant
+// after the gap, so converting back and forth is stable.
 export function zonedToUtc(local, timeZone) {
   const match = LOCAL_DATE_TIME.exec(local ?? '');
   if (!match || !isTimeZone(timeZone)) return null;
   const [, year, month, day, hour, minute] = match.map(Number);
   const wall = Date.UTC(year, month - 1, day, hour, minute);
   if (Number.isNaN(wall) || new Date(wall).toISOString().slice(0, 16) !== local) return null;
-  let utc = wall - offsetMinutes(wall, timeZone) * 60000;
-  const corrected = wall - offsetMinutes(utc, timeZone) * 60000;
-  if (corrected !== utc) utc = Math.max(utc, corrected);
-  return new Date(utc);
+  const candidates = [...new Set([-1, 1].map(days => wall - offsetMinutes(wall + days * DAY_MS, timeZone) * 60000))];
+  const matching = candidates.filter(instant => utcToZoned(instant, timeZone) === local);
+  return new Date(matching.length ? Math.min(...matching) : Math.max(...candidates));
 }
 
 // Inverse of zonedToUtc: the "YYYY-MM-DDTHH:mm" wall-clock time in `timeZone`.

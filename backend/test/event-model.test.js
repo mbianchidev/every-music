@@ -14,7 +14,16 @@ test('wall-clock times convert through IANA time zones, including daylight savin
   assert.equal(zonedToUtc('2026-07-01T20:00', 'Europe/Rome').toISOString(), '2026-07-01T18:00:00.000Z');
   assert.equal(zonedToUtc('2026-07-01T20:00', 'America/New_York').toISOString(), '2026-07-02T00:00:00.000Z');
   assert.equal(zonedToUtc('2026-01-15T09:30', 'Asia/Kolkata').toISOString(), '2026-01-15T04:00:00.000Z');
-  assert.equal(zonedToUtc('2026-03-29T02:30', 'Europe/Rome').toISOString(), '2026-03-29T01:30:00.000Z');
+  assert.equal(zonedToUtc('2026-03-29T02:30', 'Europe/Rome').toISOString(), '2026-03-29T01:30:00.000Z', 'skipped times move past the gap');
+  assert.equal(zonedToUtc('2026-03-08T03:30', 'America/New_York').toISOString(), '2026-03-08T07:30:00.000Z');
+  assert.equal(zonedToUtc('2026-11-01T01:30', 'America/New_York').toISOString(), '2026-11-01T05:30:00.000Z', 'repeated times use the first');
+  assert.equal(zonedToUtc('2026-10-25T02:30', 'Europe/Rome').toISOString(), '2026-10-25T00:30:00.000Z');
+  assert.equal(zonedToUtc('2026-10-25T01:30', 'Europe/Rome').toISOString(), '2026-10-24T23:30:00.000Z');
+  for (const [local, zone] of [['2026-03-08T03:30', 'America/New_York'], ['2026-11-01T01:30', 'America/New_York'], ['2026-10-25T02:30', 'Europe/Rome']]) {
+    let instant = zonedToUtc(local, zone);
+    for (let round = 0; round < 3; round += 1) instant = zonedToUtc(utcToZoned(instant, zone), zone);
+    assert.equal(instant.toISOString(), zonedToUtc(local, zone).toISOString(), `${local} ${zone} is stable when edited again`);
+  }
   assert.equal(zonedToUtc('2026-02-30T20:00', 'Europe/Rome'), null);
   assert.equal(zonedToUtc('2026-12-01 20:00', 'Europe/Rome'), null);
   assert.equal(zonedToUtc('2026-12-01T20:00', 'Mars/Olympus'), null);

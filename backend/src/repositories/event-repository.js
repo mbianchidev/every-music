@@ -15,10 +15,13 @@ const notFound = () => requestError(404, 'EVENT_NOT_FOUND', 'Event not found');
 
 export const endSql = alias => `COALESCE(${alias}.ends_at, ${alias}.starts_at + make_interval(hours => ${DEFAULT_DURATION_HOURS}))`;
 
-// Anyone may see a published event unless its owning account is suspended or
-// deleted. Keep in sync with media-references.js.
-export const VISIBLE_EVENT = `e.visibility = 'published' AND (e.owner_user_id IS NULL OR EXISTS(
-  SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted))`;
+// Anyone may see a published event while it has an active owning account or,
+// without an owner, at least one organizer page that was not deleted. Keep in
+// sync with media-references.js.
+export const VISIBLE_EVENT = `e.visibility = 'published' AND CASE WHEN e.owner_user_id IS NOT NULL
+  THEN EXISTS(SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted)
+  ELSE EXISTS(SELECT 1 FROM event_organizers vo JOIN organizations vg ON vg.id = vo.organization_id AND NOT vg.is_deleted
+    WHERE vo.event_id = e.id) END`;
 
 // SQL boolean: `user` may edit event `alias`, either as its owner or as an
 // active member with manage_calendar (leaders and admins hold it) of one of its
@@ -202,21 +205,31 @@ class EventRepository {
     return rows[0];
   }
 
+  // Date filters convert with PostgreSQL's zone data, so both sides must know the zone.
+  async assertTimeZone(executor, timeZone) {
+    const { rowCount } = await executor.execute('SELECT 1 FROM pg_timezone_names WHERE name = $1', [timeZone]);
+    if (!rowCount) throw requestError(400, 'INVALID_EVENT', 'Choose a valid time zone, for example Europe/Rome');
+  }
+
   async assertPlace(executor, placeId) {
     if (placeId === null || placeId === undefined) return;
     const { rowCount } = await executor.execute('SELECT 1 FROM places WHERE id = $1', [placeId]);
     if (!rowCount) throw requestError(400, 'INVALID_PLACE', 'Choose a city from the list');
   }
 
-  // Adding or removing an organizer needs manage_calendar on that organizer.
+  // Adding or removing an organizer needs manage_calendar on that organizer;
+  // pages that were deleted since can be dropped without it.
   async changeOrganizers(executor, eventId, userId, before, after) {
+    const { rows: deleted } = await executor.execute(
+      'SELECT id FROM organizations WHERE id = ANY($1::uuid[]) AND is_deleted', [before]);
+    const gone = new Set(deleted.map(row => row.id));
     for (const organizationId of after.filter(id => !before.includes(id))) {
       const access = await organizationRepository.requireMember(executor, organizationId, userId, 'manage_calendar');
       if (!ORGANIZER_KINDS.includes(access.organization.kind) || !access.organization.managed) {
         throw requestError(400, 'INVALID_ORGANIZER', 'Choose a managed page as organizer');
       }
     }
-    for (const organizationId of before.filter(id => !after.includes(id))) {
+    for (const organizationId of before.filter(id => !after.includes(id) && !gone.has(id))) {
       await organizationRepository.requireMember(executor, organizationId, userId, 'manage_calendar');
     }
     await executor.execute('DELETE FROM event_organizers WHERE event_id = $1', [eventId]);
@@ -304,6 +317,7 @@ class EventRepository {
     this.validate(merged);
     return realmConnector.transaction(async executor => {
       await executor.execute('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+      await this.assertTimeZone(executor, merged.timezone);
       await this.assertVenue(executor, merged.venueId?.toLowerCase());
       await this.assertPlace(executor, merged.placeId);
       const { rows: [{ id }] } = await executor.execute(`
@@ -343,9 +357,15 @@ class EventRepository {
         const { rows } = await executor.execute('SELECT COUNT(*)::int AS count FROM event_attendees WHERE event_id = $1', [row.id]);
         if (rows[0].count) throw requestError(409, 'EVENT_HAS_ATTENDEES', 'People already plan to attend. Cancel the event instead of unpublishing it.');
       }
+      if (merged.timezone !== row.timezone) await this.assertTimeZone(executor, merged.timezone);
       if (fields.venueId !== undefined) await this.assertVenue(executor, merged.venueId?.toLowerCase());
       if (fields.placeId !== undefined) await this.assertPlace(executor, merged.placeId);
-      const startsAt = zonedToUtc(merged.startsAt, merged.timezone);
+      // Stored instants stay untouched unless a time or the zone was sent.
+      const retimed = ['timezone', 'startsAt', 'endsAt', 'doorsOpenAt'].some(key => fields[key] !== undefined);
+      const local = value => (value ? zonedToUtc(value, merged.timezone) : null);
+      const startsAt = retimed ? local(merged.startsAt) : new Date(row.starts_at);
+      const endsAt = retimed ? local(merged.endsAt) : row.ends_at;
+      const doorsOpenAt = retimed ? local(merged.doorsOpenAt) : row.doors_open_at;
       const status = changes.status ?? row.status;
       const timeChanged = startsAt.getTime() !== new Date(row.starts_at).getTime();
       const statusChanged = status !== row.status;
@@ -355,9 +375,7 @@ class EventRepository {
           venue_id = $9, place_id = $10, address = $11, latitude = $12, longitude = $13, capacity = $14, tickets_sold = $15,
           status = $16, visibility = $17, revision = revision + 1, updated_at = NOW()
         WHERE id = $1`, [
-        row.id, merged.title.trim(), merged.description?.trim() || null, merged.type, merged.timezone, startsAt,
-        merged.endsAt ? zonedToUtc(merged.endsAt, merged.timezone) : null,
-        merged.doorsOpenAt ? zonedToUtc(merged.doorsOpenAt, merged.timezone) : null,
+        row.id, merged.title.trim(), merged.description?.trim() || null, merged.type, merged.timezone, startsAt, endsAt, doorsOpenAt,
         merged.venueId?.toLowerCase() ?? null, merged.placeId ?? null, merged.address?.trim() || null,
         merged.latitude ?? null, merged.longitude ?? null, merged.capacity ?? null, merged.ticketsSold ?? 0, status, merged.visibility,
       ]);
@@ -641,22 +659,29 @@ class EventRepository {
     });
   }
 
+  // Replaces the caller's reminder set. Kept offsets keep their state (a sent
+  // reminder does not fire again); only new ones must still lie ahead.
   async setReminders(userId, id, offsets) {
     const error = reminderOffsetsError(offsets);
     if (error) throw requestError(400, 'INVALID_REMINDER', error);
     return realmConnector.transaction(async executor => {
       const event = await this.visibleForUpdate(executor, id);
-      if (offsets.length) {
+      const { rows: existing } = await executor.execute(
+        'SELECT offset_minutes FROM event_reminders WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
+      const added = offsets.filter(minutes => !existing.some(row => row.offset_minutes === minutes));
+      if (added.length) {
         if (event.status === 'cancelled') throw requestError(409, 'EVENT_CANCELLED', 'This event was cancelled');
-        const passed = offsets.filter(minutes => new Date(event.starts_at).getTime() - minutes * 60000 <= Date.now());
+        const passed = added.filter(minutes => new Date(event.starts_at).getTime() - minutes * 60000 <= Date.now());
         if (passed.length) throw requestError(400, 'REMINDER_IN_PAST', 'That reminder time has already passed for this event');
       }
-      await executor.execute('DELETE FROM event_reminders WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
-      if (offsets.length) {
+      await executor.execute(`
+        DELETE FROM event_reminders WHERE event_id = $1 AND user_id = $2 AND NOT (offset_minutes = ANY($3::int[]))`,
+      [event.id, userId, offsets]);
+      if (added.length) {
         await executor.execute(`
           INSERT INTO event_reminders (event_id, user_id, offset_minutes, remind_at)
           SELECT $1, $2, minutes, $3::timestamptz - make_interval(mins => minutes) FROM unnest($4::int[]) AS item(minutes)`,
-        [event.id, userId, event.starts_at, offsets]);
+        [event.id, userId, event.starts_at, added]);
       }
       await publishEvent(executor, 'gigs.mine.changed', { userId });
       return { id: event.id, reminders: [...offsets].sort((a, b) => a - b) };

@@ -893,8 +893,12 @@ Editors are the owning artist and active members of an organizer holding
 `manage_calendar` (leaders and admins always do), checked with
 `organizationRepository.requireMember`. Others receive 403
 `EVENT_PERMISSION_REQUIRED`; missing events and other people's drafts return 404
-`EVENT_NOT_FOUND`. Omitted fields stay unchanged and arrays replace the stored
-list. Cross-field problems return 400 `INVALID_EVENT`; foreign or wrong-purpose
+`EVENT_NOT_FOUND`. Events without an owning artist whose organizer pages were
+all deleted are hidden; editors can drop deleted organizer pages without
+permission on them. Omitted fields stay unchanged and arrays replace the stored
+list; stored times change only when a time or `timezone` is sent (wall-clock
+values that occur twice resolve to the first occurrence, and skipped ones to
+the time after the gap). Cross-field problems return 400 `INVALID_EVENT`; foreign or wrong-purpose
 images 400 `INVALID_MEDIA`; unknown pages, people, or genres 400
 `INVALID_VENUE`, `INVALID_LINEUP`, `INVALID_ORGANIZER`, or `INVALID_GENRE`;
 removing the last organizer of a page-owned event 400 `ORGANIZER_REQUIRED`;
@@ -922,8 +926,9 @@ the start date in the event's zone), `type`, `bandId`, `artistId`,
 `band` for the first headliner, `organizer`, `location`), and paging. Upcoming
 events sort by soonest start, past events by most recent.
 
-Replies are closed for cancelled events (409 `EVENT_CANCELLED`). Reminders for
-times that already passed return 400 `REMINDER_IN_PAST`. A background job in
+Replies are closed for cancelled events (409 `EVENT_CANCELLED`). New reminder
+times that already passed return 400 `REMINDER_IN_PAST`; reminders already
+set (including ones that fired) can stay selected and never fire twice. A background job in
 every API process leases due reminders with `SKIP LOCKED` every
 `EVENT_REMINDER_INTERVAL_SECONDS` and creates one `event_reminder` per
 reminder; moving the start re-arms reminders, and cancelled or past events
@@ -933,9 +938,10 @@ blocked in either direction, and allows 20 posts per account every 10 minutes
 (429 `ACCOUNT_RATE_LIMIT`) besides the route limit. Reports use the shared
 report categories, consent, daily limit, and queue: the reported message (or
 the event title) is copied as unverified evidence, event reports target the
-owner, creator, or first organizer's leader, and removing a reported message
-marks its open reports `actioned`. Administrator removals are audited as
-`event_post_removed`.
+owner, creator, or first organizer's leader. When an administrator removes a
+reported message its open reports become `actioned` and the removal is audited
+as `event_post_removed`; deletions by authors or organizers leave reports open
+with the copied evidence.
 
 Communication kinds are `door_open`, `cancellation`, `refund`,
 `lineup_change`, `postponement`, and `general`. Changing a published event to
