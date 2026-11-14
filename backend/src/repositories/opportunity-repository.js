@@ -96,6 +96,7 @@ export class OpportunityRepository {
     if (filters.userId) {
       whereConditions.push(`NOT ${blockedBetween(`${add(filters.userId)}::uuid`, 'a.user_id')}`);
     }
+    if (filters.ids) whereConditions.push(`a.id = ANY(${add(filters.ids)}::uuid[])`);
     const location = filters.location || {};
     if (location.country) whereConditions.push(`pl.country_code = ${add(location.country)}`);
     if (location.region) whereConditions.push(`pl.region_code = ${add(location.region)}`);

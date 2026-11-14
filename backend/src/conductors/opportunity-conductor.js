@@ -10,6 +10,7 @@ import { isActive, parseExpiry, resolveExpiry } from '../engines/listing-policy.
 import { requestError } from '../engines/request-error.js';
 import { placeFields, resolveLocation, validatePlaceId } from './discovery-conductor.js';
 import { organizationRepository } from '../repositories/organization-repository.js';
+import { placeAnnouncements, withPromotion } from '../engines/discovery-placements.js';
 
 async function assertActiveCapacity(executor, userId, excludeId) {
   await quotaRepository.lockUser(executor, userId);
@@ -254,13 +255,16 @@ export class OpportunityConductor {
         limit: pagination.pageSize + 1,
       });
       const hasMore = announcements.length > pagination.pageSize;
+      const placed = await placeAnnouncements({
+        search: (...args) => opportunityRepository.searchAnnouncements(...args), filters, page: pagination.page,
+        rows: announcements.slice(0, pagination.pageSize),
+      });
 
       return reply.code(200).send({
         success: true,
         data: {
-          announcements: announcements
-            .slice(0, pagination.pageSize)
-            .map(a => this.transformBasicAnnouncement(a, { viewerId, limits })),
+          announcements: placed.rows.map(a => withPromotion(a, this.transformBasicAnnouncement(a, { viewerId, limits }))),
+          sponsored: placed.sponsored,
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,

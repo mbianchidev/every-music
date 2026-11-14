@@ -15,6 +15,8 @@ export const publicMediaReferences = [
   `EXISTS(SELECT 1 FROM organizations o WHERE o.picture_url = $2 AND o.is_deleted = FALSE)`,
   `EXISTS(SELECT 1 FROM organization_photos ph JOIN organizations o ON o.id = ph.organization_id
     WHERE ph.url = $2 AND o.is_deleted = FALSE)`,
+  `EXISTS(SELECT 1 FROM sponsored_cards c WHERE (c.image_url = $2 OR '/realm/media/' || c.video_media_id::text = $2)
+    AND c.is_active AND c.starts_at <= NOW() AND (c.ends_at IS NULL OR c.ends_at > NOW()))`,
 ];
 
 // SQL predicates granting one signed-in viewer (bound as $3) access to managed
@@ -34,4 +36,5 @@ export const retainedMediaReferences = [
   'EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_deleted = FALSE)',
   "EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE '/realm/media/' || ph.media_id::text = $2)",
   "EXISTS(SELECT 1 FROM verification_requests v WHERE $2 IN ('/realm/media/' || v.selfie_media_id::text, '/realm/media/' || v.document_media_id::text))",
+  "EXISTS(SELECT 1 FROM sponsored_cards c WHERE c.image_url = $2 OR '/realm/media/' || c.video_media_id::text = $2)",
 ];

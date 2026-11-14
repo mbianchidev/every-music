@@ -36,6 +36,10 @@ export const notificationKinds = {
   organization_update: { inApp: 'on', push: 'optional', email: 'optional' },
   organization_relation: { inApp: 'on', push: 'on', email: 'optional' },
   organization_claim: { inApp: 'on', push: 'on', email: 'optional' },
+  points_earned: { inApp: 'on', push: 'optional', email: 'off' },
+  subscription_started: { inApp: 'on', push: 'optional', email: 'optional' },
+  subscription_ended: { inApp: 'on', push: 'on', email: 'optional' },
+  payment_failed: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {
