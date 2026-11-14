@@ -61,6 +61,10 @@ return focus when a verified message replaces its warning control. Reports must
 explain exactly what is disclosed before the required consent checkbox.
 Administrator overview/queue/audit/detail states and decision confirmations need
 the same keyboard, contrast, narrow-screen and screen-reader checks.
+The welcome tour is a modal dialog: check its announcements per step, Escape to
+skip, focus return, reduced motion, and that spotlighted targets stay visible at
+320px. Also check the terms prompt, update screens, help forms (including the
+diagnostics consent text), star rating radios, Back controls, and footer links.
 
 ## Known limitations and reporting
 

@@ -121,7 +121,10 @@ endpoint/key details to logs.
 1. `npm ci`, tests, builds, and production dependency audits are green.
 2. `cargo check --locked` is green.
 3. Database backup and rollback plan are confirmed.
-4. Required environment variables and origin allowlists are reviewed.
+4. Required environment variables and origin allowlists are reviewed. The legal
+   templates are reviewed with `OPERATOR_*` and `LEGAL_EFFECTIVE_DATE` set;
+   `TERMS_VERSION` changes only when users must accept new terms; `APP_VERSION`,
+   `CLIENT_LATEST_VERSION`, and `CLIENT_MIN_VERSION` match the release.
 5. `docker compose build --no-cache` succeeds.
 6. Deployment readiness passes, and the backend smoke test passes in an isolated staging database.
 7. TLS, DNS, SMTP, PostgreSQL backups, and log collection are configured by the hosting platform.

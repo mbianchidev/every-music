@@ -58,6 +58,10 @@ Failure:
 | POST | `/realm/auth/logout` | Revoke a refresh session |
 
 Registration requires a password with at least eight characters, uppercase, lowercase, and a number. Email accounts must be verified before login.
+The body must also include `acceptedTermsVersion` equal to the current
+`termsVersion` from `GET /realm/legal`. Omitting it returns 400
+`TERMS_NOT_ACCEPTED`; a different version returns 409 `TERMS_VERSION_CHANGED`.
+The accepted version and time are stored with the new account.
 
 Refresh:
 
@@ -362,6 +366,60 @@ the values; see [configuration](configuration.md#plans-and-limits). Features
 that exceed a limit return 403 `PLAN_LIMIT_REACHED`. Admin grants and revocations
 are recorded in the audit log.
 
+## Help center, legal terms, onboarding, versions, and ratings
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/legal` | Public operator details, `effectiveDate`, `termsVersion`, `configured`, and `template: true` |
+| GET | `/realm/app/version` | Public `serverVersion`, `minimumClientVersion`, `latestClientVersion`, and `updateUrl` (`null` when unset) |
+| GET | `/realm/legal/acceptance` | Authenticated `{ termsVersion, acceptedVersion, acceptedAt, required }` |
+| POST | `/realm/legal/acceptance` | Authenticated `{ "termsVersion": "<current>" }`; returns the same state |
+| GET | `/realm/onboarding` | Authenticated `{ tour: { status, updatedAt } }`; status is `pending`, `completed`, `skipped`, or `null` |
+| PUT | `/realm/onboarding/tour` | Authenticated `{ "status": "completed" \| "skipped" }` |
+| POST | `/realm/support` | Optional authentication; create a help request, 201 |
+| GET | `/realm/support/me` | Authenticated, paginated `requests` sent from the account |
+| GET | `/realm/admin/support` | Admin-only paginated `requests` plus per-status `counts`; optional `status` and `kind` |
+| GET | `/realm/admin/support/:requestId` | Admin-only detail; access is audited |
+| PATCH | `/realm/admin/support/:requestId` | Admin-only `{ "status": "...", "replyNote": "..." }`; audited |
+| GET | `/realm/ratings/me` | Authenticated latest 20 own ratings |
+| POST | `/realm/ratings` | Authenticated `{ "appVersion": "1.2.0", "stars": 1-5, "comment": "...", "platform": "web" }`, 201 |
+| GET | `/realm/admin/ratings` | Admin-only totals, star distribution, per-version averages, and recent comments |
+
+`required` is true when the account has not accepted the current
+`TERMS_VERSION`. A stale `termsVersion` returns 409 `TERMS_VERSION_CHANGED`.
+The first accepted version of an account (at registration or through the prompt)
+also queues the welcome tour with status `pending`; later acceptances do not.
+
+Help requests accept `kind` (`bug`, `contact`, `work`), `subject` (3-200
+characters after trimming), `message` (10-5,000), optional `name` (120),
+`email` (required without authentication), `steps` (bug reports only, 5,000),
+`link` (work enquiries, an http(s) URL), and `website`, a honeypot that must stay
+empty. Bug reports may add `diagnostics` (`appVersion`, `platform`, `locale`,
+`userAgent`) only with `diagnosticsConsent: true`; otherwise 400
+`DIAGNOSTICS_CONSENT_REQUIRED`. 201 returns `{ "received": true, "id": <uuid> }`
+when signed in and `id: null` otherwise; a filled honeypot gets the same response
+without storing anything. Requests are limited to six per hour per client
+address (429 `RATE_LIMIT_EXCEEDED`) and ten per account per day
+(429 `SUPPORT_LIMIT`). A present but invalid Bearer token returns 401 instead of
+an anonymous submission.
+
+Support statuses are `open`, `in_progress`, `answered`, and `closed`. `answered`
+requires a reply note (5-5,000 characters), either new or already stored. A new
+reply sets `answeredAt`, records `support_replied`, and, for requests sent while
+signed in, creates a `support_reply` notification linking to
+`#help?view=requests`. Status changes record `support_status_changed`; detail
+reads record `support_request_viewed`. Unknown requests return 404
+`SUPPORT_REQUEST_NOT_FOUND`.
+
+A rating's `appVersion` must be `MAJOR.MINOR.PATCH`, not older than
+`CLIENT_MIN_VERSION`, and not newer than the newer of `CLIENT_LATEST_VERSION` and
+`APP_VERSION` (400 `INVALID_APP_VERSION`). Each account can rate a version once
+(409 `RATING_EXISTS`); ratings are limited to ten per hour. Ratings carry
+`rewarded_at`/`reward_reference` for a later rewards feature: server code can
+lock unrewarded rows with `ratingRepository.unrewarded(executor)` and mark them
+with `ratingRepository.markRewarded(executor, id, reference)` inside the same
+transaction that grants the reward. No points are granted by this API.
+
 ## Analytics
 
 POST `/realm/analytics/events` with `{ "kind": "profile_view" |
@@ -401,7 +459,7 @@ initial `connected` event tells clients to reload current data.
 Types include `profiles.changed`, `announcements.changed`, `comments.changed`,
 `messages.changed`, `conversations.changed`, `saved.changed`,
 `notifications.changed`, `preferences.changed`, `analytics.changed`,
-`keys.changed`, `reports.changed`, `admin.changed`, and `account.changed`. Public content
+`keys.changed`, `reports.changed`, `admin.changed`, `support.changed`, and `account.changed`. Public content
 invalidations are shared; private types target only the affected user.
 Payloads never contain message bodies or credentials. Read current state
 from the corresponding authenticated APIs; events are not a durable log.

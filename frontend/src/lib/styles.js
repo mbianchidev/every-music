@@ -476,8 +476,8 @@ tbody th { font-weight: 500; }
 .tour-dialog::backdrop { background: transparent; }
 .tour-dialog-centered::backdrop { background: #070a12b8; }
 body:has(.tour-dialog[open]) { overflow: hidden; }
-.tour-highlight { position: absolute; border-radius: 10px; box-shadow: 0 0 0 3px var(--focus), 0 0 0 200vmax #070a12b8; pointer-events: none; transition: top 240ms cubic-bezier(0.16, 1, 0.3, 1), left 240ms cubic-bezier(0.16, 1, 0.3, 1), width 240ms cubic-bezier(0.16, 1, 0.3, 1), height 240ms cubic-bezier(0.16, 1, 0.3, 1); }
-.tour-card { position: absolute; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 16px 48px #0007; transition: top 240ms cubic-bezier(0.16, 1, 0.3, 1), left 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.tour-highlight { position: absolute; top: 0; left: 0; border-radius: 10px; box-shadow: 0 0 0 3px var(--focus), 0 0 0 200vmax #070a12b8; pointer-events: none; transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.tour-card { position: absolute; top: 0; left: 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 16px 48px #0007; transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
 .tour-card .heading-md { margin-bottom: 6px; font-size: 18px; }
 .tour-card p { margin-bottom: 8px; }
 .tour-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; color: var(--muted); font-size: 12px; font-weight: 600; }

@@ -109,8 +109,8 @@ export default function ProductTour({ userId, onError }) {
     <dialog ref={dialog} className={`tour-dialog ${layout?.rect ? '' : 'tour-dialog-centered'}`} aria-labelledby="tour-label"
       aria-describedby="tour-step" onCancel={event => { event.preventDefault(); finish('skipped'); }}>
       {layout?.rect && <div className="tour-highlight" aria-hidden="true"
-        style={{ top: layout.rect.top, left: layout.rect.left, width: layout.rect.width, height: layout.rect.height }} />}
-      <section ref={card} className="tour-card" style={layout ? { top: layout.card.top, left: layout.card.left, width: layout.card.width } : { opacity: 0 }}>
+        style={{ transform: `translate(${layout.rect.left}px, ${layout.rect.top}px)`, width: layout.rect.width, height: layout.rect.height }} />}
+      <section ref={card} className="tour-card" style={layout ? { transform: `translate(${layout.card.left}px, ${layout.card.top}px)`, width: layout.card.width } : { opacity: 0 }}>
         <p className="tour-progress"><span id="tour-label">{t('onboarding.tour.label')}</span>
           <span>{t('onboarding.tour.progress', { current: index + 1, total: TOUR_STEPS.length })}</span></p>
         <div id="tour-step" aria-live="polite">

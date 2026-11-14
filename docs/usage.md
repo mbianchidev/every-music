@@ -52,6 +52,8 @@ migrations when the API container starts.
 
 1. Choose **Create an account**. Use an email address that can receive verification
    mail. Passwords need at least eight characters, uppercase, lowercase, and a number.
+   Read the Terms of Use and Privacy policy (they open in a new tab) and accept
+   the terms before creating the account.
 2. Follow the email verification link, then sign in. If it expires or delivery
    fails, attempt sign-in and use **Resend verification email**.
 3. Open **Profile**, then **Complete profile** or **Edit profile**. Fill in your
@@ -63,6 +65,41 @@ migrations when the API container starts.
 5. Open **Feed** to browse calls. **Save** bookmarks a call; **Saved** lets you
    revisit or remove it. **My calls** lets you edit or delete your announcements.
 6. Use **Profile > Sign out** to end the session.
+
+The first time a new account opens the app, a short welcome tour highlights
+Feed, Musicians, Post, Messages, Profile, Settings, and Help. Use **Next**,
+**Back**, Enter, or Escape (skip) from the keyboard; it respects reduced motion.
+Your account remembers that you finished or skipped it, and **Help > Replay the
+welcome tour** shows it again. When the operator publishes new Terms of Use,
+existing accounts are asked once after sign-in to read and accept them; Help
+and the legal pages stay readable while that prompt is open.
+
+### Help, legal pages, and updates
+
+Open **Help** from the navigation, or **Help center** in the footer of every
+screen, including sign-in and registration. You can report a bug, contact the
+team, or apply through **Work with us** without signing in; visitors must give
+an email address for the answer. Bug reports include the app version, platform,
+language, and browser identification only when you select **Include technical
+details**. Requests sent while signed in appear under **Your support requests**,
+and you get an in-app notification when the team replies. Sending is limited to
+six requests per hour per network address and ten per account per day.
+
+The footer and Help link to About, Work with us, Your data rights (GDPR),
+Privacy policy, Cookie policy, and Terms of Use. These are templates: the
+operator fills in their name, contact, jurisdiction, and dates through
+[configuration](configuration.md#help-center-legal-pages-and-app-versions) and must
+review the text. Account deletion and data export live in Settings.
+
+Nested screens (announcement and musician details, edit screens, Help forms,
+and legal pages) show **Back**. It returns to the previous Every.music page,
+or to the parent screen when you opened the page directly.
+
+If a newer app version is available, a dismissible notice links to update
+instructions for your platform. When the operator stops supporting your
+version, the app shows an **Update required** screen with the same instructions
+until you update. Signed-in members can rate each app version once from
+**Help > Rate Every.music** (1-5 stars and an optional comment).
 
 ### Discover and collaborate
 
