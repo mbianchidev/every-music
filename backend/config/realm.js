@@ -157,6 +157,10 @@ export function createRealmConfig(env = process.env) {
       senderAlias: env.MAIL_SENDER_ALIAS,
     },
     entitlements: createEntitlements(env),
+    marketplace: {
+      listingDays: parseInteger(env.MARKETPLACE_LISTING_DAYS, 60, 'MARKETPLACE_LISTING_DAYS', { minimum: 1, maximum: 365 }),
+      expiryReminderDays: parseInteger(env.MARKETPLACE_EXPIRY_REMINDER_DAYS, 3, 'MARKETPLACE_EXPIRY_REMINDER_DAYS', { minimum: 1, maximum: 30 }),
+    },
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
@@ -207,6 +211,10 @@ export function validateRealmConfig(config = realmConfig) {
     } catch {
       throw new Error('VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT must be a matching key pair and HTTPS/mailto contact');
     }
+  }
+
+  if (config.marketplace && config.marketplace.expiryReminderDays >= config.marketplace.listingDays) {
+    throw new Error('MARKETPLACE_EXPIRY_REMINDER_DAYS must be lower than MARKETPLACE_LISTING_DAYS');
   }
 
   if (config.environment === 'production') {

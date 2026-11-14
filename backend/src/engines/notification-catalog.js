@@ -22,6 +22,8 @@ export const notificationKinds = {
   come_back: { inApp: 'off', push: 'optional', email: 'on' },
   app_update_minor: { inApp: 'on', push: 'off', email: 'off' },
   app_update_major: { inApp: 'on', push: 'on', email: 'on' },
+  listing_expiring: { inApp: 'on', push: 'optional', email: 'optional' },
+  listing_removed: { inApp: 'on', push: 'optional', email: 'optional' },
 };
 
 export function notificationKind(kind) {

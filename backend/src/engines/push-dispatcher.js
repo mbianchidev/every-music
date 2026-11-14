@@ -99,7 +99,8 @@ export class PushDispatcher {
     await this.connector.execute(`
       DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'
       AND NOT EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)
-      AND NOT EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)`);
+      AND NOT EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)
+      AND NOT EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE ph.media_id = m.id)`);
     this.lastMaintenance = Date.now();
   }
 
