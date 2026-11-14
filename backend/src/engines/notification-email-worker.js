@@ -4,6 +4,9 @@ import { mailDispatcher } from './mail-dispatcher.js';
 import { composeNotificationEmail } from './notification-email.js';
 
 export const EMAIL_MAX_ATTEMPTS = 3;
+// Emails for the same kind and link (for example one conversation) are sent at
+// most once per window; notifications already read in the app are not emailed.
+export const EMAIL_COALESCE_MINUTES = 15;
 
 // Adapter over the shared SMTP transport configured by mailDispatcher.
 export const smtpNotificationMailer = {
@@ -48,17 +51,22 @@ export class NotificationEmailWorker {
         UPDATE notifications n SET email_attempts = n.email_attempts + 1,
           next_email_at = NOW() + make_interval(mins => 5 * power(2, n.email_attempts)::int)
         FROM jobs WHERE n.id = jobs.id
-        RETURNING n.id, n.user_id, n.kind, n.link, n.params, n.email_attempts
+        RETURNING n.id, n.user_id, n.kind, n.link, n.params, n.email_attempts, n.in_app, n.read_at
       )
-      SELECT l.id, l.kind, l.link, l.params, l.email_attempts AS attempts, u.email, p.locale,
-        (u.is_active = TRUE AND u.is_deleted = FALSE AND COALESCE(u.email_verified, FALSE)) AS eligible
-      FROM leased l JOIN users u ON u.id = l.user_id LEFT JOIN user_preferences p ON p.user_id = l.user_id`,
-    [this.batchSize]);
+      SELECT l.id, l.user_id AS "userId", l.kind, l.link, l.params, l.email_attempts AS attempts, u.email, p.locale,
+        (u.is_active = TRUE AND u.is_deleted = FALSE AND COALESCE(u.email_verified, FALSE)) AS eligible,
+        ((l.in_app AND l.read_at IS NOT NULL) OR EXISTS (
+          SELECT 1 FROM notifications s WHERE s.user_id = l.user_id AND s.kind = l.kind AND s.link = l.link
+            AND s.id <> l.id AND s.email_status = 'sent' AND s.email_sent_at > NOW() - make_interval(mins => $2::int)
+        )) AS redundant
+      FROM leased l JOIN users u ON u.id = l.user_id LEFT JOIN user_preferences p ON p.user_id = l.user_id
+      ORDER BY l.id`,
+    [this.batchSize, EMAIL_COALESCE_MINUTES]);
     return rows;
   }
 
   async deliver(job) {
-    if (!job.eligible) {
+    if (!job.eligible || job.redundant) {
       await this.connector.execute("UPDATE notifications SET email_status = 'skipped' WHERE id = $1", [job.id]);
       return 'skipped';
     }
@@ -93,7 +101,13 @@ export class NotificationEmailWorker {
     let delivered = 0;
     for (let batch = 0; batch < this.maxBatches; batch += 1) {
       const jobs = await this.lease();
-      const outcomes = await Promise.all(jobs.map(job => this.deliver(job)));
+      const seen = new Set();
+      const outcomes = await Promise.all(jobs.map((job) => {
+        const thread = `${job.userId}:${job.kind}:${job.link}`;
+        const duplicate = seen.has(thread);
+        seen.add(thread);
+        return this.deliver(duplicate ? { ...job, redundant: true } : job);
+      }));
       delivered += outcomes.filter(outcome => outcome === 'sent').length;
       if (jobs.length < this.batchSize) break;
     }

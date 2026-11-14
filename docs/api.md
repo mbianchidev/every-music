@@ -399,6 +399,9 @@ times, and never include message text, titles, or names. Emails are localized
 from `locale` (default English), link to the notification and to
 `#settings?section=notifications` on the first `PORTAL_ORIGINS` entry, and are
 sent only to verified, active accounts. Without SMTP the worker stays idle.
+An email is skipped when its in-app notification was already read, or when an
+email for the same kind and link (such as one conversation) was sent in the
+previous 15 minutes.
 
 Scheduled kinds are idempotent through event keys and safe with several API
 processes. `announcement_stats` and `profile_stats` are weekly digests of the

@@ -139,12 +139,13 @@ Review `RATE_THRESHOLD` for shared proxies and busy deployments.
 ### Notification email and scheduled notifications
 
 Email notifications reuse the SMTP settings above. Without a working SMTP
-transport the email worker stays idle (it logs that once at startup) and
-choices are still saved; rows older than one day are never sent later.
+transport at startup the email worker stays idle and logs that once; choices
+are still saved, and queued emails older than one day are never sent later.
 Emails are localized (English, Dutch, Italian) from the user's language
 preference, link to the first `PORTAL_ORIGINS` entry, and contain only generic
 text and counts, never message text or other private content. Each email gets
-up to three attempts, 5, 10, and 20 minutes apart.
+up to three attempts, 5, 10, and 20 minutes apart. Emails already read in the
+app, and repeats for the same conversation or item within 15 minutes, are skipped.
 
 Every API process runs these jobs; a database lease lets only one process run
 each job per interval, and event keys keep reruns from creating duplicates.

@@ -48,7 +48,7 @@ test('notification channels: preferences, delivery, email outbox, and scheduled 
     return status < 400 ? response.json().data : response.json().error;
   }
   const notify = (userId, kind, extra = {}) => realmConnector.transaction(executor => notificationRepository.create(executor, {
-    userId, kind, title: `Synthetic ${kind}`, link: '#notifications', key: `${marker}:${randomUUID()}`, ...extra,
+    userId, kind, title: `Synthetic ${kind}`, link: `#notifications?ref=${randomUUID()}`, key: `${marker}:${randomUUID()}`, ...extra,
   }));
   const stored = async id => (await realmConnector.execute(
     'SELECT in_app, push_sent, email_status, email_attempts FROM notifications WHERE id = $1', [id],
@@ -199,6 +199,18 @@ test('notification channels: preferences, delivery, email outbox, and scheduled 
     await first.dispatch();
     await realmConnector.execute('UPDATE users SET is_active = TRUE WHERE id = $1', [users[3]]);
     assert.equal((await stored(skipped)).email_status, 'skipped', 'inactive accounts are skipped');
+
+    const thread = '#messages?id=00000000-0000-4000-8000-000000000002';
+    const burst = [await notify(users[3], 'message', { link: thread }), await notify(users[3], 'message', { link: thread })];
+    const seen = await notify(users[3], 'message');
+    await realmConnector.execute('UPDATE notifications SET read_at = NOW() WHERE id = $1', [seen]);
+    sent.length = 0;
+    await first.dispatch();
+    const later = await notify(users[3], 'message', { link: thread });
+    await first.dispatch();
+    assert.equal(mine(sent).length, 1, 'one email per conversation burst; read notifications are not emailed');
+    assert.deepEqual((await Promise.all([...burst, seen, later].map(stored))).map(row => row.email_status).sort(),
+      ['sent', 'skipped', 'skipped', 'skipped']);
   });
 
   await t.test('scheduled jobs are idempotent, opt-in, and coordinated across processes', async () => {

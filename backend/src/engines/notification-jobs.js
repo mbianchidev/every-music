@@ -34,7 +34,9 @@ export class NotificationJobs {
       } catch (error) {
         this.logger.error({ err: error }, 'Notification email dispatch failed');
       }
-    })().finally(() => { this.running = null; });
+    })()
+      .catch(error => this.logger.error({ err: error }, 'Notification jobs failed'))
+      .finally(() => { this.running = null; });
     return this.running;
   }
 

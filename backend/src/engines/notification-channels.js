@@ -45,10 +45,10 @@ export function resolveChannel(kind, channel, override) {
   return typeof override === 'boolean' ? override : defaultChoice(kind, channel);
 }
 
+// Kinds are catalog keys, never user input; quoting keeps any key valid SQL.
 function kindLiteral(kind) {
   notificationKind(kind);
-  if (!/^[a-z][a-z0-9_]{1,63}$/.test(kind)) throw new Error(`Notification kinds must be snake_case: ${kind}`);
-  return `'${kind}'`;
+  return `'${kind.replaceAll("'", "''")}'`;
 }
 
 // SQL deciding delivery of one kind. Expressions use the aliases `u` (users),

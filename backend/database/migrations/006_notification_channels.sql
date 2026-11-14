@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS notification_channel_preferences (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    kind TEXT NOT NULL CHECK (kind ~ '^[a-z][a-z0-9_]{1,63}$'),
+    kind TEXT NOT NULL CHECK (length(kind) BETWEEN 1 AND 64),
     in_app BOOLEAN,
     push BOOLEAN,
     email BOOLEAN,
