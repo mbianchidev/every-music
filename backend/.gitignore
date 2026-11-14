@@ -38,3 +38,6 @@ uploads/*
 # Temp
 tmp/
 temp/
+
+# GeoNames downloads used by scripts/generate-places.mjs --source
+.geonames-cache/

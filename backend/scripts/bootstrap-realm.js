@@ -3,6 +3,7 @@ import pg from 'pg';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { loadPlaces } from './places-dataset.js';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,10 @@ async function bootstrapRealm() {
     console.log('🎵 Seeding genres...');
     await pool.query(genresSQL);
     console.log('✓ Genres seeded\n');
+
+    console.log('🌍 Loading GeoNames places...');
+    await loadPlaces(pool);
+    console.log('✓ Places loaded\n');
 
     const instrumentCount = await pool.query('SELECT COUNT(*) FROM instruments');
     const genreCount = await pool.query('SELECT COUNT(*) FROM genres');
