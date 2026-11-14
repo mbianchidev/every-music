@@ -139,6 +139,9 @@ test('musicians list the instruments they play in each project, on the editor an
 });
 
 test('Italian members see localized projects, profile details, and notification titles', async ({ browser }) => {
+  // The account language wins over the browser's once it is saved, so choose Italian explicitly.
+  await pool.query(`INSERT INTO user_preferences (user_id, locale) VALUES ($1, 'it')
+    ON CONFLICT (user_id) DO UPDATE SET locale = 'it'`, [people[0].id]);
   const { context, page } = await signIn(browser, people[0], { locale: 'it-IT' });
   try {
     const list = page.locator('.notification-list');
@@ -158,6 +161,7 @@ test('Italian members see localized projects, profile details, and notification 
     await expect(page.getByRole('heading', { name: 'Strumenti', exact: true })).toBeVisible();
   } finally {
     await context.close();
+    await pool.query("UPDATE user_preferences SET locale = 'en' WHERE user_id = $1", [people[0].id]);
   }
 });
 
