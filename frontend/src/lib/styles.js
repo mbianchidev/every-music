@@ -398,6 +398,23 @@ tbody th { font-weight: 500; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+/* w0b-notifications */
+.notification-preferences .form-stack { max-width: 900px; gap: 16px; }
+.notification-preferences > .heading-md:focus { outline-offset: 4px; }
+.notification-channel-notes { display: grid; gap: 6px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+.notification-group-heading { margin: 12px 0 4px; color: var(--paper); font-size: 16px; font-weight: 700; line-height: 1.4; }
+.notification-kind { display: block; margin: 0; padding: 6px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.notification-kind::after { content: ''; display: block; clear: both; }
+.notification-kind > legend { float: left; width: 40%; margin: 0; padding: 12px 16px 0 0; font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.notification-channels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 16px; }
+.notification-channels .checkbox-label { line-height: 1.3; overflow-wrap: anywhere; }
+.notification-kind-note { clear: both; margin: 2px 0 6px; font-size: 13px; }
+.notification-list .notification-detail { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .notification-kind > legend { float: none; width: auto; padding: 8px 0 0; }
+  .notification-channels { gap: 0 10px; }
+  .notification-channels .checkbox-label { gap: 8px; font-size: 13px; }
+}
 `;
 
 export default styles;

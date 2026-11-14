@@ -11,6 +11,7 @@ independently deployed business microservices.
 Browser -> Vite (development) or nginx (Compose) -> Fastify /realm -> PostgreSQL
 Tauri WebView ---------------------------------> absolute API URL -> PostgreSQL
 Fastify -> SMTP (verification/reset mail)
+Fastify -> SMTP (opt-in notification email outbox, idle without SMTP)
 Fastify -> Google identity verification (optional web sign-in)
 Fastify -> Web Push services (optional, generic notification payloads)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
@@ -160,6 +161,17 @@ to supported push providers. Payloads are generic; gone subscriptions are
 deleted. Notifications created while push is off are not replayed on opt-in.
 Hourly maintenance removes expired challenges, unreferenced media after a day,
 notifications after 90 days, and aggregates outside the 30-day reporting window.
+
+Per-kind channel choices live in `notification_channel_preferences`; a missing
+row or `NULL` column means the catalog default. `notificationRepository` decides
+in-app, push, and email delivery in one insert, so every feature that creates
+notifications honors them. Email uses an outbox on the notification row, drained
+by `NotificationEmailWorker` with `SKIP LOCKED` leases and up to three attempts
+through the shared SMTP transport. `NotificationScheduler` creates weekly
+statistics digests, come-back reminders and invite nudges; a lease row in
+`notification_job_runs` keeps each job to one API process per interval, and
+event keys make reruns idempotent. Both start and stop with the other
+background jobs (`NotificationJobs`).
 
 Analytics requires both actor and content owner opt-in and excludes self-views.
 Only daily resource/kind counts are retained, not actor identity or message
