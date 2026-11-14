@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Brand from './Brand.jsx';
 import Icon from './Icon.jsx';
 import { useI18n } from '../lib/i18n.js';
+import BandChatNavBadge from './BandChatNavBadge.jsx';
 
 const sections = [
   { label: 'Discover', items: [
@@ -60,6 +61,7 @@ export default function Navigation({ routeName, unreadCount = 0, isAdmin = false
       aria-current={routeName === item.id ? 'page' : undefined} onClick={mobile ? navigate : undefined}>
       <Icon name={item.icon} /><span>{item.labelKey ? t(item.labelKey) : item.label}</span>
       {item.id === 'notifications' && unreadCount > 0 && <span className="nav-badge" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+      {item.id === 'your-pages' && <BandChatNavBadge />}
     </a>
   );
   const links = (mobile = false) => groups.map(section => <div className="nav-group" key={section.label}>
