@@ -482,7 +482,9 @@ password), `emailCode` (required instead for accounts without one, from
 required when two-step verification is on). Failures return 400
 `PASSWORD_REQUIRED` / `EMAIL_CODE_REQUIRED` / `TWO_FACTOR_CODE_REQUIRED`, or
 403 `REAUTHENTICATION_FAILED` / `INVALID_TWO_FACTOR_CODE`. Five failures in 15
-minutes return 429 `REAUTHENTICATION_LOCKED`. Setup also requires
+minutes return 429 `REAUTHENTICATION_LOCKED`. Emailed confirmation codes expire
+after 10 minutes, allow five attempts, and need SMTP (503 `MAIL_NOT_CONFIGURED`
+otherwise); password accounts receive 400 `PASSWORD_REAUTHENTICATION`. Setup also requires
 re-authentication and returns 409 `TWO_FACTOR_ENABLED` while a method is on.
 
 `availableMethods` always contains `totp`; `email` appears when SMTP is
