@@ -120,7 +120,8 @@ default 55474 and 4179.
 `test:integration` exercises real Fastify authentication, PostgreSQL
 transactions, relation edits, case-normalized identifiers, visibility,
 concurrent reactions, media decoding/ownership, conversation retries/blocking,
-notification preferences, analytics consent, live HTTP streams, and push job
+notification preferences, per-kind notification channels, the email outbox and
+scheduled notification jobs, analytics consent, live HTTP streams, and push job
 retry/cleanup. Google credential verification and outbound push transport are
 narrow synthetic provider stubs; no real account, SMTP delivery, or push
 provider is contacted.

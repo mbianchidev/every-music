@@ -344,6 +344,72 @@ matching browser endpoint. Old, already-read, and push-disabled-at-creation
 notifications are not delivered later on opt-in. Notifications expire after
 90 days; a worker cleans them up hourly.
 
+## Notification channels
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/preferences/notifications` | Every catalog kind with per-channel availability, default, and current choice |
+| PUT | `/realm/preferences/notifications` | `{ "kinds": { "<kind>": { "inApp"?: bool \| null, "push"?: bool \| null, "email"?: bool \| null } } }` |
+
+Both require authentication; PUT allows 60 requests per minute. The response
+of both is:
+
+```json
+{
+  "categories": { "messages": true, "announcements": true, "engagements": true, "profileViews": false },
+  "push": false,
+  "pushConfigured": true,
+  "email": { "address": "musician@example.test", "verified": true, "configured": true },
+  "plan": "free",
+  "kinds": [{
+    "kind": "message", "category": "messages", "categoryEnabled": true,
+    "planFeature": null, "planAllowed": true,
+    "channels": {
+      "inApp": { "availability": "on", "default": true, "enabled": true },
+      "push": { "availability": "on", "default": true, "enabled": true },
+      "email": { "availability": "optional", "default": false, "enabled": false }
+    }
+  }]
+}
+```
+
+`kinds` follows `backend/src/engines/notification-catalog.js`. `availability`
+is `on` (enabled by default), `optional` (disabled until chosen), or `off`
+(never delivered on that channel). `enabled` is the user's choice, or the
+default when no choice is stored. The optional in-app channel of a kind with a
+category (profile views) defaults on because its category switch is the opt-in.
+PUT is partial: omitted kinds and channels stay unchanged, booleans store a
+choice, and `null` restores the default. Enabling an `off` channel returns 400
+`CHANNEL_UNAVAILABLE`; unknown kinds or channels return 400 `VALIDATION_ERROR`.
+Choices apply to notifications created afterwards.
+
+A notification is delivered on a channel only when all of these hold:
+
+- The account is active and not deleted.
+- The legacy category boolean (`messages`, `announcements`, `engagements`,
+  `profileViews` in `/realm/preferences`) is on. These stay master switches for
+  their kinds on every channel; kinds without a `category` have no switch.
+- The channel is available for the kind and enabled for the user.
+- Push also needs the browser push switch (`push`) and a subscribed browser.
+- Email also needs a verified address. It goes to the account address.
+
+Rows that would reach no channel are not created. Email is an outbox on the
+notification row: workers lease due rows with `SKIP LOCKED`, try up to three
+times, and never include message text, titles, or names. Emails are localized
+from `locale` (default English), link to the notification and to
+`#settings?section=notifications` on the first `PORTAL_ORIGINS` entry, and are
+sent only to verified, active accounts. Without SMTP the worker stays idle.
+
+Scheduled kinds are idempotent through event keys and safe with several API
+processes. `announcement_stats` and `profile_stats` are weekly digests of the
+previous 7 days (`params`: `views`, plus `likes` and `saves` for announcements,
+and the ISO `week`) for users with analytics consent, a chosen channel, and a
+plan with the matching statistics switch. `come_back` (`params.days`) reminds
+inactive users at most once per inactivity period, and `invite_friends`
+(`params.days`) is one in-app nudge per account linking to `#invite`. See
+[configuration](configuration.md#notification-email-and-scheduled-notifications)
+for intervals and thresholds.
+
 ## Plans and limits
 
 | Method | Path | Contract |

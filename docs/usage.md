@@ -131,6 +131,18 @@ browser push; permission is requested only when you choose to enable it.
 Push is generic and excludes message text. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
 
+Under **Notification channels** in Settings (or **Manage notification settings**
+in the notification center), choose for each type of notification whether it
+appears in the app, as browser push, or by email. Some types are not available
+on every channel; those options are disabled and marked "not available". The
+category switches above the channels still turn a whole category off. Email goes
+to your verified account address, is written in your chosen language, and
+never contains message text or other private content; every email links back to
+these settings. Optional weekly statistics digests need analytics consent and a
+plan that includes statistics. Inactive accounts may get a few "we miss you"
+reminders by email, and new accounts get one in-app reminder to invite friends.
+Choices apply to notifications created after you save them.
+
 ### Themes, analytics, and installation
 
 The **Color theme** control offers System, Light, and Dark. An explicit choice

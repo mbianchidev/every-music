@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import MessagingKeys from '../components/MessagingKeys.jsx';
+import NotificationPreferences from '../components/NotificationPreferences.jsx';
 
 const labels = {
   messages: 'New messages',
@@ -77,6 +78,7 @@ export default function SettingsScreen() {
           <p className="body-muted">Platform aggregates require a second opt-in from both musicians. Administrators see aggregate daily activity and reach of opted-in public calls, not individual visitors or private message text. Only new activity is included. Disabling it removes platform totals for your own content and stops new contributions; already anonymous contributions to other content cannot be identified individually.</p>
           <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save preferences'}</button>
         </form>
+        <NotificationPreferences />
         <div className="detail-section"><MessagingKeys /></div>
         <section className="detail-section" aria-labelledby="push-heading">
           <h2 className="heading-md" id="push-heading">Browser push</h2>

@@ -136,6 +136,32 @@ Disable proxy buffering/compression for event streams and allow idle timeouts
 longer than 15 seconds. The supplied nginx config already disables buffering.
 Review `RATE_THRESHOLD` for shared proxies and busy deployments.
 
+### Notification email and scheduled notifications
+
+Email notifications reuse the SMTP settings above. Without a working SMTP
+transport the email worker stays idle (it logs that once at startup) and
+choices are still saved; rows older than one day are never sent later.
+Emails are localized (English, Dutch, Italian) from the user's language
+preference, link to the first `PORTAL_ORIGINS` entry, and contain only generic
+text and counts, never message text or other private content. Each email gets
+up to three attempts, 5, 10, and 20 minutes apart.
+
+Every API process runs these jobs; a database lease lets only one process run
+each job per interval, and event keys keep reruns from creating duplicates.
+
+| Variable | Default (range) | Purpose |
+|---|---|---|
+| `NOTIFICATION_JOB_INTERVAL_MINUTES` | `60` (1-1440) | How often each scheduled job runs across all API processes |
+| `STATS_DIGEST_WEEKDAY` | `1` (1-7, Monday-Sunday) | First ISO weekday on which the weekly statistics digests are created |
+| `STATS_DIGEST_MIN_EVENTS` | `1` (1-100000) | Minimum activity in the previous 7 days before a digest is sent |
+| `COME_BACK_AFTER_DAYS` | `30` (1-365) | Days since the last sign-in before a come-back reminder; also the gap between reminders |
+| `COME_BACK_MAX_REMINDERS` | `3` (0-24) | Reminders per inactivity streak; `0` disables them |
+| `INVITE_NUDGE_AFTER_DAYS` | `7` (1-365) | Days after signup for the single in-app invite-friends nudge (sent within the following 30 days) |
+
+Weekly digests require personal analytics consent, a chosen push or email
+channel for that digest, and a plan whose `SEE_ADS_STATS` (announcement
+statistics) or `SEE_PROFILE_VISITS` (profile statistics) switch is on.
+
 ## Plans and limits
 
 Freemium limits use the product plan names. Set `FREE_<NAME>` or
@@ -173,7 +199,8 @@ API, and web host bindings are local by default.
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
-SMTP, pool, rate-limit, and body-size settings listed above. Its default
+SMTP, pool, rate-limit, and body-size settings listed above, plus the
+[scheduled notification settings](#notification-email-and-scheduled-notifications). Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.

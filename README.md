@@ -122,6 +122,7 @@ not packaged by desktop CI.
 - **Collaboration:** end-to-end encrypted new messages, recovery keys/fingerprints, read/archive/block controls, and notifications with optional browser push.
 - **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
+- **Notification channels:** per-type in-app, push, and email choices, localized privacy-safe email, weekly statistics digests, and come-back/invite reminders.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
 
