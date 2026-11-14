@@ -6,8 +6,6 @@
 
 [![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
 
-*Current web feed connected to a local API and PostgreSQL with synthetic accounts and announcements. Select the image to view it at full resolution.*
-
 Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, browse opportunities, and build a musician profile using a React web client backed by a Fastify API and PostgreSQL.
 
 ## Contents
