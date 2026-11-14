@@ -5,6 +5,7 @@ import { SPEND_KINDS } from '../engines/monetization-rules.js';
 import { adminGuard, identityGuard, optionalIdentityGuard } from '../guards/identity-guard.js';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { uuid, text, object, params, paging } from '../validators/http-schemas.js';
+import { realmConfig } from '../../config/realm.js';
 
 const WEBHOOK_BYTES = 512 * 1024;
 const https = { type: 'string', maxLength: 2048, pattern: '^https://[^\\s]+$' };
@@ -33,7 +34,12 @@ const card = {
   active: { type: 'boolean' },
 };
 
-export async function monetizationOrchestrator(fastify, { config, connector = realmConnector, backgroundJobs = true }) {
+export async function monetizationOrchestrator(fastify, { config: provided, connector = realmConnector, backgroundJobs = true }) {
+  const config = {
+    ...provided,
+    monetization: provided.monetization ?? realmConfig.monetization,
+    entitlements: provided.entitlements ?? realmConfig.entitlements,
+  };
   const billing = new BillingConductor(config);
   const conductor = new MonetizationConductor(config, billing);
   const jobs = new MonetizationJobs({ config, gateway: billing.gateway, connector, logger: fastify.log });
