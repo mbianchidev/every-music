@@ -27,8 +27,12 @@ request/session behavior. The [production browser suite](docs/development.md#com
 also runs axe WCAG-tagged checks on light/dark route states, tests a keyboard
 message submission, preserves composer focus through live updates, verifies
 the skip link, follows system theme changes, and checks 320px reflow and
-controls not obscured by the fixed navigation. It waits for real loading and
-entrance animations to finish before measuring stable contrast.
+controls not obscured by sticky headers or bottom navigation. The mobile
+navigation dialog checks initial focus, Tab/Shift+Tab wraparound, Escape,
+return focus, route focus, resize cleanup, and an open-dialog axe scan.
+Route focus is applied when React commits so it cannot interrupt typing
+on the following frame. The suite waits for real loading and any finite
+animations before measuring stable contrast.
 
 These are automated Chromium checks, not full accessibility compliance or a
 cross-platform screen-reader certification. Manual checks below remain necessary.

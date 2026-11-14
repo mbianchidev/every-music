@@ -29,7 +29,7 @@ const ROUTES = {
   'forgot-password': { screen: ForgotPasswordScreen, title: 'Forgot password' },
   'verify-email': { screen: VerifyEmailScreen, title: 'Verify email' },
   'reset-password': { screen: ResetPasswordScreen, title: 'Reset password' },
-  feed: { screen: SearchScreen, title: 'Feed', protected: true },
+  feed: { screen: SearchScreen, title: 'Open calls', protected: true },
   musicians: { screen: SearchScreen, props: { kind: 'profiles' }, title: 'Find musicians', protected: true },
   musician: { screen: MusicianScreen, title: 'Musician', protected: true },
   announcement: { screen: AnnouncementScreen, title: 'Announcement', protected: true },
@@ -92,7 +92,9 @@ class Orchestrator extends Component {
     const definition = Object.hasOwn(ROUTES, route.name) ? ROUTES[route.name] : undefined;
 
     if (definition?.protected && !session.authorized) {
-      try { sessionStorage.setItem('everymusic.return-to', window.location.hash); }
+      try {
+        if (readRoute().name === route.name) sessionStorage.setItem('everymusic.return-to', window.location.hash);
+      }
       catch (error) { console.warn('Could not preserve the requested page', error); }
       window.location.replace('#login');
       return;
@@ -104,35 +106,32 @@ class Orchestrator extends Component {
     }
 
     document.title = `${definition?.title || 'Page not found'} · Every.music`;
-    if (focus) window.requestAnimationFrame(() => {
+    if (focus) {
       window.scrollTo(0, 0);
       document.getElementById('main-content')?.focus({ preventScroll: true });
-    });
+    }
   };
 
   render() {
-    const { route } = this.state;
+    const { route, session } = this.state;
     const definition = Object.hasOwn(ROUTES, route.name) ? ROUTES[route.name] : undefined;
-
-    if (!definition) {
-      return (
-        <main className="container-narrow center-content" id="main-content" tabIndex="-1">
+    const Screen = definition?.screen;
+    const waitingForSignIn = definition?.protected && !session.authorized;
+    return (
+      <div className={`application ${session.authorized ? 'is-authenticated' : 'is-guest'}`}>
+        <AppStatus session={session} routeName={route.name} pageTitle={definition?.title || 'Page not found'} />
+        <main id="main-content" tabIndex="-1">
+        {waitingForSignIn ? <BootScreen /> : Screen ? <Screen key={this.state.navigation} route={route} {...definition.props} /> : <div className="container-narrow center-content">
           <div className="card">
             <p className="eyebrow">404</p>
-            <h1 className="heading-lg">PAGE NOT FOUND</h1>
+            <h1 className="heading-lg">Page not found</h1>
             <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#feed'; }}>
-              RETURN HOME
+              Return home
             </button>
           </div>
+        </div>}
         </main>
-      );
-    }
-
-    const Screen = definition.screen;
-    return (
-      <main id="main-content" tabIndex="-1">
-        <Screen key={this.state.navigation} route={route} {...definition.props} />
-      </main>
+      </div>
     );
   }
 }
@@ -148,7 +147,6 @@ root.render(
       event.preventDefault();
       document.getElementById('main-content')?.focus();
     }}>Skip to main content</a>
-    <AppStatus />
     <Orchestrator />
   </ErrorBoundary>,
 );

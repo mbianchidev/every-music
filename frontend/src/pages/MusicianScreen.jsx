@@ -3,7 +3,6 @@ import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import { useResource } from '../lib/resources.js';
 import PageHeader from '../components/PageHeader.jsx';
-import Navigation from '../components/Navigation.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
@@ -37,7 +36,7 @@ export default function MusicianScreen({ route }) {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Musician profile" title={profile?.artistName || 'MUSICIAN'} />
+      <PageHeader eyebrow="Musician profile" title={profile?.artistName || 'Musician'} />
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {error && <p className="error" role="alert">{error}</p>}
       {!profile && !resource.error ? <Spinner label="Loading musician" /> : profile && (
@@ -52,7 +51,6 @@ export default function MusicianScreen({ route }) {
           </div>
         </article>
       )}
-      <Navigation active="feed" />
     </div>
   );
 }

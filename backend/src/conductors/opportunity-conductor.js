@@ -149,6 +149,7 @@ export class OpportunityConductor {
       isRemote,
       isCoverBand,
       searchTerm,
+      createdWithin,
       sort = 'newest',
       page = 1,
       pageSize = 20,
@@ -164,6 +165,7 @@ export class OpportunityConductor {
       InputValidator.validateUuid(instrumentId, 'Instrument ID'),
       InputValidator.validateUuid(genreId, 'Genre ID'),
       InputValidator.validateEnum(sort, ['newest', 'oldest', 'title', 'city', 'popular'], 'Sort'),
+      InputValidator.validateEnum(createdWithin, ['week', 'month'], 'Creation date'),
       InputValidator.validateLength(searchTerm, 0, 200, 'Search term'),
       InputValidator.validateLength(city, 0, 255, 'City'),
     );
@@ -187,6 +189,7 @@ export class OpportunityConductor {
         isRemote: remoteResult.value,
         isCoverBand: coverBandResult.value,
         searchTerm,
+        createdWithin,
         sort,
         userId: request.authenticatedUser?.userId,
       };
@@ -548,6 +551,7 @@ export class OpportunityConductor {
       id: announcement.id,
       userId: announcement.user_id,
       creatorName: announcement.creator_name,
+      creatorPictureUrl: announcement.creator_picture_url,
       title: announcement.title,
       description: announcement.description,
       pictureUrl: announcement.picture_url,
@@ -583,6 +587,10 @@ export class OpportunityConductor {
     return {
       id: announcement.id,
       userId: announcement.user_id,
+      creatorName: announcement.creator_name,
+      creatorPictureUrl: announcement.creator_picture_url,
+      instruments: announcement.instruments || [],
+      genres: announcement.genres || [],
       title: announcement.title,
       description: announcement.description,
       pictureUrl: announcement.picture_url,

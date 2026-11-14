@@ -44,7 +44,7 @@ class ForgotPasswordScreen extends Component {
         <div style={{ width: '100%' }}>
           <PageHeader
             eyebrow="Account recovery"
-            title="RESET ACCESS"
+            title="Forgot your password?"
             subtitle="We will email a secure password reset link if the account exists."
           />
           {error && <div className="error" role="alert">{error}</div>}
@@ -63,7 +63,7 @@ class ForgotPasswordScreen extends Component {
               />
             </FormField>
             <button className="btn btn-primary" type="submit" disabled={loading || Boolean(message)}>
-              {loading ? 'SENDING…' : 'SEND RESET LINK'}
+              {loading ? 'Sending...' : 'Send reset link'}
             </button>
             <button className="text-link" type="button" onClick={() => { window.location.hash = '#login'; }}>
               Return to sign in

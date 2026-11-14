@@ -2,7 +2,6 @@ import { useState } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import { useResource } from '../lib/resources.js';
-import Navigation from '../components/Navigation.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -37,7 +36,7 @@ export default function ProfileScreen() {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Your identity" title="PROFILE" subtitle="Show collaborators what you bring to the room." />
+      <PageHeader eyebrow="Your space" title="My profile" subtitle="A little about you. A good place for a collaboration to start." />
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!resource.data && !resource.error ? <Spinner label="Loading your profile" /> : resource.data && (
         <article className="card card-highlight">
@@ -50,7 +49,6 @@ export default function ProfileScreen() {
           <div className="compact-actions"><a href="#settings">Preferences</a><a href="#analytics">My analytics</a></div>
         </article>
       )}
-      <Navigation active="profile" />
     </div>
   );
 }

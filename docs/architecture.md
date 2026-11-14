@@ -47,7 +47,11 @@ commits.
 ## Client state and navigation
 
 `frontend/src/main.jsx` maps hash routes to screens and guards authenticated
-screens. Screens use shared components and `lib/conduit.js` for API requests.
+screens before mounting them. Unauthorized screens do not start private
+resource requests while the sign-in redirect preserves the intended deep link.
+One shared shell owns desktop/sidebar and mobile/bottom navigation, theme,
+connection status, installation, and the live-update connection.
+Screens use shared components and `lib/conduit.js` for API requests.
 `lib/nucleus.js` stores the current persona and tokens in `sessionStorage`,
 not permanent local storage. Theme preference alone uses `localStorage`.
 
@@ -59,10 +63,13 @@ authentication failures clear the session, while network failures preserve it.
 Screens display recoverable errors rather than treating failed requests as
 empty data.
 
-Resource hooks abort outdated reads and reload invalidated data without
-replacing form drafts. Session changes also invalidate in-flight authenticated
+Resource hooks key both retained data and requests by account and path, abort
+outdated reads, and reload invalidated data without replacing form drafts.
+Changing accounts clears old private data immediately, even while the next
+account's request is pending. Session changes also invalidate in-flight authenticated
 results and refresh responses, preventing one account's late response from
-overwriting the next account. Route changes move focus to main content;
+overwriting the next account. Route changes move focus to main content at the
+React commit, not a delayed frame that could interrupt a newly focused input;
 background refreshes do not steal focus.
 
 The UI includes discovery/filter/sort/page controls, profile/catalog/project
@@ -92,7 +99,10 @@ also revokes refresh sessions.
 
 `PORTAL_ORIGINS` controls CORS; its first entry also supplies the base for
 verification and reset links. The optional web Google button uses the official
-Identity Services SDK and a five-minute, single-use, hashed nonce. The API
+Identity Services SDK and a five-minute, single-use, hashed nonce. An unused
+challenge can be reused in page memory for at most four minutes across sign-in
+and registration navigation; a sign-in attempt or explicit retry clears it.
+The API
 verifies Google's signature/audience/expiry/email and signed nonce before
 creating the application session. Google credentials are not persisted.
 Matching email alone never links a password account. Google users may use

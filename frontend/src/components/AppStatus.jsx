@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import nucleus from '../lib/nucleus.js';
 import { useResource } from '../lib/resources.js';
 import { connectLiveUpdates } from '../lib/realtime.js';
 import { registerPwa } from '../lib/pwa.js';
+import Navigation from './Navigation.jsx';
+import Brand from './Brand.jsx';
+import Icon from './Icon.jsx';
+import Avatar from './Avatar.jsx';
 
-export default function AppStatus() {
-  const [session, setSession] = useState(nucleus.snapshot());
+export default function AppStatus({ session, routeName, pageTitle }) {
   const [preference, setPreference] = useState(document.documentElement.dataset.themePreference || 'system');
   const [themeError, setThemeError] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
@@ -15,7 +17,6 @@ export default function AppStatus() {
   const [pwaError, setPwaError] = useState('');
   const notifications = useResource(session.authorized ? '/notifications?pageSize=1' : null, { events: 'notifications.changed' });
 
-  useEffect(() => nucleus.subscribe(setSession), []);
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
@@ -23,8 +24,8 @@ export default function AppStatus() {
       document.documentElement.dataset.theme = theme;
       document.documentElement.dataset.themePreference = preference;
       document.documentElement.style.colorScheme = theme;
-      document.documentElement.style.backgroundColor = theme === 'dark' ? '#090a0d' : '#f6f5f0';
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#090a0d' : '#f6f5f0');
+      document.documentElement.style.backgroundColor = theme === 'dark' ? '#11131a' : '#f6f7fb';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#11131a' : '#f6f7fb');
     };
     apply();
     media.addEventListener('change', apply);
@@ -75,31 +76,35 @@ export default function AppStatus() {
     }
   };
   return (
+    <>
+    {session.authorized && <Navigation routeName={routeName} unreadCount={notifications.data?.unreadCount || 0} />}
     <header className="app-tools">
-      <a className="brand-link" href={session.authorized ? '#feed' : '#login'}>Every.music</a>
-      {session.authorized && (
-        <nav className="community-nav" aria-label="Community">
-          <a href="#musicians">Musicians</a>
-          <a href="#messages">Messages</a>
-          <a href="#notifications">Notifications{notifications.data?.unreadCount ? ` (${notifications.data.unreadCount})` : ''}</a>
-          <a href="#analytics">Analytics</a>
-          <a href="#settings">Settings</a>
-        </nav>
-      )}
+      <div className="header-brand"><Brand href={session.authorized ? '#feed' : '#login'} /></div>
+      {session.authorized && <div className="header-context"><span>Workspace</span><Icon name="chevron" size={14} /><span>{pageTitle}</span></div>}
+      <div className="header-actions">
+      {session.authorized && <p className={`connection-status ${!online ? 'is-offline' : live === 'live' ? 'is-live' : 'is-connecting'}`} role="status">
+        <span className="status-dot" aria-hidden="true" /><span className="connection-label" aria-hidden="true">{!online ? 'Offline' : live === 'live' ? 'Live' : 'Connecting'}</span>
+        <span className="sr-only">{!online ? 'Offline' : live === 'live' ? 'Live updates connected' : 'Live updates reconnecting. You can still refresh lists.'}</span>
+      </p>}
       <div className="theme-control">
-        <label htmlFor="theme-preference">Color theme</label>
+        <label className="sr-only" htmlFor="theme-preference">Color theme</label>
+        <Icon name="theme" size={16} />
         <select id="theme-preference" value={preference} onChange={changeTheme}>
           <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
         </select>
       </div>
       {install && <button className="text-link" type="button" onClick={installApp}>Install app</button>}
       {update && <button className="text-link" type="button" onClick={update}>Update app</button>}
-      <p className="connection-status" role="status">
-        {!online ? 'Offline. Saved feed results are read-only; edits stay in the form until you reconnect.' : session.authorized
-          ? live === 'live' ? 'Live updates connected' : 'Live updates reconnecting. You can still refresh lists.' : ''}
-      </p>
+      {session.authorized && <a className="header-profile" href="#profile" aria-label="Open your profile">
+        {session.persona?.artistName ? <Avatar name={session.persona.artistName} src={session.persona.profilePictureUrl} /> : <span className="avatar"><Icon name="user" size={18} /></span>}
+      </a>}
+      </div>
+    </header>
+    <div className="global-notices">
+      {!online && <p className="status-message" role="status">You are offline. Saved calls are read-only. Reconnect to save changes or send messages.</p>}
       {(themeError || pwaError) && <p className="field-error" role="alert">{themeError || pwaError}</p>}
       {online && session.authorized && notifications.error && <p className="field-error" role="alert">Notifications: {notifications.error} <button className="text-link" type="button" onClick={notifications.reload}>Retry notifications</button></p>}
-    </header>
+    </div>
+    </>
   );
 }

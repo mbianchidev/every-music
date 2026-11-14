@@ -130,14 +130,23 @@ CI fetches both merge parents and uses `HEAD^1` as the base.
 `test:e2e` starts its own API on 55474 and a production Vite preview on 4179;
 those ports must be free. It seeds/cleans synthetic accounts, uses the actual
 API/database, and checks two-user messaging, publishing/editing images,
-projects, filters/pages, bookmarks/comments/reactions, notifications, analytics,
+project editing/removal and roles, catalog selection/removal, date filters/pages,
+bookmarks/comments/reactions, notifications, analytics,
 offline shell/feed, failed-edit recovery, account-bound cache cleanup,
-system/light/dark preferences, keyboard focus, 320px reflow, and axe checks.
+system/light/dark preferences, keyboard focus, 320px reflow, modal navigation
+wraparound/Escape/resize, and axe checks. Google signup, existing-account deep
+links, and pending-request account isolation use the real app/API/database with
+only the external Google SDK and credential verification replaced by synthetic
+provider fixtures. Install/share browser adapters are also controlled so tests
+do not install software or change the host clipboard.
 Do not treat its browser checks as a native screen-reader certification.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
 to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+The Google browser server is a loopback-only integration entrypoint requiring
+`REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
+not the production server and must never be exposed as one.
 
 Live Google consent/sign-in and browser push subscription/delivery still require
 configured provider credentials, HTTPS/browser permission, and target-platform

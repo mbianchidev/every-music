@@ -118,7 +118,7 @@ not packaged by desktop CI.
 
 - **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
 - **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators and roles.
-- **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, and remote filters, sorting, and bounded pages.
+- **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
 - **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
 - **Collaboration:** private messages, read state, conversation archiving, blocking, followed-musician alerts, and a notification center with optional browser push.

@@ -54,13 +54,13 @@ class ResetPasswordScreen extends Component {
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
           <p className="eyebrow">Account recovery</p>
-          <h1 className="heading-lg">RESET PASSWORD</h1>
+          <h1 className="heading-lg">Reset password</h1>
           {error && <div className="error" role="alert">{error}</div>}
           {success ? (
             <>
               <div className="success" role="status">Password updated. All previous sessions were signed out.</div>
               <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-                SIGN IN
+                Sign in
               </button>
             </>
           ) : (
@@ -86,7 +86,7 @@ class ResetPasswordScreen extends Component {
                 />
               </FormField>
               <button className="btn btn-primary" type="submit" disabled={loading}>
-                {loading ? 'UPDATING…' : 'UPDATE PASSWORD'}
+                {loading ? 'Updating...' : 'Update password'}
               </button>
             </form>
           )}

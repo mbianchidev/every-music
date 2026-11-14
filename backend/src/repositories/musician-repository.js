@@ -149,6 +149,10 @@ export class MusicianRepository {
       params.push(`%${filters.searchTerm}%`);
       paramIndex++;
     }
+    if (filters.createdWithin) {
+      whereConditions.push(`p.created_at >= NOW() - $${paramIndex++}::interval`);
+      params.push({ week: '7 days', month: '30 days' }[filters.createdWithin]);
+    }
 
     const pageSize = pagination.pageSize || 20;
     const limit = pagination.limit || pageSize;
@@ -158,7 +162,16 @@ export class MusicianRepository {
     const query = `
       SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
              p.city, p.state, p.country, p.bio, p.profile_picture_url,
-             p.created_at
+             p.created_at,
+             (SELECT jsonb_agg(jsonb_build_object(
+               'instrument_id', ui.instrument_id, 'name', i.name,
+               'skill_level', ui.skill_level, 'years_experience', ui.years_experience
+             ) ORDER BY i.name) FROM user_instruments ui JOIN instruments i ON i.id = ui.instrument_id
+               WHERE ui.profile_id = p.id) AS instruments,
+             (SELECT jsonb_agg(jsonb_build_object(
+               'genre_id', ug.genre_id, 'name', g.name
+             ) ORDER BY g.name) FROM user_genres ug JOIN genres g ON g.id = ug.genre_id
+               WHERE ug.profile_id = p.id) AS genres
       FROM profiles p
       JOIN users u ON u.id = p.user_id
       WHERE ${whereConditions.join(' AND ')}

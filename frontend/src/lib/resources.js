@@ -4,8 +4,9 @@ import nucleus from './nucleus.js';
 import { offlineFeed, rememberFeed } from './offline-feed.js';
 
 export function useResource(path, { auth = true, events = '', cacheFeed = false, reconnect = true } = {}) {
+  const account = auth ? nucleus.payload.persona?.userId : null;
   const [revision, setRevision] = useState(0);
-  const [state, setState] = useState({ path: null, data: null, loading: Boolean(path), error: '' });
+  const [state, setState] = useState({ path: null, account: null, data: null, loading: Boolean(path), error: '' });
   const reload = useCallback(() => setRevision(value => value + 1), []);
 
   useEffect(() => {
@@ -13,7 +14,7 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
     const controller = new AbortController();
     const userId = nucleus.payload.persona?.userId;
     setState(previous => ({
-      path, data: previous.path === path ? previous.data : null, loading: true, error: '',
+      path, account, data: previous.path === path && previous.account === account ? previous.data : null, loading: true, error: '',
     }));
     const load = async () => {
       if (cacheFeed && !navigator.onLine) {
@@ -28,14 +29,14 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
       return data;
     };
     load().then(data => {
-      if (!controller.signal.aborted) setState({ path, data, loading: false, error: '' });
+      if (!controller.signal.aborted) setState({ path, account, data, loading: false, error: '' });
     }).catch(error => {
       if (!controller.signal.aborted) setState(previous => ({
         ...previous, data: [403, 404].includes(error.status) ? null : previous.data, loading: false, error: error.message,
       }));
     });
     return () => controller.abort();
-  }, [path, auth, cacheFeed, revision]);
+  }, [path, auth, account, cacheFeed, revision]);
 
   useEffect(() => {
     let timer;
@@ -53,7 +54,8 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
     };
   }, [events, reconnect, reload]);
 
-  return { ...state, data: state.path === path ? state.data : null, reload };
+  const current = state.path === path && state.account === account;
+  return { ...state, data: current ? state.data : null, loading: current ? state.loading : Boolean(path), error: current ? state.error : '', reload };
 }
 
 export function useDebounced(value, milliseconds = 300) {

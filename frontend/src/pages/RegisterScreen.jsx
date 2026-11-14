@@ -62,10 +62,10 @@ class RegisterScreen extends Component {
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
           <p className="eyebrow">Account created</p>
-          <h1 className="heading-lg">CHECK YOUR EMAIL</h1>
+          <h1 className="heading-lg">Check your email</h1>
           <div className="success" role="status">{this.state.successMessage}</div>
           <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-            GO TO SIGN IN
+            Go to sign in
           </button>
         </div>
       </div>
@@ -84,7 +84,7 @@ class RegisterScreen extends Component {
         <div style={{ width: '100%' }}>
           <PageHeader
             eyebrow="New member"
-            title="JOIN THE BAND"
+            title="Find your people"
             subtitle="Create your account, verify your email, then build your profile."
           />
 
@@ -131,7 +131,7 @@ class RegisterScreen extends Component {
             </FormField>
 
             <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT'}
+              {loading ? 'Creating account...' : 'Create account'}
             </button>
 
             <p>

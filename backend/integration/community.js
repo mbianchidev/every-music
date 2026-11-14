@@ -50,8 +50,8 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     assert.equal(response.statusCode, status, `${method} ${path}: ${JSON.stringify(payload)}`);
     return payload.data ?? payload;
   }
-  const announcement = (extra = {}) => call('/announcements/', {
-    method: 'POST', status: 201,
+  const announcement = (extra = {}, actor = 0) => call('/announcements/', {
+    actor, method: 'POST', status: 201,
     body: { title: `${marker} open call`, description: 'A synthetic collaboration opportunity for integration testing.', city: marker, ...extra },
   });
 
@@ -66,7 +66,10 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     assert.equal(loaded.instruments[0].instrument_id, instrument);
     assert.equal(loaded.genres[0].genre_id, genre);
     const searchTerm = encodeURIComponent(`${marker} artist 0`);
-    assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${instrument}&genreId=${genre}`)).profiles.length, 1);
+    const matches = (await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${instrument}&genreId=${genre}`)).profiles;
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].instruments[0].instrument_id, instrument);
+    assert.equal(matches[0].genres[0].genre_id, genre);
     assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${randomUUID()}&genreId=${genre}`)).profiles.length, 0);
     assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${instrument}&genreId=${randomUUID()}`)).profiles.length, 0);
     const project = await call('/profiles/me/projects', { method: 'POST', status: 201, body: {
@@ -90,8 +93,14 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
   });
 
   await t.test('filtered and sorted pages are disjoint and drafts stay private', async () => {
-    const one = await announcement({ title: `${marker} A call` });
+    const instrument = (await call('/catalog/instruments')).instruments[0].id;
+    const genre = (await call('/catalog/genres')).genres[0].id;
+    const one = await announcement({ title: `${marker} A call`, instrumentIds: [instrument], genreIds: [genre] });
     const two = await announcement({ title: `${marker} B call` });
+    const three = await announcement({ title: `${marker} C call` });
+    for (const [id, days] of [[one.id, 3], [two.id, 20], [three.id, 40]]) {
+      await realmConnector.execute("UPDATE announcements SET created_at = NOW() - $2 * INTERVAL '1 day' WHERE id = $1", [id, days]);
+    }
     for (const body of [{ title: null }, { description: null }, { isPublished: null }]) {
       await call(`/announcements/${one.id}`, { method: 'PUT', body, status: 400 });
     }
@@ -101,11 +110,33 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     assert.equal(first.pagination.hasMore, true);
     assert.equal(first.announcements[0].id, one.id);
     assert.equal(second.announcements[0].id, two.id);
+    assert.equal(first.announcements[0].creatorName, `${marker} artist 0`);
+    assert.equal(first.announcements[0].instruments[0].instrument_id, instrument);
+    assert.equal(first.announcements[0].genres[0].genre_id, genre);
+    await call(`/announcements/${one.id}/save`, { actor: 1, method: 'POST' });
+    for (const [path, actor] of [['/announcements/me', 0], ['/announcements/saved', 1]]) {
+      const card = (await call(path, { actor })).announcements.find(item => item.id === one.id);
+      assert.equal(card.creatorName, `${marker} artist 0`);
+      assert.equal(card.instruments[0].instrument_id, instrument);
+      assert.equal(card.genres[0].genre_id, genre);
+    }
+    const filteredIds = async createdWithin => (await call(`/announcements/search?city=${marker}&sort=title&createdWithin=${createdWithin}`)).announcements.map(item => item.id);
+    assert.deepEqual(await filteredIds('week'), [one.id]);
+    assert.deepEqual(await filteredIds('month'), [one.id, two.id]);
+    assert.deepEqual(await filteredIds(''), [one.id, two.id, three.id]);
+    await realmConnector.execute("UPDATE profiles SET created_at = NOW() - INTERVAL '20 days' WHERE user_id = $1", [users[1]]);
+    await realmConnector.execute("UPDATE profiles SET created_at = NOW() - INTERVAL '40 days' WHERE user_id = $1", [users[2]]);
+    assert.deepEqual((await call(`/profiles/search?searchTerm=${marker}&createdWithin=week`)).profiles.map(item => item.userId), [users[0]]);
+    assert.equal((await call(`/profiles/search?searchTerm=${marker}&createdWithin=month`)).profiles.length, 2);
+    for (const path of ['/announcements/search', '/profiles/search']) await call(`${path}?createdWithin=year`, { status: 400 });
     await call('/announcements/search?sort=title;DROP', { status: 400 });
     await call('/profiles/search?page=2junk', { status: 400 });
     const profiles = await call(`/profiles/search?searchTerm=${marker}&sort=name&pageSize=2`);
     assert.equal(profiles.profiles.length, 2);
     assert.equal(profiles.pagination.hasMore, true);
+    const nextProfiles = await call(`/profiles/search?searchTerm=${marker}&sort=name&pageSize=2&page=2`);
+    assert.equal(nextProfiles.profiles.length, 1);
+    assert.equal(profiles.profiles.some(person => person.id === nextProfiles.profiles[0].id), false);
     const draft = await announcement({ isPublished: false });
     await call(`/announcements/${draft.id}`, { actor: 1, status: 404 });
     await call(`/announcements/${draft.id}/comments`, { actor: 1, method: 'POST', body: { body: 'Private draft test' }, status: 404 });
@@ -172,7 +203,21 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
   await t.test('notifications and analytics respect consent and reject push SSRF endpoints', async () => {
     await call('/preferences', { method: 'PUT', body: { analytics: true } });
     await call('/preferences', { actor: 1, method: 'PUT', body: { analytics: true } });
+    await call('/preferences', { method: 'PUT', body: { profileViews: true, messages: false, engagements: false, announcements: false } });
+    for (let i = 0; i < 2; i += 1) {
+      await call('/analytics/events', { actor: 1, method: 'POST', body: { kind: 'profile_view', resourceId: users[0] } });
+    }
+    assert.equal((await call('/notifications')).notifications.filter(item => item.kind === 'profile_view').length, 1);
+    const conversation = await call('/conversations', { actor: 1, method: 'POST', status: 201, body: { recipientUserId: users[0] } });
+    const before = (await call('/notifications')).notifications.length;
+    await call(`/conversations/${conversation.id}/messages`, { actor: 1, method: 'POST', status: 201, body: { body: 'Synthetic muted notification.', clientId: randomUUID() } });
+    await call(`/profiles/${users[1]}/follow`, { method: 'POST' });
+    await announcement({}, 1);
+    assert.equal((await call('/notifications')).notifications.length, before);
     const post = await announcement();
+    await call(`/announcements/${post.id}/comments`, { actor: 1, method: 'POST', status: 201, body: { body: 'Synthetic muted comment.' } });
+    await call(`/announcements/${post.id}/react`, { actor: 1, method: 'POST', body: { reactionType: 'like' } });
+    assert.equal((await call('/notifications')).notifications.length, before);
     await call('/analytics/events', { actor: 1, method: 'POST', body: { kind: 'announcement_view', resourceId: post.id } });
     const report = await call('/analytics');
     assert.equal(report.daily.find(row => row.kind === 'announcement_view').count, 1);

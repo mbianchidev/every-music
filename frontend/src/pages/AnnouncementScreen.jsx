@@ -3,7 +3,6 @@ import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import { useResource } from '../lib/resources.js';
 import PageHeader from '../components/PageHeader.jsx';
-import Navigation from '../components/Navigation.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import Spinner from '../components/Spinner.jsx';
 import FormField from '../components/FormField.jsx';
@@ -52,7 +51,7 @@ export default function AnnouncementScreen({ route }) {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow={post?.isPublished === false ? 'Your draft' : 'Open call'} title={post?.title || 'ANNOUNCEMENT'} />
+      <PageHeader eyebrow={post?.isPublished === false ? 'Your draft' : 'Open call'} title={post?.title || 'Announcement'} />
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p className="success" role="status">{message}</p>}
@@ -103,7 +102,6 @@ export default function AnnouncementScreen({ route }) {
           </section>
         </>
       )}
-      <Navigation active="feed" />
     </div>
   );
 }

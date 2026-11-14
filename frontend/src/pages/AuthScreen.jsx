@@ -66,7 +66,7 @@ class AuthScreen extends Component {
         <div style={{ width: '100%' }}>
           <PageHeader
             eyebrow="Member access"
-            title="WELCOME BACK"
+            title="Welcome back"
             subtitle="Sign in to your musician profile."
           />
 
@@ -98,7 +98,7 @@ class AuthScreen extends Component {
             </FormField>
 
             <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? 'SIGNING IN…' : 'SIGN IN'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
 
             <button className="text-link" type="button" onClick={() => { window.location.hash = '#forgot-password'; }}>
@@ -107,7 +107,7 @@ class AuthScreen extends Component {
 
             {errorCode === 'EMAIL_NOT_VERIFIED' && (
               <button className="btn btn-secondary" type="button" onClick={this.handleResend} disabled={loading}>
-                RESEND VERIFICATION EMAIL
+                Resend verification email
               </button>
             )}
 

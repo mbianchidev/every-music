@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useDebounced, useResource, queryString } from '../lib/resources.js';
-import { mediaUrl } from '../lib/media.js';
-import Navigation from '../components/Navigation.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import FormField from '../components/FormField.jsx';
 import Spinner from '../components/Spinner.jsx';
@@ -9,8 +7,10 @@ import ErrorState from '../components/ErrorState.jsx';
 import AnnouncementCard from '../components/AnnouncementCard.jsx';
 import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import Pagination from '../components/Pagination.jsx';
+import MusicianCard from '../components/MusicianCard.jsx';
+import Icon from '../components/Icon.jsx';
 
-const emptyFilters = { searchTerm: '', city: '', instrumentId: '', genreId: '', isRemote: '', sort: 'newest' };
+const emptyFilters = { searchTerm: '', city: '', instrumentId: '', genreId: '', isRemote: '', createdWithin: '', sort: 'newest' };
 
 export default function SearchScreen({ route, kind = 'announcements' }) {
   const profiles = kind === 'profiles';
@@ -18,13 +18,13 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
     key, route?.query.get(key) ?? fallback,
   ])));
   const [page, setPage] = useState(() => Number(route?.query.get('page')) || 1);
-  const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 840px)').matches);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const debounced = useDebounced(filters);
   const instruments = useResource('/catalog/instruments', { auth: false, reconnect: false });
   const genres = useResource('/catalog/genres', { auth: false, reconnect: false });
   const query = queryString({ ...debounced, isRemote: profiles ? '' : debounced.isRemote, page, pageSize: 12 });
   const resource = useResource(`/${kind}/search?${query}`, {
-    events: profiles ? 'profiles.changed' : 'announcements.changed,saved.changed', cacheFeed: !profiles,
+    events: profiles ? 'profiles.changed' : 'announcements.changed,saved.changed,profiles.changed', cacheFeed: !profiles,
   });
   const update = (key, value) => { setFilters(previous => ({ ...previous, [key]: value })); setPage(1); };
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
   }, [filters, page, profiles]);
   const rows = resource.data?.[kind] || [];
   const updating = resource.loading || filters !== debounced;
-  const activeFilters = ['city', 'instrumentId', 'genreId', ...(profiles ? [] : ['isRemote'])]
+  const activeFilters = ['city', 'instrumentId', 'genreId', 'createdWithin', ...(profiles ? [] : ['isRemote'])]
     .filter(key => filters[key] !== '').length + Number(filters.sort !== 'newest');
   const changePage = value => {
     setPage(value);
@@ -40,16 +40,22 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Find your people" title={profiles ? 'MUSICIANS' : 'THE FEED'} subtitle={profiles ? 'Find collaborators by sound, instrument, and location.' : 'Open calls from musicians looking for collaborators.'} />
-      <div className="compact-actions"><a className="text-link" href={profiles ? '#feed' : '#musicians'}>{profiles ? 'Browse announcements' : 'Find musicians'}</a></div>
+      <PageHeader title={profiles ? 'Find musicians' : 'Open calls'} subtitle={profiles ? 'People to make something great with. Find your kind of sound.' : 'A bandmate, a session, a new project. Find your next collaboration.'}
+        actions={<a className="btn btn-primary" href="#create"><Icon name="plus" size={17} />Post a call</a>} />
+      <nav className="discovery-tabs" aria-label="Discovery">
+        <a href="#feed" aria-current={!profiles ? 'page' : undefined}><Icon name="feed" size={16} />Open calls</a>
+        <a href="#musicians" aria-current={profiles ? 'page' : undefined}><Icon name="people" size={17} />Musicians</a>
+      </nav>
       <form className="form-stack discovery-form" role="search" aria-label={profiles ? 'Search musicians' : 'Search announcements'} onSubmit={event => event.preventDefault()}>
         <div className="search-field">
-          <FormField id="discovery-search" label={profiles ? 'Search musicians' : 'Search announcements'} hint="Results update as you type.">
-            <input className="input" type="search" value={filters.searchTerm} maxLength="200" onChange={event => update('searchTerm', event.target.value)} />
-          </FormField>
+          <Icon name="search" size={18} />
+          <label className="sr-only" htmlFor="discovery-search">{profiles ? 'Search musicians' : 'Search announcements'}</label>
+          <input className="input" id="discovery-search" type="search" aria-describedby="search-hint" value={filters.searchTerm} maxLength="200"
+            placeholder={profiles ? 'Search by name, sound, or something in common...' : 'Search calls by title, sound, or project...'} onChange={event => update('searchTerm', event.target.value)} />
+          <span className="sr-only" id="search-hint">Results update as you type.</span>
         </div>
         <details className="selection-panel filter-details" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
-          <summary>Filters and sorting{activeFilters ? ` (${activeFilters} active)` : ''}</summary>
+          <summary><Icon name="filter" size={16} />Filters and sorting{activeFilters ? ` (${activeFilters} active)` : ''}</summary>
           <div className="filters">
         <FormField id="discovery-city" label="City">
           <input className="input" value={filters.city} maxLength="255" onChange={event => update('city', event.target.value)} />
@@ -71,6 +77,11 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
             <option value="">Anywhere</option><option value="true">Remote welcome</option><option value="false">Local only</option>
           </select>
         </FormField>}
+        <FormField id="discovery-date" label={profiles ? 'Joined' : 'Date posted'}>
+          <select className="input" value={filters.createdWithin} onChange={event => update('createdWithin', event.target.value)}>
+            <option value="">Any time</option><option value="week">Past 7 days</option><option value="month">Past 30 days</option>
+          </select>
+        </FormField>
         <FormField id="discovery-sort" label="Sort by">
           <select className="input" value={filters.sort} onChange={event => update('sort', event.target.value)}>
             <option value="newest">Newest first</option><option value="oldest">Oldest first</option>
@@ -89,21 +100,15 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!resource.data && !resource.error ? <Spinner label="Searching" /> : resource.data && (
         <section aria-labelledby="results-heading" aria-busy={updating}>
-          <p role="status">{updating ? 'Updating results...' : rows.length ? `${rows.length} results on this page` : 'No matching results. Try different filters.'}</p>
+          <div className="results-summary"><p role="status">{updating ? 'Updating results...' : rows.length ? `${rows.length} ${profiles ? 'musicians' : 'open calls'} on this page` : 'No matching results. Try different filters.'}</p>
+            <span>Page {page}</span></div>
           <div className="grid">
-            {rows.map(item => profiles ? (
-              <article className="card" key={item.id}>
-                {item.profilePictureUrl && <img className="profile-image" src={mediaUrl(item.profilePictureUrl)} alt={`Profile image for ${item.artistName || 'this musician'}`} width="160" height="160" loading="lazy" />}
-                <h2 className="heading-md"><a href={`#musician?id=${item.userId}`}>{item.artistName || [item.firstName, item.lastName].filter(Boolean).join(' ') || 'Musician'}</a></h2>
-                <p className="body-muted">{item.city || 'Location not specified'}</p>
-                <p className="announcement-description">{item.bio}</p>
-              </article>
-            ) : <AnnouncementCard key={item.id} post={item} expanded={resource.data.offline} actions={<AnnouncementActions post={item} disabled={resource.data.offline} />} />)}
+            {rows.map(item => profiles ? <MusicianCard key={item.id} musician={item} />
+              : <AnnouncementCard key={item.id} post={item} expanded={resource.data.offline} actions={<AnnouncementActions post={item} disabled={resource.data.offline} />} />)}
           </div>
           <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={updating || resource.data?.offline} />
         </section>
       )}
-      <Navigation active="feed" />
     </div>
   );
 }

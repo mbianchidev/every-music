@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { enablePush } from '../lib/pwa.js';
 import { useResource } from '../lib/resources.js';
-import Navigation from '../components/Navigation.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
@@ -58,7 +57,7 @@ export default function SettingsScreen() {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Make it yours" title="SETTINGS" subtitle="Choose your notifications and control what is measured." />
+      <PageHeader eyebrow="Your space" title="Settings" subtitle="Stay in the loop on your terms. You choose what is shared and measured." />
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p className="success" role="status">{message}</p>}
@@ -88,7 +87,6 @@ export default function SettingsScreen() {
           <p>Offline changes stay in the open form and are not sent automatically. Reconnect and submit again. Signing out clears the saved feed and unsubscribes this browser from push.</p>
         </section>
       </>}
-      <Navigation active="profile" />
     </div>
   );
 }

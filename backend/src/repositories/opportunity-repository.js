@@ -1,5 +1,17 @@
 import { realmConnector } from './realm-connector.js';
 
+const summaryColumns = `
+  p.artist_name AS creator_name, p.profile_picture_url AS creator_picture_url,
+  (SELECT jsonb_agg(jsonb_build_object(
+    'instrument_id', ai.instrument_id, 'name', i.name, 'category', i.category
+  ) ORDER BY i.name) FROM announcement_instruments ai JOIN instruments i ON i.id = ai.instrument_id
+    WHERE ai.announcement_id = a.id) AS instruments,
+  (SELECT jsonb_agg(jsonb_build_object(
+    'genre_id', ag.genre_id, 'name', g.name
+  ) ORDER BY g.name) FROM announcement_genres ag JOIN genres g ON g.id = ag.genre_id
+    WHERE ag.announcement_id = a.id) AS genres
+`;
+
 export class OpportunityRepository {
   async createAnnouncement(userId, announcementData, executor = realmConnector) {
     const query = `
@@ -30,32 +42,14 @@ export class OpportunityRepository {
 
   async findById(announcementId, executor = realmConnector, viewerId = null) {
     const query = `
-      SELECT a.*,
-             p.artist_name as creator_name,
+      SELECT a.*, ${summaryColumns},
              EXISTS(SELECT 1 FROM saved_announcements sa WHERE sa.announcement_id = a.id AND sa.user_id = $2) AS is_saved,
              (SELECT reaction_type FROM announcement_reactions ar WHERE ar.announcement_id = a.id AND ar.user_id = $2) AS my_reaction,
-             array_agg(DISTINCT jsonb_build_object(
-               'instrument_id', ai.instrument_id,
-               'name', i.name,
-               'category', i.category
-             )) FILTER (WHERE ai.instrument_id IS NOT NULL) as instruments,
-             array_agg(DISTINCT jsonb_build_object(
-               'genre_id', ag.genre_id,
-               'name', g.name
-             )) FILTER (WHERE ag.genre_id IS NOT NULL) as genres,
-             array_agg(DISTINCT jsonb_build_object(
-               'link_type', al.link_type,
-               'url', al.url
-             )) FILTER (WHERE al.id IS NOT NULL) as links
+             (SELECT jsonb_agg(jsonb_build_object('link_type', al.link_type, 'url', al.url) ORDER BY al.id)
+               FROM announcement_links al WHERE al.announcement_id = a.id) AS links
       FROM announcements a
       LEFT JOIN profiles p ON a.user_id = p.user_id
-      LEFT JOIN announcement_instruments ai ON a.id = ai.announcement_id
-      LEFT JOIN instruments i ON ai.instrument_id = i.id
-      LEFT JOIN announcement_genres ag ON a.id = ag.announcement_id
-      LEFT JOIN genres g ON ag.genre_id = g.id
-      LEFT JOIN announcement_links al ON a.id = al.announcement_id
       WHERE a.id = $1 AND a.is_deleted = false
-      GROUP BY a.id, p.artist_name
     `;
     const result = await executor.execute(query, [announcementId, viewerId]);
     return result.rows[0] || null;
@@ -63,12 +57,10 @@ export class OpportunityRepository {
 
   async findByUserId(userId, { page = 1, pageSize = 20, limit = pageSize } = {}) {
     const query = `
-      SELECT a.*, 
-             COUNT(DISTINCT ar.id) as reactions_count
+      SELECT a.*, ${summaryColumns}
       FROM announcements a
-      LEFT JOIN announcement_reactions ar ON a.id = ar.announcement_id
+      LEFT JOIN profiles p ON p.user_id = a.user_id
       WHERE a.user_id = $1 AND a.is_deleted = false
-      GROUP BY a.id
       ORDER BY a.created_at DESC, a.id
       LIMIT $2 OFFSET $3
     `;
@@ -117,6 +109,10 @@ export class OpportunityRepository {
       params.push(`%${filters.searchTerm}%`);
       paramIndex++;
     }
+    if (filters.createdWithin) {
+      whereConditions.push(`a.created_at >= NOW() - $${paramIndex++}::interval`);
+      params.push({ week: '7 days', month: '30 days' }[filters.createdWithin]);
+    }
 
     whereConditions.push(`(a.expires_at IS NULL OR a.expires_at > NOW())`);
 
@@ -129,12 +125,13 @@ export class OpportunityRepository {
     const sorts = { newest: 'a.created_at DESC', oldest: 'a.created_at ASC', title: 'a.title ASC', city: "COALESCE(a.city, '') ASC", popular: 'a.likes_count DESC' };
     const query = `
       SELECT a.id, a.user_id, a.title, a.description, a.picture_url,
-             a.city, a.state, a.country, a.is_remote, a.is_cover_band,
+             a.city, a.state, a.country, a.is_remote, a.is_cover_band, a.is_published,
              a.views_count, a.likes_count, a.dislikes_count,
-             a.created_at, a.expires_at,
+             a.created_at, a.expires_at, ${summaryColumns},
              EXISTS(SELECT 1 FROM saved_announcements sa
                WHERE sa.announcement_id = a.id AND sa.user_id = $${viewerIndex}) AS is_saved
       FROM announcements a
+      LEFT JOIN profiles p ON p.user_id = a.user_id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY ${sorts[filters.sort] || sorts.newest}, a.id
       LIMIT $${paramIndex++} OFFSET $${paramIndex}
@@ -330,9 +327,10 @@ export class OpportunityRepository {
     const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
-      SELECT a.*, sa.created_at as saved_at, TRUE AS is_saved
+      SELECT a.*, sa.created_at as saved_at, TRUE AS is_saved, ${summaryColumns}
       FROM saved_announcements sa
       JOIN announcements a ON sa.announcement_id = a.id
+      LEFT JOIN profiles p ON p.user_id = a.user_id
       WHERE sa.user_id = $1
         AND a.is_deleted = false
         AND a.is_published = true

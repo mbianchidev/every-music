@@ -61,20 +61,29 @@ migrations when the API container starts.
    Add optional instruments, genres, images, and music links. Publish to open
    the announcement detail, or uncheck publishing to keep a private draft.
 5. Open **Feed** to browse calls. **Save** bookmarks a call; **Saved** lets you
-   revisit or remove it. **My ads** lets you edit or delete your announcements.
+   revisit or remove it. **My calls** lets you edit or delete your announcements.
 6. Use **Profile > Sign out** to end the session.
 
 ### Discover and collaborate
 
-Feed and Musicians have keyword, city, instrument, genre, and sorting controls.
-The feed also filters remote/local collaboration. Results update after a short
+Desktop navigation lives in the left sidebar. On mobile, Feed, Musicians,
+Post, and Messages stay in the bottom bar; **More** opens the remaining sections.
+Close that menu with its close button, Escape, or the backdrop.
+
+Feed and Musicians have keyword, city, instrument, genre, date, and sorting controls.
+Open **Filters and sorting** to show the advanced controls on any screen size.
+**Date posted** (calls) and **Joined** (musicians) select the past 7 or 30 days,
+or any time. The feed also filters remote/local collaboration. Results update after a short
 typing pause; Previous/Next controls load bounded pages. The URL preserves
-search filters and page on reload. On narrow screens, open **Filters and
-sorting** for the advanced controls. Open a title or musician name for details.
+search filters and page on reload. Cards show the actual creator, instruments,
+genres, and location so you can compare results before opening a detail.
+Open a title or musician name for details.
 
 Announcement details include the creator, links, reactions, comments, saving,
 sharing, and a contact route to private messaging. Only owners can edit/delete
 announcements; commenters and announcement owners can remove comments.
+**Save** and **Saved** on a call toggle its bookmark; the Saved list also offers
+an explicit Remove action.
 Drafts and expired calls are not visible to other users. Shared deep links
 return to the requested detail after sign-in.
 

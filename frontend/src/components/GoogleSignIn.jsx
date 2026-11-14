@@ -3,6 +3,7 @@ import conduit from '../lib/conduit.js';
 import { finishSignIn } from '../lib/sign-in.js';
 
 let sdk;
+let pendingChallenge;
 function loadGoogleIdentity() {
   if (globalThis.google?.accounts?.id) return Promise.resolve(globalThis.google.accounts.id);
   if (sdk) return sdk;
@@ -38,12 +39,16 @@ export default function GoogleSignIn() {
       setEnabled(true);
       if (globalThis.__TAURI_INTERNALS__) return;
       const identity = await loadGoogleIdentity();
-      const challenge = await conduit.transmit('/auth/google/challenge', { method: 'POST', body: {}, signal: controller.signal });
+      const challenge = pendingChallenge?.clientId === clientId && pendingChallenge.expiresAt > Date.now()
+        ? pendingChallenge.value
+        : await conduit.transmit('/auth/google/challenge', { method: 'POST', body: {}, signal: controller.signal });
       if (!active) return;
+      pendingChallenge = { clientId, value: challenge, expiresAt: pendingChallenge?.value === challenge ? pendingChallenge.expiresAt : Date.now() + 4 * 60 * 1000 };
       identity.initialize({
         client_id: clientId, nonce: challenge.nonce, auto_select: false,
         callback: async ({ credential }) => {
           if (!active || signingIn) return;
+          pendingChallenge = null;
           signingIn = true; setBusy(true); setError('');
           try {
             const response = await conduit.transmit('/auth/login/google', {
@@ -66,7 +71,7 @@ export default function GoogleSignIn() {
       <div ref={container} />
       {enabled && globalThis.__TAURI_INTERNALS__ && <p className="field-hint">Google sign-in uses a system browser and is available in the web app, not an embedded WebView. Use email sign-in or password recovery here.</p>}
       {busy && <p role="status">Signing in with Google...</p>}
-      {error && <><p className="field-error" role="alert">{error}</p><button className="text-link" type="button" onClick={() => setRevision(value => value + 1)}>Retry Google sign-in</button></>}
+      {error && <><p className="field-error" role="alert">{error}</p><button className="text-link" type="button" onClick={() => { pendingChallenge = null; setRevision(value => value + 1); }}>Retry Google sign-in</button></>}
     </div>
   );
 }

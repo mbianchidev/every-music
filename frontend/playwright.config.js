@@ -21,7 +21,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm --prefix ../backend start',
+      command: 'node ../backend/integration/browser-server.js',
       url: 'http://127.0.0.1:55474/health/ready',
       timeout: 30000,
       env: {
@@ -32,7 +32,7 @@ export default defineConfig({
         NEXUS_PORT: '55474', NEXUS_HOST: '127.0.0.1',
         PORTAL_ORIGINS: 'http://127.0.0.1:4179',
         RATE_THRESHOLD: '10000',
-        GOOGLE_IDENTITY_KEY: '',
+        GOOGLE_IDENTITY_KEY: 'synthetic-browser.apps.googleusercontent.com',
         MAIL_GATEWAY: '', MAIL_IDENTITY: '', MAIL_CREDENTIAL: '', MAIL_SENDER_ALIAS: '',
         VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '',
       },

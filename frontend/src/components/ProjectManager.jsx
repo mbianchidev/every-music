@@ -102,7 +102,10 @@ export default function ProjectManager() {
             <FormField id={`collaborator-role-${person.userId}`} label={`${person.artistName || 'Collaborator'} role`} required>
               <input className="input" value={person.role} maxLength="100" onChange={event => field('collaborators', draft.collaborators.map((item, i) => i === index ? { ...item, role: event.target.value } : item))} />
             </FormField>
-            <button className="text-link" type="button" onClick={() => field('collaborators', draft.collaborators.filter(item => item.userId !== person.userId))}>Remove {person.artistName || 'collaborator'}</button>
+            <button className="text-link" type="button" onClick={() => {
+              field('collaborators', draft.collaborators.filter(item => item.userId !== person.userId));
+              document.getElementById('collaborator-search')?.focus();
+            }}>Remove {person.artistName || 'collaborator'}</button>
           </div>)}
         </fieldset>
         <div className="button-row">

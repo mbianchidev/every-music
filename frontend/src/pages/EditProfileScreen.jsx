@@ -1,7 +1,6 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
-import Navigation from '../components/Navigation.jsx';
 import Spinner from '../components/Spinner.jsx';
 import FormField from '../components/FormField.jsx';
 import ErrorState from '../components/ErrorState.jsx';
@@ -111,7 +110,6 @@ class EditProfileScreen extends Component {
       return (
         <div className="container">
           <Spinner label="Loading your profile" />
-          <Navigation active="profile" />
         </div>
       );
     }
@@ -119,16 +117,15 @@ class EditProfileScreen extends Component {
     if (error && !this.state.loaded) {
       return (
         <div className="container">
-          <PageHeader eyebrow="Your identity" title="EDIT PROFILE" />
+          <PageHeader eyebrow="Your space" title="Edit profile" />
           <ErrorState message={error} onRetry={this.loadProfile} />
-          <Navigation active="profile" />
         </div>
       );
     }
 
     return (
       <div className="container">
-        <PageHeader eyebrow="Your identity" title="EDIT PROFILE" subtitle="Keep it clear, current, and recognizably you." />
+        <PageHeader eyebrow="Your space" title="Edit profile" subtitle="Your sound, your experience, and what you are working on." />
         {error && <div className="error" role="alert">{error}</div>}
 
         <form className="form-stack" onSubmit={this.handleSave}>
@@ -137,12 +134,12 @@ class EditProfileScreen extends Component {
           <FormField id="profile-artist-name" label="Artist name" required>
             <input className="input" value={artistName} onChange={(event) => this.setState({ artistName: event.target.value })} maxLength="255" disabled={saving} />
           </FormField>
-          <FormField id="profile-first-name" label="First name">
+          <div className="form-grid"><FormField id="profile-first-name" label="First name">
             <input className="input" value={firstName} onChange={(event) => this.setState({ firstName: event.target.value })} autoComplete="given-name" maxLength="100" disabled={saving} />
           </FormField>
           <FormField id="profile-last-name" label="Last name">
             <input className="input" value={lastName} onChange={(event) => this.setState({ lastName: event.target.value })} autoComplete="family-name" maxLength="100" disabled={saving} />
-          </FormField>
+          </FormField></div>
           <FormField id="profile-city" label="City">
             <input className="input" value={city} onChange={(event) => this.setState({ city: event.target.value })} autoComplete="address-level2" maxLength="255" disabled={saving} />
           </FormField>
@@ -158,16 +155,15 @@ class EditProfileScreen extends Component {
 
           <div className="button-row">
             <button className="btn btn-primary" type="submit" disabled={saving}>
-              {saving ? 'SAVING…' : 'SAVE PROFILE'}
+              {saving ? 'Saving...' : 'Save profile'}
             </button>
             <button className="btn btn-ghost" type="button" onClick={() => { window.location.hash = '#profile'; }} disabled={saving}>
-              CANCEL
+              Cancel
             </button>
           </div>
         </form>
         <ProjectManager />
 
-        <Navigation active="profile" />
       </div>
     );
   }

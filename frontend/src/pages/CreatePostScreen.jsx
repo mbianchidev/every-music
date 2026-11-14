@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import { uploadImage } from '../lib/media.js';
-import Navigation from '../components/Navigation.jsx';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
@@ -65,7 +64,7 @@ export default function CreatePostScreen({ route }) {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Open call" title={id ? 'EDIT ANNOUNCEMENT' : 'CREATE ANNOUNCEMENT'} subtitle="Be specific about the sound, commitment, and collaborator you need." />
+      <PageHeader eyebrow="Make a connection" title={id ? 'Edit your call' : 'Post a call'} subtitle="Tell the right people what you have in mind." />
       {error && (loaded ? <p className="error" role="alert">{error}</p> : <ErrorState message={error} onRetry={() => setRevision(value => value + 1)} />)}
       {loading ? <Spinner label="Loading editor" /> : loaded && <form className="form-stack" onSubmit={save}>
         <FormField id="announcement-title" label="Title" required><input className="input" value={draft.title} onChange={event => field('title', event.target.value)} minLength="5" maxLength="255" disabled={saving} /></FormField>
@@ -86,16 +85,18 @@ export default function CreatePostScreen({ route }) {
               {['website', 'spotify', 'youtube', 'soundcloud', 'bandcamp', 'other'].map(type => <option key={type} value={type}>{type}</option>)}
             </select></FormField>
             <FormField id={`link-url-${index}`} label="Link URL"><input className="input" type="url" value={link.url} maxLength="2048" onChange={event => field('links', draft.links.map((item, i) => i === index ? { ...item, url: event.target.value } : item))} /></FormField>
-            <button className="text-link" type="button" onClick={() => field('links', draft.links.filter((_, i) => i !== index))}>Remove link {index + 1}</button>
+            <button className="text-link" type="button" onClick={() => {
+              field('links', draft.links.filter((_, i) => i !== index));
+              document.getElementById('announcement-add-link')?.focus();
+            }}>Remove link {index + 1}</button>
           </div>)}
-          <button className="text-link" type="button" disabled={draft.links.length >= 10} onClick={() => field('links', [...draft.links, { linkType: 'website', url: '' }])}>Add a link</button>
+          <button id="announcement-add-link" className="text-link" type="button" disabled={draft.links.length >= 10} onClick={() => field('links', [...draft.links, { linkType: 'website', url: '' }])}>Add a link</button>
         </fieldset>
         <div className="button-row">
           <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving...' : id ? 'Save changes' : draft.isPublished ? 'Publish' : 'Save draft'}</button>
           <button className="btn btn-ghost" type="button" disabled={saving} onClick={() => { window.location.hash = id ? `#announcement?id=${id}` : '#feed'; }}>Cancel</button>
         </div>
       </form>}
-      <Navigation active="create" />
     </div>
   );
 }

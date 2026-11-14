@@ -1,6 +1,5 @@
 import { useResource } from '../lib/resources.js';
 import PageHeader from '../components/PageHeader.jsx';
-import Navigation from '../components/Navigation.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import Spinner from '../components/Spinner.jsx';
 
@@ -18,7 +17,7 @@ export default function AnalyticsScreen() {
   const maximum = Math.max(1, ...Object.values(days));
   return (
     <div className="container">
-      <PageHeader eyebrow="Your reach, privately" title="ANALYTICS" subtitle="Your last 30 days of opted-in activity, not unique visitors or total platform traffic." />
+      <PageHeader eyebrow="Your space" title="Analytics" subtitle="Your last 30 days of opted-in activity, not unique visitors or total platform traffic." />
       {preferences.data?.analytics === false && <p className="status-message">Analytics is off. <a href="#settings">Opt in from settings</a> to start collecting daily totals.</p>}
       <p className="body-muted">Only activity where both musicians consent is counted. No visitor identities or message content are included. Figures can be lower than your total engagement.</p>
       {(resource.error || preferences.error) && <ErrorState message={resource.error || preferences.error} onRetry={() => { resource.reload(); preferences.reload(); }} />}
@@ -42,7 +41,6 @@ export default function AnalyticsScreen() {
           <tbody>{resource.data.content.map(item => <tr key={item.id}><th scope="row"><a href={`#announcement?id=${item.id}`}>{item.title}</a></th><td>{item.views}</td><td>{item.likes}</td><td>{item.saves}</td></tr>)}</tbody>
         </table></div>
       </>}
-      <Navigation active="profile" />
     </div>
   );
 }

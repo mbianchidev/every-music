@@ -38,13 +38,13 @@ class VerifyEmailScreen extends Component {
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
           <p className="eyebrow">Account verification</p>
-          <h1 className="heading-lg">VERIFY YOUR EMAIL</h1>
+          <h1 className="heading-lg">Verify your email</h1>
           {loading && <Spinner label="Verifying your email" />}
           {error && <div className="error" role="alert">{error}</div>}
           {message && <div className="success" role="status">{message}</div>}
           {!loading && (
             <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-              GO TO SIGN IN
+              Go to sign in
             </button>
           )}
         </div>

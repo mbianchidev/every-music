@@ -101,7 +101,11 @@ and `isFollowing` for an authenticated viewer. Inactive/deleted users are not
 searchable. Project objects retain the existing SQL-style field names.
 
 Search accepts `searchTerm` (up to 200 characters), `city` (up to 255),
-`instrumentId`, `genreId`, and `sort` (`newest`, `oldest`, `name`, `city`).
+`instrumentId`, `genreId`, `createdWithin` (`week` or `month`), and `sort`
+(`newest`, `oldest`, `name`, `city`). `createdWithin` filters `created_at`
+over the rolling past 7 or 30 days; omitted/empty means any time. Other values
+return 400. Search summaries include selected `instruments` and `genres`
+using the same identifiers/names as profile detail.
 Profile editing takes camel-case fields plus:
 
 ```json
@@ -151,11 +155,14 @@ Only owners can retrieve drafts or expired calls. Other viewers see 404;
 save/reaction/comment routes apply the same visibility rule. Creator email is
 not exposed; detail uses `creatorName`, `userId`, and a musician contact route.
 Authenticated details expose `isSaved` and `myReaction`; search exposes
-`isSaved`. Detail retrieval itself does not record analytics.
+`isSaved`. Search, own, and saved summaries also include `creatorName`,
+`creatorPictureUrl`, `instruments`, and `genres`; these are actual profile/catalog
+data, not inferred tags. Detail retrieval itself does not record analytics.
 
 Announcement search accepts profile search's keyword/location/catalog filters,
 `isRemote` / `isCoverBand` (`true` or `false`), and `sort`
-(`newest`, `oldest`, `title`, `city`, `popular`). `popular` sorts by likes.
+(`newest`, `oldest`, `title`, `city`, `popular`). The shared `createdWithin`
+filter uses the announcement's creation date. `popular` sorts by likes.
 Optional `pictureUrl` uses a managed media URL or a legacy HTTP/S URL.
 `isPublished: false` saves a private draft.
 

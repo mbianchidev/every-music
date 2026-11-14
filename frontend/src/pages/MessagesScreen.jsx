@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
 import { useResource } from '../lib/resources.js';
-import Navigation from '../components/Navigation.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
@@ -70,11 +69,11 @@ export default function MessagesScreen({ route }) {
   };
   return (
     <div className="container">
-      <PageHeader eyebrow="Collaboration starts here" title="MESSAGES" subtitle="Private conversations between musicians. Find a musician to start a conversation." />
+      <PageHeader eyebrow="Keep the conversation going" title="Messages" subtitle="Ideas, introductions, and the details that bring a project together." />
       {error && <p className="error" role="alert">{error}</p>}
       <div className="message-layout">
-        <section aria-labelledby="conversations-heading">
-          <h2 className="heading-md" id="conversations-heading">Conversations</h2>
+        <section className="conversation-pane" aria-labelledby="conversations-heading">
+          <h2 className="heading-md" id="conversations-heading" tabIndex="-1">Conversations</h2>
           <a className="text-link" href="#musicians">Find a musician</a>
           <label className="checkbox-label"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setListPage(1); }} />Show archived</label>
           {list.error && <ErrorState message={list.error} onRetry={list.reload} />}
@@ -88,14 +87,15 @@ export default function MessagesScreen({ route }) {
             </a>
               {archived && <button className="text-link" type="button" disabled={busy} onClick={async () => {
                 try {
-                  await conduit.transmit(`/conversations/${item.id}`, { method: 'PATCH', auth: true, body: { archived: false } }); list.reload();
+                  await conduit.transmit(`/conversations/${item.id}`, { method: 'PATCH', auth: true, body: { archived: false } });
+                  document.getElementById('conversations-heading')?.focus(); list.reload();
                 } catch (failure) { setError(failure.message); }
               }}>Restore conversation with {item.recipientName}</button>}
             </li>
           ))}</ul>
           <Pagination pagination={list.data?.pagination} onPage={setListPage} disabled={list.loading} label="Conversation pages" />
         </section>
-        <section aria-labelledby="thread-heading">
+        <section className="thread-pane" aria-labelledby={conversation ? 'thread-heading' : undefined} aria-label={!conversation ? 'Conversation' : undefined}>
           {thread.error && <ErrorState message={thread.error} onRetry={thread.reload} />}
           {!id ? <p>Select a conversation, or contact someone from their musician profile.</p> : !thread.data && !thread.error ? <Spinner label="Loading messages" /> : conversation && <>
             <h2 className="heading-md" id="thread-heading" tabIndex="-1"><a href={`#musician?id=${conversation.recipientId}`}>{conversation.recipientName}</a></h2>
@@ -125,7 +125,6 @@ export default function MessagesScreen({ route }) {
           </>}
         </section>
       </div>
-      <Navigation />
     </div>
   );
 }

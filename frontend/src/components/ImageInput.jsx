@@ -30,6 +30,7 @@ export default function ImageInput({ value, onChange, onFile, disabled, id = 'im
     if (input.current) input.current.value = '';
     onFile(null);
     onChange(null);
+    input.current?.focus();
   };
   return (
     <section className="image-input">

@@ -113,7 +113,7 @@ export class MusicianConductor {
   }
 
   async searchProfiles(request, reply) {
-    const { city, instrumentId, genreId, searchTerm, sort = 'newest', page = 1, pageSize = 20 } = request.query;
+    const { city, instrumentId, genreId, searchTerm, createdWithin, sort = 'newest', page = 1, pageSize = 20 } = request.query;
 
     const paginationResult = InputValidator.parsePagination(page, pageSize);
     const queryValidation = InputValidator.gatherValidationErrors(
@@ -121,6 +121,7 @@ export class MusicianConductor {
       InputValidator.validateUuid(instrumentId, 'Instrument ID'),
       InputValidator.validateUuid(genreId, 'Genre ID'),
       InputValidator.validateEnum(sort, ['newest', 'oldest', 'name', 'city'], 'Sort'),
+      InputValidator.validateEnum(createdWithin, ['week', 'month'], 'Creation date'),
       InputValidator.validateLength(searchTerm, 0, 200, 'Search term'),
       InputValidator.validateLength(city, 0, 255, 'City'),
     );
@@ -136,7 +137,7 @@ export class MusicianConductor {
     }
 
     try {
-      const filters = { city, instrumentId, genreId, searchTerm, sort };
+      const filters = { city, instrumentId, genreId, searchTerm, createdWithin, sort };
       const pagination = paginationResult.pagination;
 
       const profiles = await musicianRepository.searchProfiles(filters, {
@@ -379,6 +380,8 @@ export class MusicianConductor {
       bio: profile.bio,
       profilePictureUrl: profile.profile_picture_url,
       createdAt: profile.created_at,
+      instruments: profile.instruments || [],
+      genres: profile.genres || [],
     };
   }
 }
