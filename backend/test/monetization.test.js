@@ -28,7 +28,8 @@ test('points packs parse from id:points:price:amount entries', () => {
   assert.deepEqual(parsePointsPacks(''), []);
   assert.throws(() => parsePointsPacks('starter:500:price_abc'), /id:points/);
   assert.throws(() => parsePointsPacks('a:1:price_a:1,a:2:price_b:2'), /unique/);
-  assert.throws(() => parsePointsPacks('a:0:price_a:1'), /at least 1/);
+  assert.throws(() => parsePointsPacks('a:0:price_a:1'), /between 1 and 1000000/);
+  assert.throws(() => parsePointsPacks('a:1000001:price_a:1'), /between 1 and 1000000/);
 });
 
 test('spending costs scale with duration and pin radius', () => {

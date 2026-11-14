@@ -79,6 +79,13 @@ Organization pages add member editors and permission checkboxes, invitation
 and request responses, the venue claim dialog, search-as-you-type pickers,
 and the admin claim and verification tools; check them the same way.
 
+Monetization adds the store's plan comparison table, Promote and Premium-days
+dialogs (cost updates are announced politely), the rewarded video dialog (the
+video description doubles as a transcript; claiming is a button, not a timer
+that acts on its own), the invite link and copy feedback, text "Promoted" and
+"Sponsored" labels that never rely on color, and the admin monetization
+console; check them the same way, including 320px reflow and dark mode.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

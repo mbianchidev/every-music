@@ -32,7 +32,7 @@ export function parsePointsPacks(value) {
     const match = PACK.exec(item);
     if (!match) throw new Error('STRIPE_POINTS_PACKS entries must look like id:points:price_id:amount_minor');
     const points = Number(match[2]);
-    if (points < 1) throw new Error('STRIPE_POINTS_PACKS points must be at least 1');
+    if (points < 1 || points > 1000000) throw new Error('STRIPE_POINTS_PACKS points must be between 1 and 1000000');
     return { id: match[1], points, priceId: match[3], amountMinor: Number(match[4]) };
   });
   if (packs.length > 8) throw new Error('STRIPE_POINTS_PACKS supports at most eight packs');
@@ -76,7 +76,7 @@ export function createMonetizationConfig(env = process.env) {
         promotedPerPage: integer(env.PROMOTED_RESULTS_PER_PAGE, 2, 'PROMOTED_RESULTS_PER_PAGE', 0, 5),
         sponsoredPerPage: integer(env.SPONSORED_CARDS_PER_PAGE, 1, 'SPONSORED_CARDS_PER_PAGE', 0, 3),
       },
-      sponsoredVideoBytes: integer(env.SPONSORED_VIDEO_BYTE_LIMIT, 15 * 1024 * 1024, 'SPONSORED_VIDEO_BYTE_LIMIT', 1024 * 1024, 50 * 1024 * 1024),
+      sponsoredVideoBytes: integer(env.SPONSORED_VIDEO_BYTE_LIMIT, 8 * 1024 * 1024, 'SPONSORED_VIDEO_BYTE_LIMIT', 1024 * 1024, 50 * 1024 * 1024),
       jobIntervalMinutes: integer(env.MONETIZATION_JOB_INTERVAL_MINUTES, 15, 'MONETIZATION_JOB_INTERVAL_MINUTES', 1, 1440),
     },
   };

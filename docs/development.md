@@ -191,6 +191,15 @@ to isolate fixtures from the shared-IP rate limit; authentication limits remain.
 `e2e/marketplace.spec.js` mints browser sessions with the synthetic browser
 API signing key instead of using the sign-in form, so it does not consume the
 per-IP login limit that the community suite exercises in the same API process.
+`e2e/monetization.spec.js` covers the store, Stripe Checkout return and
+webhook-driven plan and points updates, points spending dialogs, promoted and
+sponsored results, the invite page, the admin monetization console, rewarded
+videos, and hiding sponsored cards. The browser API runs with synthetic
+`STRIPE_*` settings: `integration/browser-server.js` replaces the Stripe API
+client with the stand-in from `integration/synthetic-stripe.js`, whose checkout
+URL returns straight to the store, while webhooks are still verified by the
+real SDK with the synthetic signing secret. No Stripe request leaves the
+machine. `integration/features/monetization.js` uses the same stand-in.
 Do not run `npm run check` / `npm run compile` in the same frontend checkout
 while browser tests run: both builds replace `dist`, and the browser build
 embeds its isolated API origin. Backend checks can run independently.
@@ -299,6 +308,12 @@ rollback. Use a reviewed forward fix or deliberately restore a verified backup.
 Migration `013_marketplace.sql` adds marketplace listings, photos, tags,
 saved listings, and the optional report `listing_id`. It is additive and
 idempotent; rolling back the application leaves these tables unused.
+
+Migration `014_monetization.sql` adds Stripe billing records, the append-only
+points ledger and balances, referrals, promotions, sponsored cards and their
+daily totals, rewarded video views, sponsored-card preferences, and offer
+broadcasts. It is additive and idempotent. Keep the ledger and billing tables
+on rollback: they are the record of what members paid for and earned.
 
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.

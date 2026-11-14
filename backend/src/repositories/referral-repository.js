@@ -57,8 +57,7 @@ class ReferralRepository {
 
   async claim(inviteeId, code, points = this.points) {
     return realmConnector.transaction(async (executor) => {
-      const { rows: [invitee] } = await executor.execute(`
-        SELECT created_at, email_verified FROM users WHERE id = $1 FOR UPDATE`, [inviteeId]);
+      const { rows: [invitee] } = await executor.execute('SELECT created_at, email_verified FROM users WHERE id = $1', [inviteeId]);
       const age = (Date.now() - new Date(invitee.created_at).getTime()) / 86400000;
       if (age > points.referralClaimDays) {
         throw requestError(409, 'REFERRAL_CLAIM_CLOSED', `Invite codes can only be used within ${points.referralClaimDays} days of creating an account`);
@@ -70,7 +69,9 @@ class ReferralRepository {
       if (inviterId === inviteeId) throw requestError(400, 'REFERRAL_SELF', 'You cannot use your own invite code');
       const reverse = await executor.execute('SELECT 1 FROM referrals WHERE invitee_id = $1 AND inviter_id = $2', [inviterId, inviteeId]);
       if (reverse.rowCount) throw requestError(400, 'REFERRAL_RECIPROCAL', 'You invited this person, so you cannot use their code');
-      await executor.execute(`INSERT INTO referrals (invitee_id, inviter_id, source) VALUES ($1, $2, 'claim')`, [inviteeId, inviterId]);
+      const { rowCount } = await executor.execute(`
+        INSERT INTO referrals (invitee_id, inviter_id, source) VALUES ($1, $2, 'claim') ON CONFLICT DO NOTHING`, [inviteeId, inviterId]);
+      if (!rowCount) throw requestError(409, 'REFERRAL_EXISTS', 'Your account already used an invite code');
       return invitee.email_verified ? this.reward(executor, inviteeId, points) : { status: 'pending' };
     });
   }

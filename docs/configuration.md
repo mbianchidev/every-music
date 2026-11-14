@@ -326,8 +326,47 @@ venues stay free; see the [organization model](organizations.md).
 | `MARKETPLACE_EXPIRY_REMINDER_DAYS` | `3` (1-30) | Send the `listing_expiring` notification when an open listing is this close to expiry; must be lower than `MARKETPLACE_LISTING_DAYS` |
 
 The API checks expiring listings hourly. Compose forwards both settings.
-Marketplace payments are never processed by Every.music, so there are no
-payment-provider settings for listings.
+Marketplace payments are never processed by Every.music; the Stripe settings
+below apply only to plans and points packs.
+
+## Payments, points and sponsored content
+
+Payments use Stripe Checkout and signed webhooks; see
+[monetization](monetization.md) for the Stripe test-mode walkthrough with the
+Stripe CLI, fees, and app-store limitations. Stripe stays disabled until both
+secrets are set, and both must be set together. Without them the store shows
+that payments are unavailable while points, boosts, pins, referrals, rewarded
+videos, and sponsored cards keep working. Compose forwards every setting below.
+
+| Variable | Default / range | Purpose |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | empty | Secret or restricted key, `sk_test_...` in development |
+| `STRIPE_WEBHOOK_SECRET` | empty | Signing secret of the webhook endpoint or `stripe listen` (`whsec_...`) |
+| `STRIPE_PREMIUM_PRICE_ID` | empty | Recurring monthly price for Premium (`price_...`); empty hides the plan |
+| `STRIPE_PARTNER_PRICE_ID` | empty | Recurring monthly price for Partner; empty hides the plan |
+| `STRIPE_POINTS_PACKS` | empty | One-time packs as `id:points:price_id:amount_minor`, comma separated, up to eight |
+| `BILLING_CURRENCY` | `EUR` | ISO 4217 currency of the displayed amounts |
+| `PREMIUM_MONTHLY_PRICE_MINOR` / `PARTNER_MONTHLY_PRICE_MINOR` | `399` / `1999` | Displayed monthly prices in minor units; Stripe charges the configured price |
+| `POINTS_PREMIUM_DAY_COST` | `20` | Points per Premium day |
+| `POINTS_PREMIUM_DURATIONS_DAYS` | `7,30` | Premium day bundles offered for points |
+| `POINTS_PROFILE_BOOST_DAY_COST` / `POINTS_ANNOUNCEMENT_BOOST_DAY_COST` | `60` / `60` | Points per boost day |
+| `POINTS_PIN_DAY_BASE_COST` / `POINTS_PIN_DAY_COST_PER_10_KM` | `80` / `10` | Pin cost per day: base plus a surcharge per started 10 km of radius |
+| `POINTS_PIN_MAX_RADIUS_KM` | `200` (5-1000) | Largest pin radius |
+| `POINTS_PROMOTION_DURATIONS_DAYS` | `1,3,7` | Boost and pin durations offered |
+| `POINTS_REFERRAL_INVITER` / `POINTS_REFERRAL_INVITEE` | `200` / `100` | Invite rewards after the friend verifies their email; `0` disables a side |
+| `REFERRAL_MONTHLY_CAP` | `10` | Rewarded invites per inviter per calendar month |
+| `REFERRAL_CLAIM_DAYS` | `7` (1-90) | How long a new account can still enter an invite code |
+| `POINTS_APP_RATING` | `50` | One-time reward for rating the app; `0` disables it |
+| `POINTS_REWARDED_VIDEO` | `10` | Default points per sponsored video (cards can override) |
+| `REWARDED_VIDEO_DAILY_CAP` | `10` | Rewarded videos per member per day (server time); `0` disables them |
+| `REWARDED_VIDEO_MIN_SECONDS` | `15` (5-600) | Minimum server-measured watch time before claiming |
+| `PROMOTED_RESULTS_PER_PAGE` | `2` (0-5) | Promoted results at the top of each discovery page |
+| `SPONSORED_CARDS_PER_PAGE` | `1` (0-3) | Sponsored cards placed between results on each page |
+| `SPONSORED_VIDEO_BYTE_LIMIT` | `8388608` (1-50 MiB) | Largest uploaded sponsored video; base64 uploads are a third larger, so also raise nginx `client_max_body_size` (11 MiB in Compose) when increasing it |
+| `MONETIZATION_JOB_INTERVAL_MINUTES` | `15` | Rating rewards, missed referral rewards, deleting Stripe customers of deleted accounts, and purging old webhook events and view tokens |
+
+Duration lists accept up to six distinct day counts between 1 and 365. App
+store pricing for paid downloads is configured in the store listing, not here.
 
 ## Compose settings
 

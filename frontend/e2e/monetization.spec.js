@@ -111,8 +111,12 @@ test('members subscribe, buy points, promote calls and profiles, and invite frie
   await expect(page.getByRole('button', { name: 'Manage billing', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Buy 500 points for €4.99', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'We are confirming your payment' })).toBeVisible();
+  // The store already shows the earlier checkout's success message, so wait
+  // for the address of this checkout's synthetic return instead.
+  await expect.poll(async () => (await pool.query(
+    `SELECT id FROM billing_checkout_sessions WHERE user_id = $1 AND product = 'points'`, [member.id])).rows[0]?.id).toBeTruthy();
   const { rows: [checkout] } = await pool.query(`SELECT id FROM billing_checkout_sessions WHERE user_id = $1 AND product = 'points'`, [member.id]);
+  await expect(page).toHaveURL(new RegExp(`session=${checkout.id}$`));
   await deliver(request, 'checkout.session.completed', {
     id: checkout.id, object: 'checkout.session', mode: 'payment', customer: customer.customer_id, payment_status: 'paid',
   });

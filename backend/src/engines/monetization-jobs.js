@@ -15,6 +15,7 @@ export class MonetizationJobs {
     this.connector = connector;
     this.logger = logger;
     this.timer = null;
+    this.firstRun = null;
     this.running = null;
   }
 
@@ -23,11 +24,13 @@ export class MonetizationJobs {
     const run = () => { this.running = this.runOnce().finally(() => { this.running = null; }); };
     this.timer = setInterval(run, this.settings.jobIntervalMinutes * 60000);
     this.timer.unref?.();
-    setTimeout(run, 5000).unref?.();
+    this.firstRun = setTimeout(run, 5000);
+    this.firstRun.unref?.();
   }
 
   async stop() {
     clearInterval(this.timer);
+    clearTimeout(this.firstRun);
     this.timer = null;
     await this.running;
   }
