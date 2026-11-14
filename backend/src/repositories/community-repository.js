@@ -4,6 +4,7 @@ import { validateMessageEnvelope } from '../engines/message-security.js';
 import { messagingKeyRepository, publicMessagingKey } from './messaging-key-repository.js';
 import { publishEvent, publishAdminEvent } from './event-publisher.js';
 import { notificationRepository } from './notification-repository.js';
+import { organizationRepository } from './organization-repository.js';
 export { publishEvent } from './event-publisher.js';
 
 export const preferenceColumns = {
@@ -85,6 +86,7 @@ class CommunityRepository {
       link: `#announcement?id=${announcement.id}`, keyPrefix: `announcement:${announcement.id}`,
       params: { announcementId: announcement.id, title: announcement.title },
     });
+    await organizationRepository.announcementPublished(executor, announcement);
     await publishEvent(executor, 'announcements.changed', { id: announcement.id });
   }
 

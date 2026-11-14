@@ -31,6 +31,11 @@ export const notificationKinds = {
   verification_decided: { inApp: 'on', push: 'on', email: 'optional' },
   saved_search_match: { inApp: 'on', push: 'on', email: 'optional' },
   support_reply: { inApp: 'on', push: 'optional', email: 'optional' },
+  organization_invitation: { inApp: 'on', push: 'on', email: 'optional' },
+  organization_membership: { inApp: 'on', push: 'optional', email: 'optional' },
+  organization_update: { inApp: 'on', push: 'optional', email: 'optional' },
+  organization_relation: { inApp: 'on', push: 'on', email: 'optional' },
+  organization_claim: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {

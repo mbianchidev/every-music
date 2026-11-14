@@ -77,6 +77,7 @@ export class MusicianConductor {
       InputValidator.validateBoolean(updateData.openToProjects, 'Open to new projects'),
       ...contactFields.map(key => validateContact(key, updateData[key])),
       validateProfileLinks(updateData.links),
+      InputValidator.validateEnum(updateData.accountKind, ['artist', 'music_lover'], 'Account kind'),
     );
 
     if (validations) {
@@ -427,6 +428,7 @@ export class MusicianConductor {
       id: profile.id,
       userId: profile.user_id,
       isFollowing: Boolean(profile.is_following),
+      accountKind: profile.account_kind || 'artist',
       artistName: profile.artist_name,
       firstName: profile.first_name,
       lastName: profile.last_name,
@@ -460,6 +462,7 @@ export class MusicianConductor {
     return {
       id: profile.id,
       userId: profile.user_id,
+      accountKind: profile.account_kind || 'artist',
       artistName: profile.artist_name,
       firstName: profile.first_name,
       lastName: profile.last_name,

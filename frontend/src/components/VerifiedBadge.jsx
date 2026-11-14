@@ -9,9 +9,12 @@ function Tick() {
   );
 }
 
-export default function VerifiedBadge({ verifiedAt, label = false }) {
+// People pass `verifiedAt` (icon only unless `label`); organization pages pass
+// `verified` and always show the text badge.
+export default function VerifiedBadge({ verifiedAt, verified, label = false }) {
   const { t } = useI18n();
-  if (!verifiedAt) return null;
-  if (label) return <span className="verified-badge verified-badge-label"><Tick />{t('profileVerification.label')}</span>;
+  if (!verified && !verifiedAt) return null;
+  const text = verified ? t('organizations.verified.badge') : label ? t('profileVerification.label') : null;
+  if (text) return <span className="verified-badge verified-badge-label"><Tick />{text}</span>;
   return <span className="verified-badge" role="img" aria-label={t('profileVerification.badge')} title={t('profileVerification.badgeTitle')}><Tick /></span>;
 }

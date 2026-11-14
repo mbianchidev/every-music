@@ -2,10 +2,13 @@ import { mediaUrl } from '../lib/media.js';
 import Avatar from './Avatar.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
 import ProfileExtras from './ProfileExtras.jsx';
+import MusicLoverDetails from './MusicLoverDetails.jsx';
+import ProfileOrganizations from './ProfileOrganizations.jsx';
 
 const links = { spotify_link: 'Spotify', youtube_link: 'YouTube', bandcamp_link: 'Bandcamp', soundcloud_link: 'SoundCloud', website_link: 'Website' };
 
 export default function ProfileDetails({ profile, showName = true }) {
+  if (profile.accountKind === 'music_lover') return <MusicLoverDetails profile={profile} showName={showName} />;
   return (
     <>
       <div className="profile-summary">
@@ -46,6 +49,7 @@ export default function ProfileDetails({ profile, showName = true }) {
           </article>
         ))}</div>
       </section>}
+      <ProfileOrganizations userId={profile.userId} />
     </>
   );
 }

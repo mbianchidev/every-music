@@ -132,6 +132,7 @@ development packages; store signing is still a manual step.
 - **Places and plans:** GeoNames city picker, distance/region/cover-band/open-to discovery, opt-in "near me", saved searches with alerts, contacts with visibility, profile links, follow alerts, profile blocks, owner-only reactions, and free-plan limits with Premium statistics and profile visitors.
 - **Help and onboarding:** help center with bug/contact/job forms and an admin inbox, operator-configured legal templates with terms acceptance, a skippable welcome tour, Back controls, update notices, in-app ratings, and branded icons and splash screens.
 - **Hosting and storage:** deploy on Compose, any container host, or Kubernetes; keep media in PostgreSQL or any private S3-compatible bucket (optional bundled SeaweedFS), store encrypted attachment blobs, deliver native Android/iOS push, and build unsigned mobile packages in CI.
+- **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
 
 ### Current limitations
 
@@ -140,6 +141,7 @@ development packages; store signing is still a manual step.
 - Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
 - Distance, region and country filters use city-level GeoNames coordinates for cities above 15,000 people; towns typed as free text are shown but not found by those filters.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
+- Band update feeds import only public YouTube channel feeds; Spotify and other services need manual updates or releases. Page events are a placeholder until events ship.
 - Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
 - Desktop and mobile CI provide unsigned development artifacts, not signed/notarized or store releases. The mobile shell does not register for native push yet. Mobile distribution and cross-platform accessibility still need platform-specific verification.

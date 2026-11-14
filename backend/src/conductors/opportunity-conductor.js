@@ -9,6 +9,7 @@ import { savedSearchRepository } from '../repositories/saved-search-repository.j
 import { isActive, parseExpiry, resolveExpiry } from '../engines/listing-policy.js';
 import { requestError } from '../engines/request-error.js';
 import { placeFields, resolveLocation, validatePlaceId } from './discovery-conductor.js';
+import { organizationRepository } from '../repositories/organization-repository.js';
 
 async function assertActiveCapacity(executor, userId, excludeId) {
   await quotaRepository.lockUser(executor, userId);
@@ -49,6 +50,7 @@ export class OpportunityConductor {
       InputValidator.validateLinks(announcementData.links),
       validatePlaceId(announcementData.placeId),
       parseExpiry(announcementData.expiresAt),
+      InputValidator.validateUuid(announcementData.organizationId, 'Organization'),
     );
 
     if (validations) {
@@ -92,6 +94,9 @@ export class OpportunityConductor {
           announcementData.links || [],
           executor,
         );
+        if (announcementData.organizationId) {
+          await organizationRepository.attachAnnouncement(executor, announcement.id, announcementData.organizationId.toLowerCase(), userId);
+        }
         const full = await opportunityRepository.findById(announcement.id, executor, userId);
         if (full.is_published) {
           await communityRepository.announcementPublished(executor, full);
@@ -295,6 +300,7 @@ export class OpportunityConductor {
       InputValidator.validateLinks(updateData.links),
       validatePlaceId(updateData.placeId),
       parseExpiry(updateData.expiresAt),
+      InputValidator.validateUuid(updateData.organizationId, 'Organization'),
     );
 
     if (validations) {
@@ -352,6 +358,10 @@ export class OpportunityConductor {
 
         if (updateData.links !== undefined) {
           await opportunityRepository.attachLinks(announcementId, updateData.links, executor);
+        }
+
+        if (updateData.organizationId !== undefined && updateData.organizationId?.toLowerCase() !== previous.organization_id) {
+          await organizationRepository.attachAnnouncement(executor, announcementId, updateData.organizationId?.toLowerCase() || null, userId);
         }
 
         const full = await opportunityRepository.findById(announcementId, executor, userId);
@@ -653,6 +663,7 @@ export class OpportunityConductor {
       isPublished: announcement.is_published,
       isSaved: Boolean(announcement.is_saved),
       myReaction: announcement.my_reaction || null,
+      organization: announcement.organization || null,
       createdAt: announcement.created_at,
       updatedAt: announcement.updated_at,
     };
@@ -685,6 +696,7 @@ export class OpportunityConductor {
       expiresAt: announcement.expires_at,
       distanceKm: announcement.distance_km === null || announcement.distance_km === undefined
         ? null : Math.round(Number(announcement.distance_km) * 10) / 10,
+      organization: announcement.organization || null,
       createdAt: announcement.created_at,
     };
   }

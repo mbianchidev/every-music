@@ -192,6 +192,9 @@ distinct `{ "userId": "<existing active user>", "role": "<1-100 characters>" }`
 objects. Omit collaborators to leave them unchanged; send `[]` to clear.
 Create returns 201; update/delete return 200. Foreign projects return 404.
 
+Profiles also return `accountKind` (`artist` or `music_lover`), which
+`PUT /realm/profiles/me` accepts. `telegramId` is limited to 100 characters.
+
 ## Announcements
 
 | Method | Path | Authentication |
@@ -297,10 +300,81 @@ between blocked accounts. Withdrawing consent deletes the visitor's records.
 Owners without `profileVisits` receive 403 `PLAN_LIMIT_REACHED`. Hourly
 maintenance deletes visits older than 30 days.
 
+Create and update accept an optional `organizationId` to publish on behalf of
+a managed page where the author has `post_announcements` (403 otherwise);
+`null` on update detaches it, omission leaves it unchanged. Details and
+summaries return `organization` (`{ id, name, kind, verified }`) or `null`.
+The author keeps ownership; page followers are notified when it is published.
+
+## Organizations
+
+Bands, venues, organizers, booking agencies, and labels. See the
+[organization model](organizations.md) for roles, permissions, and limits.
+`:organizationId` is the page UUID; `GET /realm/organizations/:organizationId`
+and its `/posts` also accept the page slug. Reads are public (optional
+authentication adds viewer fields); writes require authentication.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/organizations` | Search: `kind`, `q` (name/bio, 200), `genreId`, `location` (city/region/country, 255), `sort` (`newest`, `name`, `followers`), paging; returns `organizations` |
+| POST | `/realm/organizations` | Create (see fields below), 201; rate-limited to 20/hour |
+| GET | `/realm/organizations/mine` | `organizations` (with `role`, `permissions`), pending `invitations`, `relationRequests` for bands you manage |
+| GET | `/realm/organizations/invitations` | Your pending invitations |
+| GET | `/realm/organizations/updates` | Paginated `posts` from pages you follow |
+| GET | `/realm/organizations/:organizationId` | Detail with members, history, links, photos, releases, relations, similar bands, and `viewer` |
+| PATCH | `/realm/organizations/:organizationId` | Partial update, `manage_profile` |
+| DELETE | `/realm/organizations/:organizationId` | Soft delete, leader (or community venue creator) |
+| POST / DELETE | `/realm/organizations/:organizationId/follow` | Follow or unfollow |
+| GET | `/realm/organizations/:organizationId/members` | For active members: every member period and invitation, with permissions |
+| POST | `/realm/organizations/:organizationId/members` | Invite `{ userId, role?, title?, permissions? }`, `manage_members`, 201 |
+| PATCH | `/realm/organizations/:organizationId/members/:userId` | `{ memberId?, title?, role?, permissions?, joinedOn?, leftOn? }`; `memberId` selects a former period, otherwise the current one changes |
+| DELETE | `/realm/organizations/:organizationId/members/:userId` | Remove, cancel an invitation, or leave (your own user ID) |
+| PATCH | `/realm/organizations/:organizationId/invitation` | Invitee `{ "response": "accept" \| "decline" }` |
+| POST | `/realm/organizations/:organizationId/leadership` | Leader transfers to `{ userId }` of an active member |
+| POST / DELETE | `/realm/organizations/:organizationId/photos[/:photoId]` | `{ url, category: inside \| outside \| gallery, caption? }`, `manage_profile` |
+| GET / POST / DELETE | `/realm/organizations/:organizationId/posts[/:postId]` | Paginated updates; posting `{ title?, body?, url? }` and removing manual updates need `post_announcements` (release and imported video posts are not removable) |
+| POST / PATCH / DELETE | `/realm/organizations/:organizationId/releases[/:releaseId]` | Bands: `{ title, releaseType: single \| ep \| lp \| album, releaseDate?, links? }`, `manage_profile` |
+| GET / POST | `/realm/organizations/:organizationId/relations` | Managers list pending and accepted relations; agencies/labels request `{ bandId }` |
+| PATCH / DELETE | `/realm/organizations/:organizationId/relations/:relationId` | Band answers `{ response }`; either side ends it |
+| PUT | `/realm/organizations/:organizationId/similar` | Bands: `{ bandIds }` (up to 10) replaces manual picks |
+| GET | `/realm/organizations/:organizationId/suggestions` | Up to six suggested bands with `score` and `reasons` |
+| GET | `/realm/organizations/:organizationId/announcements` | Open announcements published for the page |
+| POST | `/realm/organizations/:organizationId/claims` | Claim a community venue `{ message }` (10-2,000 characters), 201 |
+| GET | `/realm/users/:userId/organizations` | Pages a user is an active member of |
+| GET | `/realm/users/:userId/follows` | `{ visible, artists, organizations }`; hidden lists return `visible: false` and empty arrays to others |
+| GET / PUT | `/realm/follows/visibility` | Your `{ visible }` follow-list setting |
+| GET | `/realm/admin/organization-claims` | Admin queue, `status` `pending` \| `approved` \| `rejected` or empty |
+| PATCH | `/realm/admin/organization-claims/:claimId` | Admin `{ decision: approve \| reject, note? }`, audited |
+| PUT | `/realm/admin/organizations/:organizationId/verification` | Admin `{ verified }`, audited |
+
+Create and update accept `name` (1-255), `slug` (3-80 lowercase letters,
+digits, hyphens; unique, 409 `SLUG_TAKEN`), `bio` and `workWithUs` (5,000),
+`pictureUrl` (an `organization` image you uploaded), `city`, `region`,
+`country`, `latitude`/`longitude` (together), `contactEmail`, `contactPhone`,
+`activeSince`/`activeUntil` years, `genreIds` (up to 10), and `links` (up to 12
+`{ linkType, url }` with `spotify`, `youtube`, `soundcloud`, `bandcamp`,
+`instagram`, `website`, or `other`). Venues add `venueType`, `capacity`,
+`parkingInfo`, and `directions`; bands add `formedYear`, `youtubeChannelId`
+(`UC` plus 22 characters), and `openTo` (`tours`, `live`, `supportActs`,
+`endorsements` booleans, merged on update). Fields for another kind return 400.
+Create also accepts `kind`, `title` (your member title), and for venues
+`managed: false` to add a community-maintained page.
+
+Business kinds return 403 `PLAN_LIMIT_REACHED` without the `businessPages`
+limit. Missing permissions return 403 `ORGANIZATION_PERMISSION_REQUIRED` or
+`LEADER_REQUIRED`; missing pages 404 `ORGANIZATION_NOT_FOUND`. Duplicate
+invitations, relations, and pending claims return 409. Invitations,
+membership changes, relation requests/answers, claim outcomes, and updates
+create notifications with kinds `organization_invitation`,
+`organization_membership`, `organization_relation`, `organization_claim`, and
+`organization_update` (params include `organizationId` and `organizationName`).
+Detail `viewer` contains `role` (`leader`, `admin`, `member`, `maintainer`, or
+`null`), effective `permissions`, `invited`, and your latest `claim`.
+
 ## Pagination
 
-Profile/announcement search, own/saved announcements, conversations, messages,
-comments, and notifications accept positive integer `page` and `pageSize`.
+Profile/announcement/organization search, own/saved announcements, organization
+posts and updates, conversations, messages, comments, and notifications accept positive integer `page` and `pageSize`.
 Defaults are 1 and 20; `pageSize` cannot exceed 100. Fractional, malformed, and
 unsafe offsets return 400. Each response returns its named list plus:
 
@@ -860,7 +934,7 @@ out of URLs. Frames are `data: {"type":"messages.changed","id":"<uuid>",...}`
 separated by blank lines, with heartbeat comments every 15 seconds. The
 initial `connected` event tells clients to reload current data.
 
-Types include `profiles.changed`, `announcements.changed`, `comments.changed`,
+Types include `profiles.changed`, `announcements.changed`, `comments.changed`, `organizations.changed`,
 `messages.changed`, `conversations.changed`, `saved.changed`,
 `notifications.changed`, `preferences.changed`, `analytics.changed`,
 `keys.changed`, `reports.changed`, `admin.changed`, `blocks.changed`,

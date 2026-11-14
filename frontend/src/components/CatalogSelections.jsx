@@ -1,7 +1,7 @@
 import FormField from './FormField.jsx';
 
 export default function CatalogSelections({
-  instruments, genres, instrumentIds, genreIds, onInstruments, onGenres, disabled, experience, onExperience,
+  instruments, genres, instrumentIds, genreIds, onInstruments, onGenres, disabled, experience, onExperience, hideInstruments = false,
 }) {
   const choices = (title, items, ids, change) => (
     <details className="selection-panel">
@@ -23,8 +23,8 @@ export default function CatalogSelections({
   );
   return (
     <div className="form-stack">
-      {choices('Instruments', instruments, instrumentIds, onInstruments)}
-      {experience && instrumentIds.map(id => (
+      {!hideInstruments && choices('Instruments', instruments, instrumentIds, onInstruments)}
+      {!hideInstruments && experience && instrumentIds.map(id => (
         <fieldset className="experience-row" key={id} disabled={disabled}>
           <legend>{instruments.find(item => item.id === id)?.name || 'Instrument'} experience</legend>
           <FormField id={`level-${id}`} label="Skill level">

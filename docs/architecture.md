@@ -17,6 +17,7 @@ Fastify -> Web Push services (optional, generic notification payloads)
 Fastify -> SMS provider, Twilio adapter (optional two-step codes)
 Fastify -> FCM / APNs (optional native mobile push, generic payloads)
 Fastify -> S3-compatible object storage (optional media bytes, private bucket)
+Fastify -> https://www.youtube.com/feeds/videos.xml (optional band video import)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
@@ -290,6 +291,22 @@ publication; JSON filters are evaluated in SQL and fan out through
 (`blocked_users`) are excluded in both directions from search, saved-search
 matching, follows and contact visibility. Profile visits are written only
 with the visitor's consent and expire after 30 days.
+
+## Organizations
+
+Bands, venues, organizers, booking agencies, and labels share the
+`organizations` table with membership periods, follows, relations, releases,
+update posts, and venue claims (migration `012_organizations.sql`). Routes live
+in `organization-orchestrator.js`, validation in `organization-conductor.js`,
+and SQL in `organization-repository.js` and `organization-content-repository.js`.
+Every organization-scoped write authorizes through
+`organizationRepository.requireMember` inside its transaction. Each API
+process runs `OrganizationFeedImporter`, which leases due bands with
+`SKIP LOCKED`, fetches their public YouTube feeds outside transactions with a
+fixed host, timeout, and size cap, and stores new videos and follower
+notifications atomically. The client loads organization screens on demand
+through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
+the shell. See the [organization model](organizations.md).
 
 ## Operational boundaries and extension points
 

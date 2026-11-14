@@ -87,6 +87,7 @@ startup. Mail settings are mandatory in production.
 | `APNS_PRIVATE_KEY` | Unset | APNs authentication key (`.p8` PEM; `\n` escapes accepted) |
 | `APNS_TOPIC` | Unset | iOS bundle identifier, normally `music.every.app` |
 | `APNS_ENVIRONMENT` | `production` | `production`, or `sandbox` for development-signed apps |
+| `YOUTUBE_FEED_INTERVAL_MINUTES` | `60` (0-10080) | How often each band's public YouTube channel feed is checked for new videos; `0` disables the import and its outbound requests to `www.youtube.com` |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -314,7 +315,8 @@ premium limits and can always manage business pages.
 | `SEE_PROFILE_VISITS` | `false` | `true` | Seeing consenting visitors of your profile |
 
 `PARTNER_PLAN_REQUIRED` (default `false`) restricts venue, organizer, booking
-agency, and label pages to the partner plan.
+agency, and label pages to the partner plan. Bands and community-maintained
+venues stay free; see the [organization model](organizations.md).
 
 ## Marketplace
 
@@ -346,8 +348,8 @@ API, and web host bindings are local by default.
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
 SMTP, pool, rate-limit, body-size, application-retention, two-step key,
-verification retention, Twilio, media storage, and native push settings listed
-above, plus `APP_VERSION`, the
+verification retention, Twilio, media storage, native push, and YouTube feed
+settings listed above, plus `APP_VERSION`, the
 [scheduled notification settings](#notification-email-and-scheduled-notifications),
 and the help center, legal, and client version settings. In Compose,
 `S3_ENDPOINT` defaults to the bundled `http://object-store:8333`, `S3_BUCKET` to

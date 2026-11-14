@@ -651,6 +651,40 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
 /* w0c-infra */
 .device-list { list-style: none; padding: 0; }
 .device-list .card { overflow-wrap: anywhere; }
+/* w5-organizations */
+.organization-card { display: flex; flex-direction: column; padding: 20px; }
+.organization-card .heading-md { margin-bottom: 3px; font-size: 17px; }
+.organization-card .musician-summary p { margin: 0; color: var(--muted); font-size: 12px; }
+.organization-card .card-footer { justify-content: space-between; font-size: 13px; }
+.verified-badge { gap: 4px; background: var(--positive-soft); color: var(--positive); }
+.organization-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.organization-byline .tag { min-height: 21px; }
+.post-list, .release-list, .member-list, .member-admin-list, .photo-grid { display: grid; gap: 12px; margin: 16px 0; padding: 0; list-style: none; }
+.post-list .card, .release-list .card, .member-admin-list .card { padding: 18px; box-shadow: none; }
+.post-list .eyebrow { margin-bottom: 4px; }
+.post-list h3, .release-list h3, .member-admin-list h3 { margin-bottom: 6px; }
+.post-list .body-muted, .release-list .body-muted { margin: 0; font-size: 13px; }
+.inline-list { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 8px 0 16px; padding: 0; list-style: none; }
+.inline-list li { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.member-row { display: flex; align-items: center; gap: 12px; }
+.member-row p { margin: 2px 0 0; font-size: 13px; }
+.member-editor { margin-top: 12px; }
+.member-editor .form-stack { padding: 0 14px 14px; }
+.photo-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.photo-grid figure { margin: 0; }
+.photo-grid img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; border: 1px solid var(--line); border-radius: 8px; object-fit: cover; }
+.photo-grid figcaption { margin-top: 6px; color: var(--muted); font-size: 13px; }
+.detail-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px 20px; margin: 20px 0; }
+.detail-list dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.detail-list dd { margin: 4px 0 0; }
+.picker { display: grid; gap: 12px; max-width: 520px; }
+.picker > .btn { justify-self: start; }
+.claim-venue { display: grid; gap: 8px; justify-items: start; }
+.verification-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; box-shadow: none; }
+@media (max-width: 480px) {
+  .organization-card { padding: 18px; }
+  .inline-list { gap: 8px 14px; }
+}
 `;
 
 export default styles;

@@ -13,6 +13,7 @@ import ManagedImage from '../components/ManagedImage.jsx';
 import ApplicationPanel from '../components/ApplicationPanel.jsx';
 import VerifiedBadge from '../components/VerifiedBadge.jsx';
 import AnnouncementStats from '../components/AnnouncementStats.jsx';
+import OrganizationByline from '../components/OrganizationByline.jsx';
 
 export default function AnnouncementScreen({ route }) {
   const id = route.query.get('id');
@@ -63,6 +64,7 @@ export default function AnnouncementScreen({ route }) {
           <article className="card">
             {post.pictureUrl && <ManagedImage className="content-image" src={post.pictureUrl} authenticated={post.isPublished === false} alt={`Announcement image: ${post.title}`} />}
             <p>Posted by <a href={`#musician?id=${post.userId}`}>{post.creatorName || 'Musician'}</a><VerifiedBadge verifiedAt={post.creatorVerifiedAt} /> on <time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString()}</time></p>
+            <OrganizationByline organization={post.organization} />
             <p className="detail-text">{post.description}</p>
             <p>{[post.location.city, post.location.state, post.location.country].filter(Boolean).join(', ') || 'Location flexible'}{post.isRemote ? ' / Remote welcome' : ''}{post.isCoverBand ? ' / Cover band' : ''}</p>
             {!!post.instruments.length && <div><h2 className="heading-md">Instruments needed</h2><div className="tag-list">{post.instruments.map(item => <span className="tag" key={item.instrument_id}>{item.name}</span>)}</div></div>}

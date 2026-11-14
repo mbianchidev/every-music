@@ -13,7 +13,9 @@ const summaryColumns = `
   (SELECT jsonb_agg(jsonb_build_object(
     'genre_id', ag.genre_id, 'name', g.name
   ) ORDER BY g.name) FROM announcement_genres ag JOIN genres g ON g.id = ag.genre_id
-    WHERE ag.announcement_id = a.id) AS genres
+    WHERE ag.announcement_id = a.id) AS genres,
+  (SELECT jsonb_build_object('id', o.id, 'name', o.name, 'kind', o.kind, 'verified', o.verified_at IS NOT NULL)
+    FROM organizations o WHERE o.id = a.organization_id AND o.is_deleted = FALSE) AS organization
 `;
 
 export class OpportunityRepository {

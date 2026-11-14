@@ -75,6 +75,10 @@ skip, focus return, reduced motion, and that spotlighted targets stay visible at
 320px. Also check the terms prompt, update screens, help forms (including the
 diagnostics consent text), star rating radios, Back controls, and footer links.
 
+Organization pages add member editors and permission checkboxes, invitation
+and request responses, the venue claim dialog, search-as-you-type pickers,
+and the admin claim and verification tools; check them the same way.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

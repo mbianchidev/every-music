@@ -20,6 +20,8 @@ import { discoveryOrchestrator } from './orchestrators/discovery-orchestrator.js
 import { helpOrchestrator } from './orchestrators/help-orchestrator.js';
 import { infrastructureOrchestrator } from './orchestrators/infrastructure-orchestrator.js';
 import { configureMediaStorage } from './engines/media-storage.js';
+import { organizationOrchestrator } from './orchestrators/organization-orchestrator.js';
+import { OrganizationFeedImporter } from './engines/organization-feed-importer.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
@@ -182,6 +184,7 @@ export async function buildNexus({
   await nexus.register(discoveryOrchestrator, { prefix: '/realm' });
   await nexus.register(helpOrchestrator, { prefix: '/realm', config, backgroundJobs });
   await nexus.register(infrastructureOrchestrator, { prefix: '/realm', config });
+  await nexus.register(organizationOrchestrator, { prefix: '/realm' });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({
@@ -200,6 +203,9 @@ export async function buildNexus({
   const notificationJobs = new NotificationJobs({ config, connector, logger: nexus.log });
   nexus.addHook('onListen', async () => { if (backgroundJobs) notificationJobs.start(); });
   nexus.addHook('preClose', async () => { await notificationJobs.stop(); });
+  const feedImporter = new OrganizationFeedImporter({ config: config.organizations, connector, logger: nexus.log });
+  nexus.addHook('onListen', async () => { if (backgroundJobs) feedImporter.start(); });
+  nexus.addHook('preClose', async () => feedImporter.stop());
 
   return nexus;
 }

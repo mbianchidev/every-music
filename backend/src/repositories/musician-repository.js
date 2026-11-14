@@ -116,6 +116,7 @@ export class MusicianRepository {
       placeId: 'place_id',
       contactVisibility: 'contact_visibility',
       openToProjects: 'open_to_projects',
+      accountKind: 'account_kind',
     };
 
     for (const [jsField, dbField] of Object.entries(fieldMapping)) {
@@ -208,7 +209,7 @@ export class MusicianRepository {
     const sorts = { newest: 'p.created_at DESC', oldest: 'p.created_at ASC', name: "COALESCE(p.artist_name, p.first_name, '') ASC", city: "COALESCE(p.city, '') ASC" };
     if (distance) sorts.distance = `${distance} ASC NULLS LAST, p.created_at DESC`;
     const query = `
-      SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
+      SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name, p.account_kind,
              p.city, p.state, p.country, p.bio, p.profile_picture_url,
              p.created_at, p.verified_at, ${openToProjects} AS open_to_projects_effective,
              ${distance ? `CASE WHEN p.latitude IS NULL THEN NULL ELSE ${distance} END` : 'NULL::float8'} AS distance_km,

@@ -12,6 +12,9 @@ export const publicMediaReferences = [
   `EXISTS(SELECT 1 FROM marketplace_listing_photos ph JOIN marketplace_listings l ON l.id = ph.listing_id
     JOIN users u ON u.id = l.user_id AND u.is_active AND NOT u.is_deleted
     WHERE ('/realm/media/' || ph.media_id::text) = $2 AND l.removed_at IS NULL AND l.expires_at > NOW())`,
+  `EXISTS(SELECT 1 FROM organizations o WHERE o.picture_url = $2 AND o.is_deleted = FALSE)`,
+  `EXISTS(SELECT 1 FROM organization_photos ph JOIN organizations o ON o.id = ph.organization_id
+    WHERE ph.url = $2 AND o.is_deleted = FALSE)`,
 ];
 
 // SQL predicates granting one signed-in viewer (bound as $3) access to managed

@@ -35,6 +35,13 @@ import LegalScreen from './pages/LegalScreen.jsx';
 import ShellGate from './components/ShellGate.jsx';
 import BackButton from './components/BackButton.jsx';
 import SiteFooter from './components/SiteFooter.jsx';
+import lazyScreen from './lib/lazy-screen.jsx';
+
+const OrganizationSearchScreen = lazyScreen(() => import('./pages/OrganizationSearchScreen.jsx'));
+const OrganizationScreen = lazyScreen(() => import('./pages/OrganizationScreen.jsx'));
+const OrganizationEditorScreen = lazyScreen(() => import('./pages/OrganizationEditorScreen.jsx'));
+const OrganizationMembersScreen = lazyScreen(() => import('./pages/OrganizationMembersScreen.jsx'));
+const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -69,6 +76,12 @@ const ROUTES = {
   'saved-searches': { screen: SavedSearchesScreen, title: 'Saved searches', protected: true },
   help: { screen: HelpScreen, title: 'Help center' },
   legal: { screen: LegalScreen, title: 'Legal information' },
+  organizations: { screen: OrganizationSearchScreen, get title() { return t('organizations.routes.discover'); }, protected: true },
+  organization: { screen: OrganizationScreen, get title() { return t('organizations.routes.page'); }, protected: true },
+  'create-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.create'); }, protected: true },
+  'edit-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.edit'); }, protected: true },
+  'organization-members': { screen: OrganizationMembersScreen, get title() { return t('organizations.routes.members'); }, protected: true },
+  'your-pages': { screen: YourPagesScreen, get title() { return t('organizations.routes.yours'); }, protected: true },
 };
 
 function readRoute() {

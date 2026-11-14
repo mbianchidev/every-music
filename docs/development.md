@@ -177,6 +177,13 @@ server treats SQL-seeded fixture accounts that have no terms record as having
 accepted the current terms, so other suites are not interrupted by the terms
 prompt; seed an older `terms_acceptances` row to exercise the prompt. Seeded
 accounts also have no pending tour unless a `user_onboarding` row is inserted.
+
+The organizations suite (`e2e/organizations.spec.js`) covers band creation,
+invitations, updates, releases, announcements for a page, discovery,
+music-lover profiles, venue claims and verification, with axe and 320px
+checks. Because sign-in is limited to five attempts per IP, it issues real
+refresh sessions with the browser API's synthetic signing keys instead of
+using the sign-in form.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget

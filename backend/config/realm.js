@@ -245,6 +245,9 @@ export function createRealmConfig(env = process.env) {
     accountTrust: createAccountTrust(env),
     ...createHelpConfig(env),
     ...createInfrastructureConfig(env),
+    organizations: {
+      youtubeFeedIntervalMinutes: parseInteger(env.YOUTUBE_FEED_INTERVAL_MINUTES, 60, 'YOUTUBE_FEED_INTERVAL_MINUTES', { maximum: 10080 }),
+    },
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
