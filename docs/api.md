@@ -166,7 +166,8 @@ characters), `signal` (phone number or username), `websiteUrl`, and `links`:
 up to 20 `{ "linkType": "spotify" | "youtube" | "soundcloud" | "bandcamp" |
 "instagram" | "website" | "other", "url": "<http(s) URL>" }` in display order.
 A place sets `city`, `state`, `country`, `latitude` and `longitude` from the
-GeoNames record. Empty contact strings clear the contact. `openToProjects` on
+GeoNames record; sending `city`, `state`, `country` or coordinates without
+`placeId` detaches the place. Empty contact strings clear the contact. `openToProjects` on
 detail and search is true when the manual flag is set **or** the musician has
 an active (published, unexpired) announcement.
 Omitted relation fields preserve values; `[]` clears them.

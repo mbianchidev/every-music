@@ -118,6 +118,9 @@ test('profiles, announcements and discovery: places, distance, plans, saved sear
     assert.equal(upgraded.projects.length, 4);
 
     await call('/profiles/me', { actor: 3, method: 'PUT', body: { placeId: milan.id } });
+    const manual = await call('/profiles/me', { actor: 3, method: 'PUT', body: { city: 'Synthetic manual town' } });
+    assert.deepEqual([manual.place, manual.city], [null, 'Synthetic manual town']);
+    await call('/profiles/me', { actor: 3, method: 'PUT', body: { placeId: milan.id } });
     const cleared = await call('/profiles/me', { actor: 3, method: 'PUT', body: { placeId: null, city: 'Synthetic legacy town' } });
     assert.equal(cleared.place, null);
     assert.equal(cleared.city, 'Synthetic legacy town');

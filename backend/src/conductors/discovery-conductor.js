@@ -20,9 +20,13 @@ export async function resolveLocation(query) {
 }
 
 // A selected place supplies the city, region, country and coordinates.
-// Clearing it keeps any free-text city sent with the same request.
+// Clearing it keeps any free-text city sent with the same request, and a
+// location typed by hand without a place detaches the previous place.
 export async function placeFields(input, executor) {
-  if (input.placeId === undefined) return {};
+  if (input.placeId === undefined) {
+    const manual = ['city', 'state', 'country', 'latitude', 'longitude'].some(key => input[key] !== undefined);
+    return manual ? { placeId: null } : {};
+  }
   if (input.placeId === null) {
     return {
       placeId: null, latitude: null, longitude: null, city: input.city ?? null,
