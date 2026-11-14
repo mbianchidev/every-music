@@ -88,6 +88,7 @@ startup. Mail settings are mandatory in production.
 | `APNS_TOPIC` | Unset | iOS bundle identifier, normally `music.every.app` |
 | `APNS_ENVIRONMENT` | `production` | `production`, or `sandbox` for development-signed apps |
 | `YOUTUBE_FEED_INTERVAL_MINUTES` | `60` (0-10080) | How often each band's public YouTube channel feed is checked for new videos; `0` disables the import and its outbound requests to `www.youtube.com` |
+| `EVENT_REMINDER_INTERVAL_SECONDS` | `60` (0-3600) | How often each API process looks for due event reminders (`event_reminder` notifications) and, hourly, removes reminders of ended or cancelled events; `0` disables reminder delivery |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete

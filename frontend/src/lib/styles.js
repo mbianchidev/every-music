@@ -713,6 +713,55 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .store-price { font-size: 18px; }
   .wallet-balance { grid-template-columns: minmax(0, 1fr); }
 }
+/* w8-events */
+.event-quick-filters, .filters.event-filters { min-width: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.discovery-form > .filter-details { min-width: 0; }
+.event-quick-filters { max-width: 560px; }
+.filters.event-filters .btn { grid-column: 1 / -1; justify-self: start; }
+.event-filters .picker, .event-filters .chosen-entity, .event-filters .place-picker { align-self: start; }
+.chosen-entity-value { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 44px; margin: 0; }
+.chosen-entity-value > span { font-weight: 600; }
+.event-card { display: flex; flex-direction: column; }
+.event-card-date { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-weight: 600; }
+.event-card-lineup { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.event-notice { font-size: 14px; }
+.event-notice-cancelled { background: var(--danger-soft); color: var(--danger); }
+.event-detail { display: grid; gap: 4px; }
+.event-cover { display: block; width: 100%; height: auto; max-height: 420px; margin-bottom: 8px; border-radius: 10px; object-fit: cover; }
+.event-facts dd { display: grid; gap: 4px; }
+.event-your-time { color: var(--muted); font-size: 13px; }
+.event-map-links { margin: 0; }
+.event-actions { margin-top: 16px; align-items: flex-start; }
+.event-actions > .compact-actions { margin: 0; }
+.capacity { display: grid; gap: 8px; max-width: 520px; margin-bottom: 14px; }
+.capacity-text { margin: 0; }
+.capacity-bar { height: 10px; overflow: hidden; border: 1px solid var(--control-border); border-radius: 999px; background: var(--surface-raised); }
+.capacity-bar span { display: block; height: 100%; background: var(--brand); }
+.ticket-links .btn { white-space: normal; }
+.lineup-group h3 { margin: 16px 0 8px; font-size: 14px; }
+.lineup-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lineup-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.lineup-name { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; }
+.communication-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.communication { padding: 14px 16px; border: 1px solid var(--line); border-left: 4px solid var(--brand-ink); border-radius: 8px; background: var(--surface); }
+.communication-cancellation, .communication-postponement { border-left-color: var(--danger); }
+.communication p { margin: 0 0 6px; }
+.communication-form { margin-top: 18px; }
+.event-posts .card-author { flex-wrap: wrap; }
+.event-posts .detail-text { margin: 0 0 8px; }
+.lineup-editor-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.lineup-editor-list .card { padding: 16px; box-shadow: none; }
+.lineup-editor-list legend { font-weight: 600; }
+.lineup-add { align-items: start; }
+.ticket-link-row { align-items: end; }
+.events-extension-list { min-width: 0; }
+.events-extension-list h3 { margin: 0 0 10px; }
+.events-extension-list .stack { margin-bottom: 10px; }
+@media (max-width: 480px) {
+  .event-quick-filters, .filters.event-filters { grid-template-columns: minmax(0, 1fr); }
+  .event-card .call-card-heading { flex-wrap: wrap; }
+  .communication { padding: 12px; }
+}
 `;
 
 export default styles;

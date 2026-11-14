@@ -28,7 +28,10 @@ Location is stored in plain columns so a later places table can reference or
 backfill them without a breaking change. Kind-specific columns are guarded by
 database checks and rejected by the API for other kinds.
 
-`verified_at` is set only by administrators. `managed = false` marks a
+`verified_at` is set only by administrators, either directly or by approving a
+verification request that the page leader sends from the page (a note, the
+page's daily code, and an optional private document; see the
+[API reference](api.md#page-verification-requests)). `managed = false` marks a
 community-maintained venue (see below).
 
 Pictures and photos must be images uploaded through `POST /realm/media` with
@@ -49,7 +52,8 @@ media cleanup.
 | `joined_on` / `left_on` | Member timeline shown as current line-up and former members |
 
 Leaders and admins hold every permission. Members hold only the listed ones.
-`manage_calendar` is reserved for the calendar and rehearsal feature.
+`manage_calendar` lets members create and edit the page's events; the calendar
+and rehearsal feature can reuse it.
 
 | Action | Requirement |
 |---|---|
@@ -58,6 +62,8 @@ Leaders and admins hold every permission. Members hold only the listed ones.
 | Change a member's permissions | Leader or admin |
 | Promote/demote administrators, transfer leadership, delete the page | Leader |
 | Publish updates and announcements for the page | `post_announcements` |
+| Create and edit events organized by the page, leave lineups for a band | `manage_calendar` |
+| Request page verification | Leader |
 | Leave | Any non-leader member; the leader transfers leadership first |
 
 The creator becomes the leader. Invitations notify the invitee
@@ -164,8 +170,9 @@ pages and artists, and an events placeholder. `profiles.follows_visible`
 ## Extension points
 
 - `frontend/src/components/PastAndNextEvents.jsx` renders the "Next events"
-  and "Past events" sections for a page or music-lover profile. It shows an
-  empty state today; the events feature replaces its body.
-- `manage_calendar` is already a grantable permission.
+  and "Past events" sections for a page (events it organizes, performs in, or
+  hosts) or a profile (performances and events the person goes to and shows),
+  from `GET /realm/gigs/organizations/:id` and `/realm/gigs/profiles/:id`.
+- `manage_calendar` grants event management for the page.
 - `organizationRepository.requireMember` and `managerIds` are the supported
   way to authorize and notify organization members.

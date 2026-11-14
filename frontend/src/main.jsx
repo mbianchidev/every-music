@@ -45,6 +45,10 @@ const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
 const StoreScreen = lazyScreen(() => import('./pages/StoreScreen.jsx'));
 const WalletScreen = lazyScreen(() => import('./pages/WalletScreen.jsx'));
 const InviteScreen = lazyScreen(() => import('./pages/InviteScreen.jsx'));
+const EventsScreen = lazyScreen(() => import('./pages/EventsScreen.jsx'));
+const EventScreen = lazyScreen(() => import('./pages/EventScreen.jsx'));
+const EventEditorScreen = lazyScreen(() => import('./pages/EventEditorScreen.jsx'));
+const MyEventsScreen = lazyScreen(() => import('./pages/MyEventsScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -88,6 +92,11 @@ const ROUTES = {
   store: { screen: StoreScreen, get title() { return t('monetization.routes.store'); }, protected: true },
   wallet: { screen: WalletScreen, get title() { return t('monetization.routes.wallet'); }, protected: true },
   invite: { screen: InviteScreen, get title() { return t('monetization.routes.invite'); }, protected: true },
+  events: { screen: EventsScreen, get title() { return t('events.routes.discover'); }, protected: true },
+  event: { screen: EventScreen, get title() { return t('events.routes.event'); }, protected: true },
+  'new-event': { screen: EventEditorScreen, get title() { return t('events.routes.create'); }, protected: true },
+  'edit-event': { screen: EventEditorScreen, get title() { return t('events.routes.edit'); }, protected: true },
+  'my-events': { screen: MyEventsScreen, get title() { return t('events.routes.mine'); }, protected: true },
 };
 
 function readRoute() {

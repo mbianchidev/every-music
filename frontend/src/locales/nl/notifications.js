@@ -23,6 +23,10 @@ export default {
     subscription_started: { label: 'Betaald abonnement gestart', title: 'Je betaalde abonnement is actief', detail: 'Bedankt dat je Every.music steunt.' },
     subscription_ended: { label: 'Betaald abonnement beëindigd', title: 'Je betaalde abonnement is beëindigd', detail: 'Je gebruikt weer het gratis abonnement. Je kunt op elk moment opnieuw een abonnement nemen.' },
     payment_failed: { label: 'Mislukte betaling voor je abonnement', title: 'Een betaling voor je abonnement is mislukt', detail: 'Werk je betaalmethode bij via Facturering beheren om je abonnement te houden.' },
+    event_published: { label: "Nieuwe evenementen van pagina's en artiesten die je volgt", title: 'Nieuw evenement: {title}', detail: '' },
+    event_lineup: { label: 'Je bent toegevoegd aan een line-up', title: 'Je staat in de line-up van {title}', detail: '' },
+    event_reminder: { label: 'Herinneringen voor evenementen', title: 'Herinnering: {title} begint binnenkort', detail: '' },
+    event_communication: { label: 'Officiële updates van evenementen waar je naartoe gaat', title: 'Officiële update over {title}', detail: '' },
   },
   groups: {
     messages: 'Berichten',

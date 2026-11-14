@@ -17,6 +17,11 @@ export const publicMediaReferences = [
     WHERE ph.url = $2 AND o.is_deleted = FALSE)`,
   `EXISTS(SELECT 1 FROM sponsored_cards c WHERE (c.image_url = $2 OR '/realm/media/' || c.video_media_id::text = $2)
     AND c.is_active AND c.starts_at <= NOW() AND (c.ends_at IS NULL OR c.ends_at > NOW()))`,
+  `EXISTS(SELECT 1 FROM event_images ei JOIN events e ON e.id = ei.event_id
+    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND e.visibility = 'published' AND CASE WHEN e.owner_user_id IS NOT NULL
+      THEN EXISTS(SELECT 1 FROM users ou WHERE ou.id = e.owner_user_id AND ou.is_active AND NOT ou.is_deleted)
+      ELSE EXISTS(SELECT 1 FROM event_organizers vo JOIN organizations vg ON vg.id = vo.organization_id AND NOT vg.is_deleted
+        WHERE vo.event_id = e.id) END)`,
 ];
 
 // SQL predicates granting one signed-in viewer (bound as $3) access to managed
@@ -25,7 +30,14 @@ export const publicMediaReferences = [
 // predicate must check the viewer's current right to the referencing content.
 // Matches are served with `Cache-Control: private, no-store`. Attachment blobs
 // are never served through publicMediaReferences, only through these.
-export const authorizedMediaReferences = [];
+export const authorizedMediaReferences = [
+  // Draft event images for everyone who may edit the event.
+  `EXISTS(SELECT 1 FROM event_images ei JOIN events e ON e.id = ei.event_id
+    WHERE ('/realm/media/' || ei.media_id::text) = $2 AND (e.owner_user_id = $3 OR EXISTS(
+      SELECT 1 FROM event_organizers eo JOIN organizations o ON o.id = eo.organization_id AND o.is_deleted = FALSE
+      JOIN organization_members m ON m.organization_id = o.id AND m.status = 'active' AND m.user_id = $3
+      WHERE eo.event_id = e.id AND (m.role IN ('leader', 'admin') OR 'manage_calendar' = ANY(m.permissions)))))`,
+];
 
 // SQL predicates (URL bound as $2) that keep media from the hourly orphan
 // cleanup, which deletes unreferenced uploads older than one day together with
@@ -37,4 +49,5 @@ export const retainedMediaReferences = [
   "EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE '/realm/media/' || ph.media_id::text = $2)",
   "EXISTS(SELECT 1 FROM verification_requests v WHERE $2 IN ('/realm/media/' || v.selfie_media_id::text, '/realm/media/' || v.document_media_id::text))",
   "EXISTS(SELECT 1 FROM sponsored_cards c WHERE c.image_url = $2 OR '/realm/media/' || c.video_media_id::text = $2)",
+  "EXISTS(SELECT 1 FROM event_images ei WHERE '/realm/media/' || ei.media_id::text = $2)",
 ];

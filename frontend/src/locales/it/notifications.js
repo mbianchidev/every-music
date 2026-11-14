@@ -23,6 +23,10 @@ export default {
     subscription_started: { label: 'Piano a pagamento attivato', title: 'Il tuo piano a pagamento è attivo', detail: 'Grazie per sostenere Every.music.' },
     subscription_ended: { label: 'Piano a pagamento terminato', title: 'Il tuo piano a pagamento è terminato', detail: 'Sei tornato al piano gratuito. Puoi abbonarti di nuovo in qualsiasi momento.' },
     payment_failed: { label: 'Pagamento del piano non riuscito', title: 'Un pagamento per il tuo piano non è riuscito', detail: 'Aggiorna il metodo di pagamento in Gestisci fatturazione per mantenere il piano.' },
+    event_published: { label: 'Nuovi eventi di pagine e artisti che segui', title: 'Nuovo evento: {title}', detail: '' },
+    event_lineup: { label: 'Sei stato aggiunto alla line-up di un evento', title: 'Sei nella line-up di {title}', detail: '' },
+    event_reminder: { label: 'Promemoria degli eventi', title: 'Promemoria: {title} sta per iniziare', detail: '' },
+    event_communication: { label: 'Aggiornamenti ufficiali degli eventi a cui partecipi', title: 'Aggiornamento ufficiale su {title}', detail: '' },
   },
   groups: {
     messages: 'Messaggi',

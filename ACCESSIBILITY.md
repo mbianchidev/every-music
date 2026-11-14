@@ -86,6 +86,12 @@ that acts on its own), the invite link and copy feedback, text "Promoted" and
 "Sponsored" labels that never rely on color, and the admin monetization
 console; check them the same way, including 320px reflow and dark mode.
 
+Events add discovery filters with pickers, the lineup editor (ordering, roles,
+set times), date and time zone fields, the capacity text and bar (the text
+carries the value; the bar is decorative), going/interested toggle buttons
+with `aria-pressed`, reminder checkboxes, the calendar download, the status
+dialog, official updates, and the discussion; check them the same way.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

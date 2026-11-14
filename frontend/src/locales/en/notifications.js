@@ -23,6 +23,10 @@ export default {
     subscription_started: { label: 'Paid plan started', title: 'Your paid plan is active', detail: 'Thank you for supporting Every.music.' },
     subscription_ended: { label: 'Paid plan ended', title: 'Your paid plan has ended', detail: 'You are back on the free plan. You can subscribe again at any time.' },
     payment_failed: { label: 'Failed plan payment', title: 'A payment for your plan failed', detail: 'Update your payment method in Manage billing to keep your plan.' },
+    event_published: { label: 'New events from pages and artists you follow', title: 'New event: {title}', detail: '' },
+    event_lineup: { label: 'You were added to an event lineup', title: 'You are on the lineup of {title}', detail: '' },
+    event_reminder: { label: 'Event reminders you set', title: 'Reminder: {title} starts soon', detail: '' },
+    event_communication: { label: 'Official updates for events you go to', title: 'Official update about {title}', detail: '' },
   },
   groups: {
     messages: 'Messages',

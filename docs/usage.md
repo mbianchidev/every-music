@@ -244,6 +244,52 @@ and projects are hidden and your profile shows your bio, contacts, and the
 bands and artists you follow. **Settings > Profile visibility** hides those
 follow lists from other people.
 
+### Events, tickets, and reminders
+
+Open **Events** to find concerts and festivals. Search by event, band, artist,
+or venue name, choose **Upcoming**, **Past**, or **All dates**, and sort by
+date, band name, organizer name, or location. **More filters** narrows by
+date range, type, genre, band playing, organizer, venue, or a city and
+distance. Each card shows the date in the event's own time zone, the
+headliners, the place, the organizers, and how many people are going.
+
+An event page lists the date and time in the event's time zone (and in yours
+when it differs), doors-open time, the venue and address with OpenStreetMap
+**Open map** and **Directions** links, who organizes it, and the lineup
+grouped into headliners, openers, support, and others, with links to band
+pages and artist profiles and optional set times. **Tickets** shows the share
+of the capacity already sold and **Buy tickets on ...** links to the external
+ticket sellers; Every.music does not sell tickets. Official updates from the
+organizers (doors open, lineup changes, refunds, postponements, and
+cancellations) appear at the top.
+
+Choose **Going** or **Interested** to reply. Going events appear on your
+profile under **Next events** and **Past events** unless you clear **Show this
+event on my profile**. **Download calendar file (.ics)** and **Add to Google
+Calendar** add the event to your calendar, and **Reminders** sends a
+notification from 15 minutes to a week before the start. People going or
+interested can read and post in the **Discussion**; report messages with
+**Report message from ...** and the event itself with **Report event**.
+**My events** lists the events you reply to and the ones you organize.
+
+To organize, choose **New event**. Artists can organize on their own; pages
+you manage (as leader, admin, or member with the calendar permission) appear
+under **Organized by**, and their other managers can then edit the event too.
+Enter every time as the local time at the event and pick its time zone, choose
+a venue page or a city and address, build the lineup from band pages, artist
+profiles, or plain names, and add capacity, tickets sold, ticket links,
+genres, and images. Save as a draft or publish: publishing notifies the
+followers of the organizers, bands, venue, and artists, and tells the
+performers they are on the lineup. On the event page, organizers send official
+updates, use **Change status** to postpone or cancel (attendees are notified),
+moderate the discussion, and delete drafts, cancelled, or past events. A
+listed artist or band manager can use **Remove ... from this lineup**.
+
+Page leaders can ask for a verified badge in **Page verification** on their
+page: add the daily code to the official website or a social bio, explain how
+to confirm the page, and optionally attach a document that only administrators
+see. Administrators decide in the same verification queue as profiles.
+
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives
@@ -487,6 +533,10 @@ sessions end immediately. A confirmation email is sent when mail is configured.
 - Pages you lead: leadership passes to the longest-serving active admin, or
   else member, who is notified. A page with no other active member is retired.
   Pages you created but do not lead stay with their members.
+- Events: events you organized on your own, your replies, reminders,
+  discussion messages, and lineup entries are deleted. Events co-organized by
+  pages stay with those pages; official updates you sent stay without your
+  name.
 - Reports filed by you or about you are removed. Administrator audit entries
   keep only the action and time; their actor or target IDs no longer lead to an
   account. They expire after 365 days.

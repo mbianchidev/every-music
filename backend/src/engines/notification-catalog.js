@@ -40,6 +40,10 @@ export const notificationKinds = {
   subscription_started: { inApp: 'on', push: 'optional', email: 'optional' },
   subscription_ended: { inApp: 'on', push: 'on', email: 'optional' },
   payment_failed: { inApp: 'on', push: 'on', email: 'optional' },
+  event_published: { inApp: 'on', push: 'on', email: 'on' },
+  event_lineup: { inApp: 'on', push: 'on', email: 'on' },
+  event_reminder: { inApp: 'on', push: 'on', email: 'on' },
+  event_communication: { inApp: 'on', push: 'on', email: 'on' },
 };
 
 export function notificationKind(kind) {

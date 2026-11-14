@@ -9,7 +9,7 @@ const GROUPS = [
   ['activity', ['comment', 'reaction', 'profile_view', 'new_follower']],
   ['following', ['announcement']],
   ['statistics', ['announcement_stats', 'profile_stats']],
-  ['community', ['events', 'offers']],
+  ['community', ['events', 'offers', 'event_published', 'event_lineup', 'event_reminder', 'event_communication']],
   ['account', ['report_reviewed', 'invite_friends', 'come_back', 'app_update_minor', 'app_update_major']],
   ['wallet', ['points_earned', 'subscription_started', 'subscription_ended', 'payment_failed']],
 ];
