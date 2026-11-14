@@ -4,6 +4,7 @@ import nucleus from '../../lib/nucleus.js';
 import { useI18n } from '../../lib/i18n.js';
 import { formatEventTime, lineupByRole, performerHref } from '../../lib/events.js';
 import VerifiedBadge from '../VerifiedBadge.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Lineup grouped by role with links to band pages and artist profiles.
 // Performers (or managers of a listed band) can take themselves off it.
@@ -18,7 +19,7 @@ export default function EventLineup({ event, onChanged, managedBandIds = [] }) {
     try {
       await conduit.transmit(`/gigs/${event.id}/lineup/${entry.id}`, { method: 'DELETE', auth: true });
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const time = value => formatEventTime(value, event.timezone, locale, { timeStyle: 'short' });

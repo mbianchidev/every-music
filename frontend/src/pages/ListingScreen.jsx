@@ -13,6 +13,7 @@ import ListingSaveButton from '../components/marketplace/ListingSaveButton.jsx';
 import ListingReportButton from '../components/marketplace/ListingReportButton.jsx';
 import ListingModerationButton from '../components/marketplace/ListingModerationButton.jsx';
 import MarketplaceSafetyTips from '../components/marketplace/MarketplaceSafetyTips.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const transitions = { active: ['reserved', 'sold', 'closed'], reserved: ['active', 'sold', 'closed'], sold: ['active'], closed: ['active'] };
 const statusAction = { reserved: 'reserve', sold: 'sold', closed: 'close', active: 'reopen' };
@@ -35,7 +36,7 @@ export default function ListingScreen({ route }) {
       if (success) setMessage(success(result));
       resource.reload();
       return true;
-    } catch (failure) { setError(failure.message); return false; }
+    } catch (failure) { setError(errorText(failure)); return false; }
     finally { setBusy(false); }
   };
   const contact = () => run(async () => {
@@ -58,7 +59,7 @@ export default function ListingScreen({ route }) {
     try {
       await conduit.transmit(`/marketplace/listings/${listing.id}`, { method: 'DELETE', auth: true });
       window.location.hash = '#my-listings';
-    } catch (failure) { setError(failure.message); setBusy(false); }
+    } catch (failure) { setError(errorText(failure)); setBusy(false); }
   };
   const open = listing && ['active', 'reserved'].includes(listing.status);
   const location = listing && [listing.locationText, listing.latitude !== null ? `${listing.latitude}, ${listing.longitude}` : null].filter(Boolean);

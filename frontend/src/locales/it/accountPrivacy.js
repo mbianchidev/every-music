@@ -7,6 +7,7 @@ export default {
   findHeading: 'Trova persone che conosci',
   findIntro: 'Scegli dei contatti o incolla degli indirizzi email. Il browser trasforma ogni indirizzo in un codice non reversibile (un hash SHA-256) prima di inviare qualsiasi cosa. Solo questi codici vengono confrontati con le persone che hanno scelto di essere trovate e nulla di ciò che cerchi viene conservato. I numeri di telefono non vengono mai usati né raccolti.',
   pick: 'Scegli dai contatti',
+  hashUnavailable: 'Questo browser non può calcolare l\'hash dei contatti in modo sicuro. Aggiornalo e riprova.',
   picked: { one: '{count} indirizzo aggiunto dai tuoi contatti.', other: '{count} indirizzi aggiunti dai tuoi contatti.' },
   pasteLabel: 'Indirizzi email',
   pasteHint: 'Separa gli indirizzi con virgole, spazi o a capo. Fino a 500 alla volta.',

@@ -8,6 +8,7 @@ import FormField from '../FormField.jsx';
 import ImageInput from '../ImageInput.jsx';
 import PlacePicker from '../PlacePicker.jsx';
 import CatalogSelections from '../CatalogSelections.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Videos can take longer to upload than the default request timeout.
 const uploads = new Conduit({ timeoutMs: 180000 });
@@ -83,7 +84,7 @@ export default function SponsoredCardForm({ card, defaultPoints, videoBytes, onS
       }
       onSaved(saved);
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
       setBusy('');
     }
   };

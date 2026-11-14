@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.jsx';
 import FormField from '../components/FormField.jsx';
 import ApplicantCard, { OWNER_STATUSES } from '../components/ApplicantCard.jsx';
 import ApplicationDetails from '../components/ApplicationDetails.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const PAGE_SIZE = 10;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -122,7 +123,7 @@ function SentApplication({ application, onChanged }) {
       await conduit.transmit(`/applications/${application.id}`, { method: 'DELETE', auth: true });
       focusMain();
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

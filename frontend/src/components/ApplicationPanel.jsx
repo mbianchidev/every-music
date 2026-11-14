@@ -6,6 +6,7 @@ import FormField from './FormField.jsx';
 import Spinner from './Spinner.jsx';
 import ErrorState from './ErrorState.jsx';
 import ApplicationDetails from './ApplicationDetails.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const LINK_TYPES = ['website', 'youtube', 'spotify', 'soundcloud', 'bandcamp', 'other'];
 const MAX_LINKS = 5;
@@ -48,7 +49,7 @@ function ApplyForm({ post, onSent, onCancel }) {
       });
       onSent();
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
     } finally { setBusy(false); }
   };
   return (
@@ -128,7 +129,7 @@ function ApplyPanel({ post }) {
       setNotice(t('applications.apply.withdrawn'));
       resource.reload();
       focusHeading();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

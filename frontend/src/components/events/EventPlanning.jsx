@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { saveFile } from '../../lib/download.js';
 import { useI18n } from '../../lib/i18n.js';
 import { REMINDER_PRESETS, calendarFileName, reminderAvailable } from '../../lib/events.js';
+import { errorText } from '../../lib/error-text.js';
 
 // Calendar file and Google Calendar link, plus user-chosen reminders.
 export default function EventPlanning({ event, onChanged }) {
@@ -19,7 +20,7 @@ export default function EventPlanning({ event, onChanged }) {
       const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || calendarFileName(event.title);
       saveFile(name, await response.text(), 'text/calendar');
       setMessage(t('events.calendar.downloaded'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setDownloading(false); }
   };
   const save = async submitted => {
@@ -29,7 +30,7 @@ export default function EventPlanning({ event, onChanged }) {
       await conduit.transmit(`/gigs/${event.id}/reminders`, { method: 'PUT', auth: true, body: { offsets } });
       setMessage(t(offsets.length ? 'events.reminders.saved' : 'events.reminders.cleared'));
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const remindable = event.upcoming && event.status !== 'cancelled' && event.visibility === 'published';

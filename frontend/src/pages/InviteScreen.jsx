@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import FormField from '../components/FormField.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const STATUSES = ['pending', 'rewarded', 'capped'];
 
@@ -50,7 +51,7 @@ export default function InviteScreen() {
       setClaimMessage(t(result.status === 'pending' ? 'monetization.invite.claimedPending' : 'monetization.invite.claimed'));
       setCode('');
       resource.reload();
-    } catch (failure) { setClaimError(failure.message); }
+    } catch (failure) { setClaimError(errorText(failure)); }
     finally { setClaiming(false); }
   };
   return (

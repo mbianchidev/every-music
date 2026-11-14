@@ -5,6 +5,7 @@ import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import FormField from './FormField.jsx';
 import ApplicationDetails from './ApplicationDetails.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export const OWNER_STATUSES = ['new', 'shortlisted', 'accepted', 'declined'];
 
@@ -27,7 +28,7 @@ export default function ApplicantCard({ application, showAnnouncement = false, o
       await operation();
       if (success) setMessage(success);
       return true;
-    } catch (failure) { setError(failure.message); return false; }
+    } catch (failure) { setError(errorText(failure)); return false; }
     finally { setBusy(false); }
   };
   const update = (body, success) => run(async () => {

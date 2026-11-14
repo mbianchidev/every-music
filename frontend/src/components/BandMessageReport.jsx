@@ -3,6 +3,7 @@ import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
 import FormField from './FormField.jsx';
 import ModalDialog from './ModalDialog.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const CATEGORIES = ['spam', 'harassment', 'threats', 'inappropriate_language', 'fake_profile', 'other'];
 
@@ -23,7 +24,7 @@ export default function BandMessageReport({ organizationId, message, senderName,
         method: 'POST', auth: true, body: { category, details, signedEvidence, consent },
       });
       setOpen(false); setDetails(''); setConsent(false); setSuccess(t('bandChat.report.done'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

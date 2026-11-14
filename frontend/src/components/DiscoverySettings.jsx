@@ -5,6 +5,7 @@ import { useI18n } from '../lib/i18n.js';
 import { locationEnabled, setLocationEnabled } from '../lib/geolocation.js';
 import ErrorState from './ErrorState.jsx';
 import BlockedUsers from './BlockedUsers.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Location opt-in (stored only in this browser), profile-visit sharing
 // consent and the blocked musicians list.
@@ -29,7 +30,7 @@ export default function DiscoverySettings() {
       const saved = await conduit.transmit('/profile-visits/sharing', { method: 'PUT', auth: true, body: { share: enabled } });
       setShare(saved.share);
       setMessage(t(enabled ? 'profileExtras.visits.sharingOn' : 'profileExtras.visits.sharingOff'));
-    } catch (failure) { setShare(!enabled); setError(failure.message); }
+    } catch (failure) { setShare(!enabled); setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

@@ -6,6 +6,7 @@ import { feedLinks } from '../lib/calendar.js';
 import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Private ICS subscription link. The token is shown once after creation; the
 // server keeps only its hash, so a lost link is replaced, not recovered.
@@ -28,7 +29,7 @@ export default function CalendarFeedSettings() {
       const result = await conduit.transmit('/calendar/feed', { method: 'POST', auth: true });
       setCreated(feedLinks(result.token)); status.reload();
       requestAnimationFrame(() => document.getElementById('calendar-feed-link')?.focus());
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const revoke = async () => {
@@ -37,7 +38,7 @@ export default function CalendarFeedSettings() {
     try {
       await conduit.transmit('/calendar/feed', { method: 'DELETE', auth: true });
       setCreated(null); setMessage(t('calendar.feed.revoked')); status.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const copy = async () => {

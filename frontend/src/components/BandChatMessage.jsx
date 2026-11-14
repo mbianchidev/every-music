@@ -4,11 +4,12 @@ import { messageVault } from '../lib/message-vault.js';
 import FingerprintComparison from './FingerprintComparison.jsx';
 import ChatAttachment from './ChatAttachment.jsx';
 import BandMessageReport from './BandMessageReport.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // One band chat message: verifies the sender key against this browser's trust
 // pins, decrypts with the member's own key and shows text and attachments.
 export default function BandChatMessage({ message, organizationId, ownId, ownKey, ownKeyIds, keys, vault, busy, onRemove, onUnlock }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const [result, setResult] = useState(null);
   const mine = message.senderId === ownId;
   const ownKeyId = message.recipientKeyIds.find(id => ownKeyIds.includes(id));
@@ -20,7 +21,7 @@ export default function BandChatMessage({ message, organizationId, ownId, ownKey
     const revision = vault.revision;
     const decrypt = async () => {
       if (!sender || sender.userId !== message.senderId) {
-        throw Object.assign(new Error('The sender\'s messaging key is unavailable. Reload the chat.'), { code: 'INVALID_IDENTITY' });
+        throw Object.assign(new Error(t('bandChat.message.senderKeyMissing')), { code: 'INVALID_IDENTITY' });
       }
       if (!mine) await messageVault.checkPeer(sender, message.senderId, null);
       const { decryptGroupMessage } = await import('../lib/message-crypto.js');
@@ -29,7 +30,7 @@ export default function BandChatMessage({ message, organizationId, ownId, ownKey
     decrypt().then(value => { if (active) setResult({ ...value, revision, source }); }).catch(failure => {
       if (!active) return;
       if (!['KEY_LOCKED', 'NOT_A_RECIPIENT'].includes(failure.code)) console.warn('Band message unavailable', { id: message.id, code: failure.code || 'VERIFICATION_FAILED' });
-      setResult({ revision, source, error: failure.message, code: failure.code });
+      setResult({ revision, source, error: errorText(failure), code: failure.code });
     });
     return () => { active = false; };
   }, [source, message.isDeleted, vault.revision]);
@@ -49,7 +50,7 @@ export default function BandChatMessage({ message, organizationId, ownId, ownKey
           {current.body && <p>{current.body}</p>}
           {current.attachments.map(attachment => <ChatAttachment key={attachment.id} attachment={attachment} senderName={mine ? t('bandChat.members.you') : message.senderName} />)}
         </> : <p className="field-hint">{t('bandChat.message.decrypting')}</p>}
-      <small><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString()}</time></small>
+      <small><time dateTime={message.createdAt}>{formatDate(message.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></small>
       {mine && !message.isDeleted && <button className="text-link" type="button" disabled={busy} onClick={() => onRemove(message)}>{t('bandChat.message.remove')}</button>}
       {!mine && !message.isDeleted && current?.signedEvidence && <BandMessageReport organizationId={organizationId} message={message}
         senderName={message.senderName} body={current.body} signedEvidence={current.signedEvidence} />}

@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { useDebounced, useResource } from '../lib/resources.js';
 import FormField from './FormField.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Administrator verification toggle for pages; every change is audited.
 export default function OrganizationVerificationAdmin() {
@@ -21,7 +22,7 @@ export default function OrganizationVerificationAdmin() {
     try {
       await conduit.transmit(`/admin/organizations/${organization.id}/verification`, { method: 'PUT', auth: true, body: { verified } });
       setMessage(t(verified ? 'organizations.admin.verified' : 'organizations.admin.unverified', { name: organization.name })); resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

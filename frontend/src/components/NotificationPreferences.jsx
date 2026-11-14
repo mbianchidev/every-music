@@ -7,6 +7,7 @@ import {
 } from '../lib/notification-text.js';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const requestedSection = () => new URLSearchParams(window.location.hash.split('?')[1] || '').get('section');
 
@@ -40,7 +41,7 @@ export default function NotificationPreferences() {
     try {
       const saved = await conduit.transmit('/preferences/notifications', { method: 'PUT', auth: true, body: { kinds: changes } });
       setOverview(saved); setChanges({}); setMessage(t('notifications.preferences.saved'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
 

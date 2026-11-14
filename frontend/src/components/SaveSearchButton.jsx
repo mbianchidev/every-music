@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { describeFilters, savedSearchFilters } from '../lib/discovery.js';
 import FormField from './FormField.jsx';
 import ModalDialog from './ModalDialog.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Saves the current feed filters and opts in to notifications for new matches.
 export default function SaveSearchButton({ filters, nearMe, catalogs }) {
@@ -27,7 +28,7 @@ export default function SaveSearchButton({ filters, nearMe, catalogs }) {
       const created = await conduit.transmit('/saved-searches', { method: 'POST', auth: true, body: { name: name.trim(), filters: body, notify } });
       setOpen(false);
       setSaved(t('discoveryExtras.save.saved', { name: created.name }));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

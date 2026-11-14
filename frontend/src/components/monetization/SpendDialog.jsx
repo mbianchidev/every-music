@@ -8,6 +8,7 @@ import FormField from '../FormField.jsx';
 import PlacePicker from '../PlacePicker.jsx';
 import Spinner from '../Spinner.jsx';
 import ErrorState from '../ErrorState.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 function SpendForm({ mode, announcement, onClose }) {
   const { t, formatDate, formatNumber } = useI18n();
@@ -42,7 +43,7 @@ function SpendForm({ mode, announcement, onClose }) {
         },
       });
       setDone(result);
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   if (done) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
+import { errorText } from '../lib/error-text.js';
 
 export default function FollowVisibilitySetting() {
   const { t } = useI18n();
@@ -16,7 +17,7 @@ export default function FollowVisibilitySetting() {
     try {
       const saved = await conduit.transmit('/follows/visibility', { method: 'PUT', auth: true, body: { visible: next } });
       setVisible(saved.visible); setMessage(t('organizations.settings.saved'));
-    } catch (failure) { setVisible(!next); setError(failure.message); }
+    } catch (failure) { setVisible(!next); setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

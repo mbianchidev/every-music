@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
 import { can, organizationHref } from '../lib/organizations.js';
 import EntityPicker from './EntityPicker.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function reasonText(t, reason) {
   return t(`organizations.similar.reasons.${reason.reason}`, { count: reason.count ?? 0 });
@@ -24,7 +25,7 @@ export default function SimilarBands({ organization, onChanged }) {
     try {
       await conduit.transmit(`/organizations/${organization.id}/similar`, { method: 'PUT', auth: true, body: { bandIds: ids } });
       setMessage(success); onChanged(); suggestions.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

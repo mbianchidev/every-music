@@ -7,6 +7,7 @@ export default {
   findHeading: 'Find people you know',
   findIntro: 'Choose contacts or paste email addresses. Your browser turns each address into a one-way code (a SHA-256 hash) before anything is sent. Only the codes are compared with people who chose to be found, and nothing you search for is stored. Phone numbers are never used or collected.',
   pick: 'Choose from contacts',
+  hashUnavailable: 'This browser cannot hash contacts securely. Update it and try again.',
   picked: { one: '{count} address added from your contacts.', other: '{count} addresses added from your contacts.' },
   pasteLabel: 'Email addresses',
   pasteHint: 'Separate addresses with commas, spaces, or new lines. Up to 500 at a time.',

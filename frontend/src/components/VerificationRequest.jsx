@@ -8,6 +8,7 @@ import ErrorState from './ErrorState.jsx';
 import ImageInput from './ImageInput.jsx';
 import ManagedImage from './ManagedImage.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function VerificationRequest() {
   const { t, formatDate } = useI18n();
@@ -33,7 +34,7 @@ export default function VerificationRequest() {
       } });
       setSelfie(null); setDocumentScan(null); setRevision(value => value + 1);
       setMessage(t('profileVerification.submitted')); resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const cancel = async () => {
@@ -41,7 +42,7 @@ export default function VerificationRequest() {
     try {
       await conduit.transmit(`/verification/requests/${request.id}`, { method: 'DELETE', auth: true });
       setMessage(t('profileVerification.cancelled')); resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

@@ -3,6 +3,7 @@ import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
 import FormField from './FormField.jsx';
 import ModalDialog from './ModalDialog.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function ClaimVenue({ organization, onChanged }) {
   const { t, formatDate } = useI18n();
@@ -17,7 +18,7 @@ export default function ClaimVenue({ organization, onChanged }) {
     try {
       await conduit.transmit(`/organizations/${organization.id}/claims`, { method: 'POST', auth: true, body: { message: text } });
       setOpen(false); setText(''); onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

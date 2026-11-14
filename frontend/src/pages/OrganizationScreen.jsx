@@ -23,6 +23,7 @@ import ClaimVenue from '../components/ClaimVenue.jsx';
 import PastAndNextEvents from '../components/PastAndNextEvents.jsx';
 import OrganizationVerificationRequest from '../components/OrganizationVerificationRequest.jsx';
 import BandWorkspace from '../components/BandWorkspace.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function Details({ organization }) {
   const { t, formatNumber } = useI18n();
@@ -57,7 +58,7 @@ export default function OrganizationScreen({ route }) {
     try {
       await conduit.transmit(`/organizations/${organization.id}/follow`, { method: organization.isFollowing ? 'DELETE' : 'POST', auth: true });
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const links = mapLinks(organization?.coordinates);

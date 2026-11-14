@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import FormField from '../FormField.jsx';
 import ModalDialog from '../ModalDialog.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 const REASONS = ['spam', 'harassment', 'threats', 'inappropriate_language', 'other'];
 
@@ -25,7 +26,7 @@ export default function EventReportButton({ event, post }) {
         method: 'POST', auth: true, body: { category, details, consent },
       });
       setOpen(false); setDetails(''); setConsent(false); setSuccess(t('events.report.success'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const title = t(post ? 'events.report.postTitle' : 'events.report.title');

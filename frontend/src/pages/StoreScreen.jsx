@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import { PromoteButton } from '../components/monetization/SpendDialog.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const PERKS = ['maxActiveAnnouncements', 'maxSavedSearches', 'maxSavedAnnouncements', 'announcementExpiryDays', 'maxProjectsShown',
   'maxContentShown', 'announcementStats', 'profileVisits', 'businessPages', 'hideSponsored'];
@@ -34,7 +35,7 @@ export default function StoreScreen({ route }) {
       const result = await conduit.transmit(path, { method: 'POST', auth: true, ...(body ? { body } : {}) });
       window.location.assign(result.url);
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
       setBusy('');
     }
   };

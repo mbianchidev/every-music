@@ -6,6 +6,7 @@ import { PHOTO_CATEGORIES, can } from '../lib/organizations.js';
 import FormField from './FormField.jsx';
 import ImageInput from './ImageInput.jsx';
 import ManagedImage from './ManagedImage.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function OrganizationPhotos({ organization, onChanged }) {
   const { t } = useI18n();
@@ -26,7 +27,7 @@ export default function OrganizationPhotos({ organization, onChanged }) {
       const { url } = await uploadImage(file, 'organization');
       await conduit.transmit(`/organizations/${organization.id}/photos`, { method: 'POST', auth: true, body: { url, category, caption } });
       setFile(null); setCaption(''); setInputKey(value => value + 1); setMessage(t('organizations.photos.added')); onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const remove = async photo => {
@@ -36,7 +37,7 @@ export default function OrganizationPhotos({ organization, onChanged }) {
       await conduit.transmit(`/organizations/${organization.id}/photos/${photo.id}`, { method: 'DELETE', auth: true });
       setMessage(t('organizations.photos.removed')); onChanged();
       document.getElementById('photos-heading')?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

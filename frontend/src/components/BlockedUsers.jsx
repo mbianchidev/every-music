@@ -6,6 +6,7 @@ import Avatar from './Avatar.jsx';
 import ErrorState from './ErrorState.jsx';
 import Pagination from './Pagination.jsx';
 import Spinner from './Spinner.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function BlockedUsers() {
   const { t } = useI18n();
@@ -21,7 +22,7 @@ export default function BlockedUsers() {
       setMessage(t('profileExtras.block.unblocked', { name: person.artistName }));
       document.getElementById('blocked-heading')?.focus();
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(''); }
   };
   const rows = resource.data?.blocked || [];

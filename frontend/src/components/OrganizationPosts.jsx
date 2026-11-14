@@ -7,6 +7,7 @@ import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
 import Pagination from './Pagination.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export function PostList({ posts, onRemove, busy, showOrganization = false }) {
   const { t, formatDate } = useI18n();
@@ -40,7 +41,7 @@ export default function OrganizationPosts({ organization }) {
     try {
       await conduit.transmit(`/organizations/${organization.id}/posts`, { method: 'POST', auth: true, body: draft });
       setDraft({ title: '', body: '', url: '' }); setPage(1); setMessage(t('organizations.posts.published')); resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const remove = async post => {
@@ -50,7 +51,7 @@ export default function OrganizationPosts({ organization }) {
       await conduit.transmit(`/organizations/${organization.id}/posts/${post.id}`, { method: 'DELETE', auth: true });
       setMessage(t('organizations.posts.removed')); resource.reload();
       document.getElementById('posts-heading')?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

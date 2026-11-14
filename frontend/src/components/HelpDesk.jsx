@@ -6,6 +6,7 @@ import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
 import Pagination from './Pagination.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const STATUSES = ['open', 'in_progress', 'answered', 'closed'];
 const KINDS = ['bug', 'contact', 'work'];
@@ -30,7 +31,7 @@ function RequestDetail({ id, onClose, onSaved }) {
       await conduit.transmit(`/admin/support/${id}`, { method: 'PATCH', auth: true, body: { status, ...(changedReply ? { replyNote: reply } : {}) } });
       setMessage(t('help.admin.detail.saved'));
       onSaved();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   if (resource.error) return <ErrorState message={resource.error} onRetry={resource.reload} />;

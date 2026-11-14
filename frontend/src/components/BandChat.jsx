@@ -14,6 +14,7 @@ import Avatar from './Avatar.jsx';
 import MessagingKeys from './MessagingKeys.jsx';
 import FingerprintComparison from './FingerprintComparison.jsx';
 import BandChatMessage from './BandChatMessage.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const RECIPIENT_CHANGES = ['BAND_CHAT_RECIPIENTS_CHANGED', 'MESSAGING_KEYS_CHANGED', 'BAND_CHAT_NO_RECIPIENTS'];
 const megabytes = bytes => Math.round(((bytes - ENCRYPTION_OVERHEAD) / 1048576) * 10) / 10;
@@ -54,7 +55,7 @@ export default function BandChat({ organization, focus = false }) {
     if (!currentKey) { setTrust({}); return undefined; }
     Promise.all(others.map(async member => {
       try { return [member.userId, { keyId: member.key.id, verified: await messageVault.checkPeer(member.key, member.userId, null) }]; }
-      catch (failure) { return [member.userId, { keyId: member.key.id, error: failure.message, code: failure.code }]; }
+      catch (failure) { return [member.userId, { keyId: member.key.id, error: errorText(failure), code: failure.code }]; }
     })).then(entries => { if (active) setTrust(Object.fromEntries(entries)); });
     return () => { active = false; };
   }, [memberContext, currentKey?.id, vault.revision]);
@@ -69,7 +70,7 @@ export default function BandChat({ organization, focus = false }) {
     const markRead = () => {
       if (document.visibilityState !== 'visible') return;
       conduit.transmit(`/organizations/${organization.id}/chat`, { method: 'PATCH', auth: true, body: { read: true } })
-        .catch(failure => setError(failure.message));
+        .catch(failure => setError(errorText(failure)));
     };
     markRead();
     document.addEventListener('visibilitychange', markRead);
@@ -125,7 +126,7 @@ export default function BandChat({ organization, focus = false }) {
         pending.current = null;
         setError(failure.code === 'BAND_CHAT_NO_RECIPIENTS' ? t('bandChat.composer.noRecipients') : t('bandChat.composer.changed'));
         chat.reload();
-      } else setError(failure.message);
+      } else setError(errorText(failure));
     } finally { setBusy(false); }
   };
 
@@ -135,7 +136,7 @@ export default function BandChat({ organization, focus = false }) {
     try {
       await conduit.transmit(`/organizations/${organization.id}/chat/messages/${message.id}`, { method: 'DELETE', auth: true });
       document.getElementById('band-chat-heading')?.focus(); chat.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
 

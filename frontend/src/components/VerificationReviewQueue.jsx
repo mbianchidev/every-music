@@ -7,6 +7,7 @@ import ErrorState from './ErrorState.jsx';
 import FormField from './FormField.jsx';
 import Pagination from './Pagination.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Loads evidence through the audited administrator media route.
 function EvidenceImage({ requestId, mediaId, alt }) {
@@ -18,7 +19,7 @@ function EvidenceImage({ requestId, mediaId, alt }) {
     conduit.transmit(`/admin/verification-requests/${requestId}/media/${mediaId}`, { auth: true, stream: true, signal: controller.signal })
       .then(response => response.blob())
       .then(blob => { if (!controller.signal.aborted) { url = URL.createObjectURL(blob); setState({ url }); } })
-      .catch(failure => { if (!controller.signal.aborted) setState({ error: failure.message }); });
+      .catch(failure => { if (!controller.signal.aborted) setState({ error: errorText(failure) }); });
     return () => { controller.abort(); if (url) URL.revokeObjectURL(url); };
   }, [requestId, mediaId]);
   if (state.error) return <p className="field-error" role="alert">{t('profileVerification.admin.imageError', { message: state.error })}</p>;
@@ -39,7 +40,7 @@ function RequestCard({ request, onDecided }) {
     try {
       const result = await conduit.transmit(`/admin/verification-requests/${request.id}`, { method: 'PATCH', auth: true, body: { decision, note } });
       onDecided(t(`profileVerification.admin.decided.${result.status}`, { name }));
-    } catch (failure) { setError(failure.message); setBusy(false); }
+    } catch (failure) { setError(errorText(failure)); setBusy(false); }
   };
   const revoke = async () => {
     if (!window.confirm(t('profileVerification.admin.revokeConfirm', { name }))) return;
@@ -48,7 +49,7 @@ function RequestCard({ request, onDecided }) {
       if (page) await conduit.transmit(`/admin/organizations/${request.subjectId}/verification`, { method: 'PUT', auth: true, body: { verified: false } });
       else await conduit.transmit(`/admin/users/${request.subjectId}/verification`, { method: 'DELETE', auth: true });
       onDecided(t('profileVerification.admin.revoked', { name }));
-    } catch (failure) { setError(failure.message); setBusy(false); }
+    } catch (failure) { setError(errorText(failure)); setBusy(false); }
   };
   const photos = [[request.selfieMediaId, 'selfieAlt'], [request.documentMediaId, 'documentAlt']].filter(([id]) => id);
   return (

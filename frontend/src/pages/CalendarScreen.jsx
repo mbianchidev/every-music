@@ -6,6 +6,7 @@ import { blankEntry, entryBody } from '../lib/calendar.js';
 import PageHeader from '../components/PageHeader.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import CalendarEntryForm from '../components/CalendarEntryForm.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function CalendarScreen() {
   const { t } = useI18n();
@@ -20,7 +21,7 @@ export default function CalendarScreen() {
     try {
       const entry = await conduit.transmit('/calendar/entries', { method: 'POST', auth: true, body: entryBody(draft, { creating: true }) });
       window.location.hash = `#calendar-entry?id=${entry.id}`;
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

@@ -5,6 +5,7 @@ import { saveFile } from '../lib/download.js';
 import FormField from './FormField.jsx';
 import QrCode from './QrCode.jsx';
 import ReauthenticationFields, { emptyReauthentication, reauthenticationBody, reauthenticationReady } from './ReauthenticationFields.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function TwoFactorSettings({ security, onChanged }) {
   const { t, formatDate } = useI18n();
@@ -34,7 +35,7 @@ export default function TwoFactorSettings({ security, onChanged }) {
   };
   const run = async (operation) => {
     setBusy(true); setError(''); setMessage('');
-    try { await operation(); } catch (failure) { setError(failure.message); } finally { setBusy(false); }
+    try { await operation(); } catch (failure) { setError(errorText(failure)); } finally { setBusy(false); }
   };
   const start = event => {
     event.preventDefault();

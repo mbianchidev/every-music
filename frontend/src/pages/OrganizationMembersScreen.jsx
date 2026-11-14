@@ -9,6 +9,7 @@ import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import FormField from '../components/FormField.jsx';
 import EntityPicker from '../components/EntityPicker.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function MemberEditor({ member, actorRole, titleOnly, busy, onSave }) {
   const { t } = useI18n();
@@ -85,7 +86,7 @@ export default function OrganizationMembersScreen({ route }) {
       document.getElementById(focus)?.focus();
       return true;
     } catch (failure) {
-      setError(failure.details?.length ? `${failure.message}: ${failure.details.join('; ')}` : failure.message);
+      setError(failure.details?.length ? `${errorText(failure)}: ${failure.details.join('; ')}` : errorText(failure));
       return false;
     } finally { setBusy(false); }
   };
