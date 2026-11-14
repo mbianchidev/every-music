@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { blankEntry, entryBody, feedLinks, formatEntryTime, googleCalendarLink, mapLinks, timeZones } from '../src/lib/calendar.js';
+import { blankEntry, changedFields, entryBody, feedLinks, formatEntryTime, googleCalendarLink, mapLinks, timeZones } from '../src/lib/calendar.js';
 import { attachmentFits, attachmentTypeOf } from '../src/lib/band-chat.js';
 import { ATTACHMENT_TYPES } from '../src/lib/attachment-types.js';
 
@@ -45,6 +45,11 @@ test('entry drafts become API bodies and times format in the entry time zone', (
     placeId: 7, address: null, notes: 'Notes', organizationId: 'band-1', inviteeIds: ['user-2'], reminderOffsets: [15],
   });
   assert.equal('inviteeIds' in entryBody(draft), false);
+  const original = entryBody(draft);
+  assert.deepEqual(changedFields({ ...original, notes: 'Changed' }, original), { notes: 'Changed' });
+  assert.deepEqual(changedFields({ ...original, endLocal: '2026-07-10T22:00' }, original),
+    { startLocal: original.startLocal, endLocal: '2026-07-10T22:00', timeZone: original.timeZone });
+  assert.deepEqual(changedFields(original, original), {});
   assert.match(formatEntryTime(entry, 'en-GB'), /^Friday,? 10 July 2026 19:30 - 21:30$/);
   assert.match(formatEntryTime(entry, 'en-GB', 'UTC'), /17:30 - 19:30$/);
   assert.ok(timeZones('Mars/Base').includes('Mars/Base'));

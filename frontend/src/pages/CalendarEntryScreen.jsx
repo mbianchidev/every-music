@@ -4,8 +4,8 @@ import nucleus from '../lib/nucleus.js';
 import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
 import {
-  CALENDAR_RESPONSES, MAX_REMINDERS, REMINDER_OFFSETS, downloadEntryIcs, entryBody, entryDraft, formatEntryTime, googleCalendarLink,
-  localTimeZone, mapLinks,
+  CALENDAR_RESPONSES, MAX_REMINDERS, REMINDER_OFFSETS, changedFields, downloadEntryIcs, entryBody, entryDraft, formatEntryTime,
+  googleCalendarLink, localTimeZone, mapLinks,
 } from '../lib/calendar.js';
 import PageHeader from '../components/PageHeader.jsx';
 import ErrorState from '../components/ErrorState.jsx';
@@ -47,8 +47,12 @@ export default function CalendarEntryScreen({ route }) {
   const [reminders, setReminders] = useState(null);
   const [rsvp, setRsvp] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [base, setBase] = useState(null);
+  const [dirty, setDirty] = useState(false);
   useEffect(() => {
-    if (entry) { setReminders(entry.viewer.reminders); setDraft(previous => previous ?? entryDraft(entry)); }
+    if (!entry) return;
+    setReminders(entry.viewer.reminders);
+    if (!dirty) { setDraft(entryDraft(entry)); setBase(entry); }
   }, [entry?.id, entry?.updatedAt, entry?.viewer.reminders.join(',')]);
   const act = async (operation, success, focus) => {
     setBusy(true); setError(''); setMessage('');
@@ -73,6 +77,13 @@ export default function CalendarEntryScreen({ route }) {
     act(() => conduit.transmit(`${path}/reminders`, { method: 'PUT', auth: true, body: { offsets: reminders } }), t('calendar.entry.remindersSaved'));
   };
   const update = changes => act(() => conduit.transmit(path, { method: 'PATCH', auth: true, body: changes }), t('calendar.entry.saved'), 'main-content');
+  // Sends only the fields edited since the form was loaded, so a concurrent
+  // edit by another organizer is not silently reverted.
+  const saveDraft = async () => {
+    const changes = changedFields(entryBody(draft), entryBody(entryDraft(base)));
+    if (!Object.keys(changes).length) { setDirty(false); setMessage(t('calendar.entry.saved')); return; }
+    if (await update(changes)) setDirty(false);
+  };
   const removeEntry = async () => {
     if (!window.confirm(t('calendar.entry.removeConfirm'))) return;
     setBusy(true); setError('');
@@ -160,8 +171,8 @@ export default function CalendarEntryScreen({ route }) {
               t('calendar.entry.inviteSaved'), 'entry-people-heading')} />
           {draft && <details className="calendar-create">
             <summary>{t('calendar.entry.edit')}</summary>
-            <CalendarEntryForm id="edit-entry" draft={draft} onChange={setDraft} busy={busy} submitLabel={t('calendar.form.save')}
-              onSubmit={() => update(entryBody(draft))} />
+            <CalendarEntryForm id="edit-entry" draft={draft} onChange={value => { setDraft(value); setDirty(true); }} busy={busy}
+              submitLabel={t('calendar.form.save')} onSubmit={saveDraft} />
           </details>}
           <div className="compact-actions">
             {entry.status === 'cancelled'

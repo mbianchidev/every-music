@@ -363,6 +363,9 @@ test('band collaboration: calendars, feeds, reminders, encrypted band chat, revi
     const report = await call(`/organizations/${band.id}/chat/messages/${firstMessage.id}/reports`, { actor: 1, method: 'POST', status: 201, body });
     reportId = report.id;
     await failure(`/organizations/${band.id}/chat/messages/${firstMessage.id}/reports`, 409, 'REPORT_EXISTS', { actor: 1, method: 'POST', body });
+    await call('/reports', { actor: 1, method: 'POST', status: 201, body: {
+      reportedUserId: users[0], category: 'other', details: 'Synthetic profile report', consent: true,
+    } });
     const queue = await call('/admin/reports?status=open&pageSize=50', { actor: 5 });
     assert.equal(queue.reports.find(item => item.id === reportId).hasMessage, true);
     const detail = await call(`/admin/reports/${reportId}`, { actor: 5 });

@@ -135,6 +135,13 @@ test('bands schedule rehearsals with invitees, RSVPs, map and calendar links, an
     expect(Buffer.concat(ics).toString('utf8').replace(/\r\n /g, '')).toContain('SUMMARY:Synthetic rehearsal\\, full set');
     await assertAccessible(leader, 'calendar entry for its organizer');
     await leader.screenshot({ path: testInfo.outputPath('calendar-entry.png'), fullPage: true });
+    await leader.getByText('Edit details', { exact: true }).click();
+    const edit = leader.locator('.calendar-create');
+    await expect(edit.getByLabel(/^Title\b/)).toHaveValue('Synthetic rehearsal, full set');
+    await edit.getByLabel('Notes', { exact: true }).fill('Bring spare strings and cables.');
+    await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(leader.getByRole('status').filter({ hasText: 'Entry updated.' })).toBeVisible();
+    await expect(leader.getByRole('article').getByText('Bring spare strings and cables.', { exact: true })).toBeVisible();
 
     await bassist.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'My calendar', exact: true }).click();
     await expect(bassist.getByRole('heading', { name: 'My calendar', level: 1 })).toBeVisible();

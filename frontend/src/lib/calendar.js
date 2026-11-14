@@ -95,6 +95,16 @@ export function entryBody(draft, { creating = false } = {}) {
   return body;
 }
 
+const TIME_FIELDS = ['startLocal', 'endLocal', 'timeZone'];
+
+// Fields of `body` that differ from `original`; the start, end and time zone
+// always travel together because the server resolves them as one.
+export function changedFields(body, original) {
+  const changes = Object.fromEntries(Object.entries(body).filter(([key, value]) => value !== original[key]));
+  if (TIME_FIELDS.some(key => Object.hasOwn(changes, key))) for (const key of TIME_FIELDS) changes[key] = body[key];
+  return changes;
+}
+
 export async function downloadEntryIcs(entry, transport = conduit) {
   const response = await transport.transmit(`/calendar/entries/${entry.id}/ics`, { auth: true, stream: true });
   saveFile(`every-music-${entry.id}.ics`, await response.text(), 'text/calendar');

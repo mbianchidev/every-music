@@ -63,7 +63,7 @@ class AdministrationRepository {
       if (recent.rows[0].count >= 10) throw requestError(429, 'REPORT_LIMIT', 'At most ten reports can be submitted per day');
       const duplicate = await executor.execute(`
         SELECT id FROM user_reports WHERE reporter_id = $1 AND reported_user_id = $2 AND status = 'open'
-          AND message_id IS NOT DISTINCT FROM $3::uuid`, [userId, targetId, input.messageId ?? null]);
+          AND message_id IS NOT DISTINCT FROM $3::uuid AND band_message_id IS NULL`, [userId, targetId, input.messageId ?? null]);
       if (duplicate.rows.length) throw requestError(409, 'REPORT_EXISTS', 'An open report already exists for this concern');
       let legacyEvidence = null;
       let evidenceKeyId = null;
