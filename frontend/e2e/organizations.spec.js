@@ -2,13 +2,21 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
+import playwrightConfig from '../playwright.config.js';
+import { CipherEngine } from '../../backend/src/engines/cipher-engine.js';
+import { webOrigin } from './origins.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
-const bcrypt = requireBackend('bcryptjs');
 const pool = new Pool({ connectionString: process.env.REALM_CONNECTION });
+const serverEnv = playwrightConfig.webServer[0].env;
+// Sign-in is rate limited per IP, and other browser suites already use the
+// form. These are real sessions issued with the browser API's synthetic keys.
+const cipher = new CipherEngine({ cipher: {
+  primaryKey: serverEnv.CIPHER_PRIMARY_KEY, refreshKey: serverEnv.CIPHER_REFRESH_KEY,
+  issuer: 'every.music', audience: 'every.music.clients', accessTokenMinutes: 30, refreshTokenDays: 1,
+} });
 const marker = `orgs-${randomUUID().slice(0, 8)}`;
-const password = 'Synthetic1Password';
 const names = ['Demo Leader', 'Demo Drummer', 'Demo Fan', 'Demo Booker', 'Demo Admin'];
 const people = [];
 const band = { name: `${marker} Riverglass`, slug: `${marker}-riverglass` };
@@ -17,19 +25,12 @@ let genre;
 
 test.describe.configure({ mode: 'serial' });
 
-test.beforeEach(async ({ context }) => {
-  await context.route('https://accounts.google.com/gsi/client', route => route.fulfill({
-    contentType: 'application/javascript', body: 'window.google = { accounts: { id: { initialize() {}, renderButton() {} } } };',
-  }));
-});
-
 test.beforeAll(async () => {
-  const hash = bcrypt.hashSync(password, 4);
   genre = (await pool.query("SELECT id, name FROM genres WHERE name = 'Rock'")).rows[0];
   for (const [index, name] of names.entries()) {
     const email = `${marker}-${index}@example.test`;
-    const { rows } = await pool.query('INSERT INTO users (email, password_hash, email_verified, role) VALUES ($1, $2, TRUE, $3) RETURNING id',
-      [email, hash, index === 4 ? 'admin' : 'member']);
+    const { rows } = await pool.query('INSERT INTO users (email, email_verified, role) VALUES ($1, TRUE, $2) RETURNING id',
+      [email, index === 4 ? 'admin' : 'member']);
     people.push({ id: rows[0].id, email, artistName: `${name} ${marker}` });
     await pool.query('INSERT INTO profiles (user_id, artist_name, city) VALUES ($1, $2, $3)', [rows[0].id, `${name} ${marker}`, 'Synthetic City']);
   }
@@ -43,13 +44,24 @@ test.afterAll(async () => {
   await pool.end();
 });
 
-async function login(page, person) {
+async function signIn(browser, person) {
+  const refresh = cipher.createRefreshToken(person.id);
+  await pool.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [person.id, refresh.tokenHash, refresh.expiresAt]);
+  const session = {
+    persona: { userId: person.id, email: person.email, emailVerified: true },
+    keys: { accessToken: cipher.createAccessToken(person.id, person.email), refreshToken: refresh.token },
+  };
+  const context = await browser.newContext();
+  await context.addInitScript(({ value, origin }) => {
+    if (location.origin === origin && !sessionStorage.getItem('everymusic.session.v1')) {
+      sessionStorage.setItem('everymusic.session.v1', JSON.stringify(value));
+    }
+  }, { value: session, origin: webOrigin });
+  const page = await context.newPage();
   page.on('dialog', dialog => dialog.accept());
-  await page.goto('/#login');
-  await page.getByLabel(/^Email\b/).fill(person.email);
-  await page.getByLabel(/^Password\b/).fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.goto('/#feed');
   await expect(page.getByRole('heading', { name: 'Open calls', exact: true })).toBeVisible();
+  return { context, page };
 }
 
 async function assertAccessible(page, label) {
@@ -67,12 +79,9 @@ async function reflows(page, label) {
 }
 
 test('a musician creates a band page, invites a bandmate, and publishes on behalf of the band', async ({ browser }, testInfo) => {
-  const leaderContext = await browser.newContext();
-  const memberContext = await browser.newContext();
-  const leader = await leaderContext.newPage();
-  const member = await memberContext.newPage();
+  const { context: leaderContext, page: leader } = await signIn(browser, people[0]);
+  const { context: memberContext, page: member } = await signIn(browser, people[1]);
   try {
-    await login(leader, people[0]);
     await leader.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Your pages', exact: true }).click();
     await expect(leader.getByRole('heading', { name: 'Your pages', exact: true, level: 1 })).toBeVisible();
     await expect(leader.getByText('You are not part of any page yet. Start one:')).toBeVisible();
@@ -113,7 +122,6 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
     await leader.getByRole('button', { name: 'Send invitation', exact: true }).click();
     await expect(leader.getByRole('status').filter({ hasText: `Invitation sent to ${people[1].artistName}` })).toBeVisible();
 
-    await login(member, people[1]);
     await member.goto('/#notifications');
     await expect(member.getByRole('link', { name: `You were invited to join ${band.name}`, exact: true })).toBeVisible();
     await member.goto('/#your-pages');
@@ -159,14 +167,10 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
 });
 
 test('fans discover and follow pages, music lovers share follows, and venues are claimed and verified', async ({ browser }, testInfo) => {
-  const fanContext = await browser.newContext();
-  const bookerContext = await browser.newContext();
-  const adminContext = await browser.newContext();
-  const fan = await fanContext.newPage();
-  const booker = await bookerContext.newPage();
-  const admin = await adminContext.newPage();
+  const { context: fanContext, page: fan } = await signIn(browser, people[2]);
+  const { context: bookerContext, page: booker } = await signIn(browser, people[3]);
+  const { context: adminContext, page: admin } = await signIn(browser, people[4]);
   try {
-    await login(fan, people[2]);
     await fan.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Bands and venues', exact: true }).click();
     await expect(fan.getByRole('heading', { name: 'Bands and venues', exact: true, level: 1 })).toBeVisible();
     await fan.getByRole('searchbox', { name: 'Search pages', exact: true }).fill(marker);
@@ -212,7 +216,6 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await expect(fan.getByRole('status').filter({ hasText: 'Profile visibility saved.' })).toBeVisible();
     await assertAccessible(fan, 'settings with follow visibility');
 
-    await login(booker, people[3]);
     await booker.goto(`/#musician?id=${people[2].id}`);
     await expect(booker.getByText('This person keeps the list of who they follow private.', { exact: true })).toBeVisible();
     await booker.goto(`/${venueHash}`);
@@ -223,7 +226,6 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await dialog.getByRole('button', { name: 'Send claim request', exact: true }).click();
     await expect(booker.getByText(/is waiting for review/)).toBeVisible();
 
-    await login(admin, people[4]);
     await admin.goto('/#admin');
     const claims = admin.getByRole('region', { name: 'Venue claim requests' });
     await claims.getByRole('button', { name: `Approve claim for ${venue.name}`, exact: true }).click();
