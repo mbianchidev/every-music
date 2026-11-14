@@ -94,6 +94,33 @@ images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
 uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
 stripped of metadata. Published images are public.
 
+### Reply to calls and review applicants
+
+On someone else's open call, **Apply to this call** opens a reply form. Write a
+message, optionally tick the instruments from the call you can cover, and add up
+to five links to demos or your website. The form says it plainly: the owner sees
+your message, and it is stored on Every.music without end-to-end encryption.
+Use Messages for anything private. You can send one active reply per call;
+**Withdraw application** removes it from the owner's view and lets you reply
+again while the call is open. Blocked musicians cannot reply to each other.
+
+**Applications** in the navigation has two views. **Sent** lists your replies
+with their status: Sent, Shortlisted, Accepted, Declined, Withdrawn, or Closed
+when the call was deleted, unpublished, or expired. **Received** is the owner
+dashboard across all your calls. Filter by call, status, or the instrument an
+applicant can cover, and sort by newest or oldest. Each applicant shows their
+name, picture, city, and profile instruments, plus their message and links.
+Change the status, keep a private note only you can see, or choose
+**Message applicant** to open the encrypted conversation. Open the dashboard
+for one call from **Applicants** in **My calls** or **Review applications** on
+your announcement page. Applicants are notified when you shortlist, accept, or
+decline them, and you are notified about each new reply.
+
+When a call closes, its applications stay readable to you for 90 days by
+default (`APPLICATION_RETENTION_DAYS`); the dashboard shows the exact date.
+Status changes are off for closed calls, but notes still work. After the
+retention period the applications are deleted automatically.
+
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives

@@ -64,6 +64,7 @@ startup. Mail settings are mandatory in production.
 | `RATE_WINDOW_MS` | `900000` (at least 1000) | Rate-limit window in milliseconds |
 | `RATE_THRESHOLD` | `150` (at least 1) | Requests allowed per client/window |
 | `UPLOAD_BYTE_LIMIT` | `5242880` (at least 1024) | Maximum JSON body size, including base64 image uploads; images themselves are capped at 2 MiB |
+| `APPLICATION_RETENTION_DAYS` | `90` (1-3650) | Days that [announcement applications](api.md#announcement-applications) stay readable to the owner after the call closes, and that withdrawn replies are kept, before hourly cleanup deletes them |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -173,7 +174,7 @@ API, and web host bindings are local by default.
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
-SMTP, pool, rate-limit, and body-size settings listed above. Its default
+SMTP, pool, rate-limit, body-size, and application-retention settings listed above. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.
