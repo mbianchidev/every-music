@@ -208,7 +208,7 @@ class TwoFactorRepository {
           pending_code_hash = CASE WHEN $2 >= $3 THEN NULL ELSE pending_code_hash END
         WHERE user_id = $1`, [row.user_id, attempts, MAX_CODE_ATTEMPTS]);
     }
-    return fail(401, 'INVALID_TWO_FACTOR_CODE', 'That two-step code is not correct.', { failure: true });
+    return fail(403, 'INVALID_TWO_FACTOR_CODE', 'That two-step code is not correct.');
   }
 
   async createChallenge(userId, method, code) {
