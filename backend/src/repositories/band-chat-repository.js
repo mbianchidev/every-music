@@ -58,15 +58,15 @@ class BandChatRepository {
   // without a published key, or with inactive accounts, cannot receive.
   async members(executor, organizationId) {
     const { rows } = await executor.execute(`
-      SELECT m.user_id, ${displayName('p')} AS name, p.profile_picture_url AS picture_url, m.role,
-        (u.is_active AND NOT u.is_deleted) AS available, k.*
+      SELECT k.*, m.user_id AS member_user_id, ${displayName('p')} AS name, p.profile_picture_url AS picture_url, m.role,
+        (u.is_active AND NOT u.is_deleted) AS available
       FROM organization_members m JOIN users u ON u.id = m.user_id
       LEFT JOIN profiles p ON p.user_id = m.user_id
       LEFT JOIN messaging_keys k ON k.user_id = m.user_id AND k.is_current AND u.is_active AND NOT u.is_deleted
       WHERE m.organization_id = $1 AND m.status = 'active'
       ORDER BY ${displayName('p')}, m.user_id`, [organizationId]);
     return rows.map(row => ({
-      userId: row.user_id, name: row.name, pictureUrl: row.picture_url, role: row.role,
+      userId: row.member_user_id, name: row.name, pictureUrl: row.picture_url, role: row.role,
       key: row.available && row.id ? publicMessagingKey(row) : null, canReceive: Boolean(row.available && row.id),
     }));
   }
@@ -123,6 +123,9 @@ class BandChatRepository {
     const attachmentIds = [...new Set((input.attachmentIds ?? []).map(lower))];
     if (attachmentIds.length !== (input.attachmentIds ?? []).length || attachmentIds.length > GROUP_LIMITS.attachments) {
       throw requestError(400, 'INVALID_ATTACHMENT', `Attach up to ${GROUP_LIMITS.attachments} different files`);
+    }
+    if (recipientKeyIds.length < 2) {
+      throw requestError(409, 'BAND_CHAT_NO_RECIPIENTS', 'No other band member can receive encrypted messages yet. Ask them to set up encrypted messaging.');
     }
     const ciphertext = await validateGroupEnvelope(input.ciphertext, senderKeyId, recipientKeyIds);
     return realmConnector.transaction(async executor => {

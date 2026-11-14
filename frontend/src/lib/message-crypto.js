@@ -161,3 +161,154 @@ export async function decryptMessage({ message, conversationId, ownUserId, unloc
     throw failure('DECRYPTION_FAILED', 'This message could not be decrypted and verified. Check the messaging fingerprints; no unverified text is shown.');
   }
 }
+
+// Band group chat. Each message has a fresh content key wrapped for every
+// current member key (General JSON JWE, ECDH-ES+A256KW). Inside is a
+// sender-signed JWT naming the chat, the exact recipient keys and attachment
+// fingerprints, plus the attachment keys, which stay outside the signature so
+// a reported message never discloses them.
+const groupAudience = 'everymusic.band-chat';
+const groupMessageType = 'everymusic.group-message.v1+jwt';
+const groupEnvelopeType = 'everymusic.group-message.v1+jwe';
+export const GROUP_MESSAGE_LIMITS = { recipients: 100, attachments: 4, body: 4000, name: 255 };
+export const ATTACHMENT_TYPES = {
+  'image/jpeg': 'image', 'image/png': 'image', 'image/webp': 'image', 'image/gif': 'image',
+  'audio/mpeg': 'audio', 'audio/mp4': 'audio', 'audio/x-m4a': 'audio', 'audio/aac': 'audio', 'audio/ogg': 'audio',
+  'audio/wav': 'audio', 'audio/x-wav': 'audio', 'audio/wave': 'audio', 'audio/webm': 'audio', 'audio/flac': 'audio', 'audio/x-flac': 'audio',
+};
+const attachmentKey = value => typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
+
+function sameIds(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+  const expected = [...right].sort();
+  return [...left].sort().every((value, index) => value === expected[index]);
+}
+
+function attachmentMeta(item) {
+  if (!item || !uuid(item.id) || !Object.hasOwn(ATTACHMENT_TYPES, item.type) || typeof item.name !== 'string'
+    || !item.name || item.name.length > GROUP_MESSAGE_LIMITS.name || /[\\/\u0000-\u001f\u007f]/.test(item.name)
+    || !Number.isSafeInteger(item.size) || item.size < 0 || !attachmentKey(item.digest)) {
+    throw failure('INVALID_MESSAGE', 'An attachment description is invalid.');
+  }
+  return { id: item.id, type: item.type, name: item.name, size: item.size, digest: item.digest };
+}
+
+function validateGroupBody(body, attachments) {
+  if (typeof body !== 'string' || body.length > GROUP_MESSAGE_LIMITS.body || (!body.trim() && !attachments.length)) {
+    throw failure('INVALID_MESSAGE', 'Messages need up to 4,000 characters or an attachment.');
+  }
+}
+
+export function attachmentName(name) {
+  const clean = String(name ?? '').replace(/[\\/\u0000-\u001f\u007f]/g, '_').trim().slice(-GROUP_MESSAGE_LIMITS.name);
+  return clean || 'attachment';
+}
+
+export async function encryptAttachment(bytes) {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data));
+  const blob = new Uint8Array(iv.length + sealed.length);
+  blob.set(iv);
+  blob.set(sealed, iv.length);
+  const digest = base64url.encode(new Uint8Array(await crypto.subtle.digest('SHA-256', blob)));
+  return { blob, key: base64url.encode(raw), digest };
+}
+
+export async function decryptAttachment(bytes, { key, digest }) {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const actual = base64url.encode(new Uint8Array(await crypto.subtle.digest('SHA-256', data)));
+  if (data.length < 28 || actual !== digest || !attachmentKey(key)) {
+    throw failure('ATTACHMENT_INVALID', 'This attachment does not match the file the sender signed.');
+  }
+  try {
+    const cryptoKey = await crypto.subtle.importKey('raw', base64url.decode(key), 'AES-GCM', false, ['decrypt']);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: data.slice(0, 12) }, cryptoKey, data.slice(12)));
+  } catch {
+    throw failure('ATTACHMENT_INVALID', 'This attachment could not be decrypted.');
+  }
+}
+
+export async function encryptGroupMessage({ body = '', organizationId, clientId, sender, recipients, unlocked, attachments = [] }) {
+  if (!uuid(organizationId) || !uuid(clientId)) throw failure('INVALID_MESSAGE', 'A valid band chat and retry identifier are required.');
+  if (!unlocked || unlocked.record.id !== sender.id || unlocked.record.userId !== sender.userId) {
+    throw failure('KEY_LOCKED', 'Unlock your current messaging key before sending.');
+  }
+  if (attachments.length > GROUP_MESSAGE_LIMITS.attachments) throw failure('INVALID_MESSAGE', 'Attach up to four files.');
+  const meta = attachments.map(attachmentMeta);
+  if (attachments.some(item => !attachmentKey(item.key)) || new Set(meta.map(item => item.id)).size !== meta.length) {
+    throw failure('INVALID_MESSAGE', 'An attachment key is missing.');
+  }
+  validateGroupBody(body, meta);
+  const ids = recipients.map(recipient => recipient.id).sort();
+  if (new Set(ids).size !== ids.length || !ids.includes(sender.id) || ids.length > GROUP_MESSAGE_LIMITS.recipients) {
+    throw failure('INVALID_MESSAGE', 'The band chat recipients are invalid.');
+  }
+  const verified = await Promise.all(recipients.map(recipient => verifyIdentity(recipient)));
+  const signed = await new SignJWT({
+    version: 1, body: body.trim(), senderKeyId: sender.id, senderFingerprint: sender.fingerprint, recipients: ids, attachments: meta,
+  }).setProtectedHeader({ alg: 'ES256', typ: groupMessageType })
+    .setIssuer(sender.userId).setAudience(groupAudience).setSubject(organizationId).setJti(clientId).setIssuedAt()
+    .sign(unlocked.signingPrivate);
+  const content = { version: 1, jwt: signed, keys: Object.fromEntries(attachments.map(item => [item.id, item.key])) };
+  const encrypted = new GeneralEncrypt(encode(JSON.stringify(content))).setProtectedHeader({ enc: 'A256GCM', typ: groupEnvelopeType });
+  recipients.forEach((recipient, index) => {
+    encrypted.addRecipient(verified[index].encryptionPublic).setUnprotectedHeader({ alg: keyAlgorithm, kid: recipient.id });
+  });
+  return {
+    clientId, senderKeyId: sender.id, recipientKeyIds: ids, attachmentIds: meta.map(item => item.id),
+    ciphertext: JSON.stringify(await encrypted.encrypt()),
+  };
+}
+
+export async function verifyGroupMessageEvidence(signed, { message, organizationId, sender }) {
+  if (!uuid(organizationId) || !uuid(message.clientId)) throw failure('INVALID_MESSAGE', 'The band chat context is missing or invalid.');
+  const { signingPublic } = await verifyIdentity(sender);
+  const { payload } = await jwtVerify(signed, signingPublic, {
+    algorithms: ['ES256'], typ: groupMessageType, issuer: sender.userId, audience: groupAudience, subject: organizationId,
+    requiredClaims: ['jti', 'version', 'body', 'senderKeyId', 'senderFingerprint', 'recipients', 'attachments'],
+  });
+  if (payload.version !== 1 || payload.jti !== message.clientId
+    || (message.senderId && message.senderId !== sender.userId)
+    || payload.senderKeyId !== message.senderKeyId || payload.senderKeyId !== sender.id
+    || payload.senderFingerprint !== sender.fingerprint || !sameIds(payload.recipients, message.recipientKeyIds)
+    || !Array.isArray(payload.attachments) || payload.attachments.length > GROUP_MESSAGE_LIMITS.attachments
+    || !sameIds(payload.attachments.map(item => item?.id), message.attachments ?? [])) {
+    throw failure('INVALID_MESSAGE', 'This message does not match its signed band chat context.');
+  }
+  const attachments = payload.attachments.map(attachmentMeta);
+  validateGroupBody(payload.body, attachments);
+  return { body: payload.body, attachments };
+}
+
+export async function decryptGroupMessage({ message, organizationId, ownUserId, ownKeyId, unlocked, sender }) {
+  if (!message.recipientKeyIds?.includes(ownKeyId)) {
+    throw failure('NOT_A_RECIPIENT', 'This message was not encrypted for your messaging key. It was sent before you joined or set up encrypted messaging.');
+  }
+  if (!unlocked || unlocked.record.id !== ownKeyId || unlocked.record.userId !== ownUserId) {
+    throw failure('KEY_LOCKED', 'Unlock the messaging key used for this message.');
+  }
+  try {
+    const encrypted = JSON.parse(message.ciphertext);
+    const mine = encrypted.recipients?.find(item => item.header?.kid === ownKeyId);
+    if (!mine || encrypted.recipients.length !== message.recipientKeyIds.length) throw new Error('Recipient mismatch');
+    const { plaintext, protectedHeader } = await generalDecrypt({ ...encrypted, recipients: [mine] }, unlocked.encryptionPrivate, {
+      keyManagementAlgorithms: [keyAlgorithm], contentEncryptionAlgorithms: ['A256GCM'], maxDecompressedLength: 0,
+    });
+    if (protectedHeader.typ !== groupEnvelopeType) throw new Error('Unexpected message profile');
+    const content = JSON.parse(decode(plaintext));
+    if (content?.version !== 1 || typeof content.jwt !== 'string' || !content.keys || typeof content.keys !== 'object') {
+      throw new Error('Unexpected message content');
+    }
+    const verified = await verifyGroupMessageEvidence(content.jwt, { message, organizationId, sender });
+    const attachments = verified.attachments.map(item => {
+      if (!attachmentKey(content.keys[item.id])) throw new Error('Missing attachment key');
+      return { ...item, key: content.keys[item.id] };
+    });
+    return { body: verified.body, attachments, signedEvidence: content.jwt };
+  } catch {
+    throw failure('DECRYPTION_FAILED', 'This message could not be decrypted and verified. Check the messaging fingerprints; no unverified content is shown.');
+  }
+}

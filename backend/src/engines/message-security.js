@@ -95,7 +95,7 @@ export async function validateGroupEnvelope(ciphertext, senderKeyId, recipientKe
     if (!value || Object.keys(value).some(key => !['protected', 'iv', 'ciphertext', 'tag', 'recipients'].includes(key))
       || !encoded(value.iv, 16) || !encoded(value.tag, 22) || !encoded(value.ciphertext)
       || !Array.isArray(value.recipients) || value.recipients.length !== recipientKeyIds.length
-      || wanted.size !== recipientKeyIds.length || wanted.size < 1 || wanted.size > GROUP_LIMITS.recipients
+      || wanted.size !== recipientKeyIds.length || wanted.size < 2 || wanted.size > GROUP_LIMITS.recipients
       || !wanted.has(senderKeyId)) throw new Error('Invalid envelope');
     const header = decodeProtectedHeader(value);
     if (header.enc !== 'A256GCM' || header.typ !== 'everymusic.group-message.v1+jwe'

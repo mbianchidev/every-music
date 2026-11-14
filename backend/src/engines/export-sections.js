@@ -131,7 +131,7 @@ export const exportSections = [
   {
     key: 'bandChatMemberships', sql: `
       SELECT organization_id AS "organizationId", joined_at AS "joinedAt", left_at AS "leftAt",
-        CASE WHEN read_at = '-infinity' THEN NULL ELSE read_at END AS "readAt"
+        NULLIF(read_at, '-infinity') AS "readAt"
       FROM band_chat_members WHERE user_id = $1 ORDER BY joined_at, id`,
   },
   {
