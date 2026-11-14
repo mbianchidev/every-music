@@ -59,9 +59,10 @@ The API container runs database migrations before accepting traffic. The web and
 The `object-storage` profile adds `object-store`, a single-node SeaweedFS
 S3 gateway with its data in the `everymusic-object-volume` volume. It creates
 the bucket (`S3_BUCKET`, default `everymusic-media`) on startup, requires
-signed requests with the configured key pair, and the API waits for its
-healthcheck. Without the profile, Compose behaves exactly as before and stores
-media in PostgreSQL. Add to `.env`:
+signed requests with the configured key pair, and has its own healthcheck. The
+API reports not ready until the bucket answers, so the web service starts only
+after both are up. Without the profile, Compose behaves exactly as before and
+stores media in PostgreSQL. Add to `.env`:
 
 ```text
 COMPOSE_PROFILES=object-storage

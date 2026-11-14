@@ -392,7 +392,8 @@ server has configured. Android tokens are Firebase Cloud Messaging registration
 tokens; iOS tokens are hexadecimal APNs device tokens (stored lowercase).
 Invalid tokens return 400 `INVALID_PUSH_DEVICE`; an unconfigured platform returns
 503 `PUSH_NOT_CONFIGURED`. Each account can register 10 devices; more return
-400 `PUSH_DEVICE_LIMIT`. Registering an existing token moves it to the caller,
+400 `PUSH_DEVICE_LIMIT`, and registration is rate limited per client.
+Registering an existing token moves it to the caller,
 refreshes `updatedAt`, and enables the `push` preference. Tokens are never
 returned. Disabling `push` in preferences removes every device.
 
