@@ -1,6 +1,14 @@
 import { authenticationConductor } from '../conductors/authentication-conductor.js';
+import { realmConfig } from '../../config/realm.js';
 
 export async function authOrchestrator(fastify, options) {
+  fastify.get('/google/config', async () => ({
+    success: true, data: { clientId: realmConfig.googleGateway.identityKey || null },
+  }));
+  fastify.post('/google/challenge', {
+    config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+  }, (request, reply) => authenticationConductor.googleChallenge(request, reply));
+
   fastify.post('/register', {
     config: {
       rateLimit: {

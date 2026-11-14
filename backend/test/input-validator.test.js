@@ -12,6 +12,9 @@ test('parses bounded pagination', () => {
 test('rejects invalid pagination instead of passing NaN to PostgreSQL', () => {
   assert.equal(InputValidator.parsePagination('nope', '20').valid, false);
   assert.equal(InputValidator.parsePagination('1', '101').valid, false);
+  assert.equal(InputValidator.parsePagination('2junk', '20').valid, false);
+  assert.equal(InputValidator.parsePagination('1', '2.5').valid, false);
+  assert.equal(InputValidator.parsePagination('9007199254740991', '100').valid, false);
 });
 
 test('validates empty strings when a minimum length is specified', () => {

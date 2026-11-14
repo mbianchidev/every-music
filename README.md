@@ -117,16 +117,21 @@ not packaged by desktop CI.
 ## Implemented features
 
 - **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
-- **Profiles:** edit your artist name, first and last name, city, and biography.
-- **Announcements:** browse the feed, publish an open call with a city and remote-collaboration option, and delete your own announcements.
+- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators and roles.
+- **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, and remote filters, sorting, and bounded pages.
+- **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
-- **API capabilities:** filtered profile and announcement searches, instrument and genre catalogs, musical projects, announcement updates and reactions, and optional Google ID-token sign-in. Some of these capabilities are API-only.
+- **Collaboration:** private messages, read state, conversation archiving, blocking, followed-musician alerts, and a notification center with optional browser push.
+- **Preferences:** system/light/dark themes, opt-in private engagement analytics, and notification settings.
+- **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
+- **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
 
 ### Current limitations
 
-- The current UI has no Google sign-in, profile-search screen, search filters or pagination controls, announcement-editing or reaction controls, or editors for instruments, genres, and musical projects. These capabilities are exposed through the API.
-- In-app chat, push notifications, payments/subscriptions, and a media-upload workflow are not implemented. [Product vision](docs/main.md) contains proposed features and historical design ideas, not a list of shipped functionality.
-- Native shells do not bundle the backend or provide an offline mode. A reachable API is required.
+- Google sign-in needs a configured web OAuth client; browser push needs HTTPS, VAPID keys, browser support, and permission. Native WebViews use email/password, not embedded Google sign-in.
+- Messages are access-controlled, not end-to-end encrypted. Analytics counts only mutually opted-in activity, not unique visitors or total platform traffic.
+- Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
+- Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 
 ## Documentation

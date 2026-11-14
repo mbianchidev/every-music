@@ -1,8 +1,9 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
-import nucleus from '../lib/nucleus.js';
+import { finishSignIn } from '../lib/sign-in.js';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import GoogleSignIn from '../components/GoogleSignIn.jsx';
 
 class AuthScreen extends Component {
   constructor(props) {
@@ -13,7 +14,7 @@ class AuthScreen extends Component {
       error: '',
       errorCode: '',
       loading: false,
-      message: '',
+      message: props.route?.query.get('signedOut') === 'local-only' ? 'Signed out on this device. Server session revocation could not be confirmed.' : '',
     };
   }
 
@@ -33,11 +34,7 @@ class AuthScreen extends Component {
         method: 'POST',
         body: { email, password },
       });
-      nucleus.login(response.user, {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-      });
-      window.location.hash = '#feed';
+      finishSignIn(response);
     } catch (error) {
       this.setState({
         error: error.message,
@@ -121,6 +118,7 @@ class AuthScreen extends Component {
               </button>
             </p>
           </form>
+          <GoogleSignIn />
         </div>
       </div>
     );

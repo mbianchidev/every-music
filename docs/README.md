@@ -11,7 +11,7 @@
 | [Deployment and operations](deployment.md) | Migrate safely, check health, collect logs, and operate PostgreSQL and SMTP |
 | [Desktop and mobile](mobile.md) | Build native clients with the right API URL and platform toolchains |
 | [Release artifacts](releases.md) | Build/checksum native installers and obtain CI development bundles |
-| [API reference](api.md) | Integrate accounts, profiles, announcements, and catalogs |
+| [API reference](api.md) | Integrate discovery, accounts, images, projects, messages, notifications, analytics, and live events |
 
 ## Developing Every.music
 
@@ -19,6 +19,7 @@
 |---|---|
 | [Development](development.md) | Install dependencies, run services, test, debug, and change the schema |
 | [Architecture](architecture.md) | Follow requests, state, persistence, and transaction boundaries |
+| [AT Protocol exploration](at-protocol.md) | Evaluate an opt-in public MusicSky adapter without exposing private application data |
 | [Release process](releases.md) | Package and verify native artifacts without publishing |
 | [Agent instructions](../AGENTS.md) | Follow repository invariants and verified quality gates |
 | [Accessibility](../ACCESSIBILITY.md) | Apply UI guidelines and manual verification practices |

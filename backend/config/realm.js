@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createECDH } from 'node:crypto';
 
 const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 
@@ -110,7 +111,11 @@ export function createRealmConfig(env = process.env) {
     },
     googleGateway: {
       identityKey: env.GOOGLE_IDENTITY_KEY,
-      identityLock: env.GOOGLE_IDENTITY_LOCK,
+    },
+    push: {
+      publicKey: env.VAPID_PUBLIC_KEY || '',
+      privateKey: env.VAPID_PRIVATE_KEY || '',
+      subject: env.VAPID_SUBJECT || '',
     },
     mailTransporter: {
       gateway: env.MAIL_GATEWAY,
@@ -155,6 +160,20 @@ export function validateRealmConfig(config = realmConfig) {
 
   if (config.cipher.primaryKey === config.cipher.refreshKey) {
     throw new Error('CIPHER_PRIMARY_KEY and CIPHER_REFRESH_KEY must be different');
+  }
+
+  const push = config.push;
+  if (push && (push.publicKey || push.privateKey || push.subject)) {
+    try {
+      const key = createECDH('prime256v1');
+      key.setPrivateKey(Buffer.from(push.privateKey, 'base64url'));
+      if (!key.getPublicKey().equals(Buffer.from(push.publicKey, 'base64url'))
+        || !['https:', 'mailto:'].includes(new URL(push.subject).protocol)) {
+        throw new Error('Invalid VAPID configuration');
+      }
+    } catch {
+      throw new Error('VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT must be a matching key pair and HTTPS/mailto contact');
+    }
   }
 
   if (config.environment === 'production') {

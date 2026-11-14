@@ -1,7 +1,13 @@
 dist
 node_modules
-src-tauri
+src-tauri/*
+!src-tauri/icons/
+src-tauri/icons/*
+!src-tauri/icons/icon.png
 test
+e2e
+test-results
+playwright-report
 .git
 .github
 .env

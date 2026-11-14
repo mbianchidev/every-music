@@ -31,6 +31,7 @@ async function resolveIdentity(request) {
   return {
     userId: identity.id,
     email: identity.email,
+    expiresAt: payload.exp,
   };
 }
 

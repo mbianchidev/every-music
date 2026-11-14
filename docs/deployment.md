@@ -70,6 +70,13 @@ Use readiness for load balancer admission. Use liveness only for process restart
 - Test restore procedures, not only backup creation.
 - Keep the database private; the Compose port binds to `127.0.0.1` by default.
 - Monitor connection saturation against `REALM_POOL_MAX`.
+- Allow one extra dedicated LISTEN connection per API process for live updates.
+- Include uploaded image bytes, private messages, notification settings, and push
+  subscriptions in backup protection; media is stored in PostgreSQL, not a local
+  upload directory. Restrict administrative access and restore copies.
+- Migration 003 installs `pg_trgm` and creates search indexes transactionally.
+  Use a suitable maintenance window for large tables; see
+  [migration verification](development.md#community-api-migration-and-browser-tests).
 - Run `npm run migrate` as a dedicated release step outside Compose when the platform separates migrations from application startup.
 
 ## Email
@@ -94,6 +101,20 @@ Fastify emits structured JSON logs in production. Collect stdout/stderr and aler
 - authentication lookup failures
 - migration failures
 - uncaught exceptions or unhandled rejections
+- live-listener disconnects and repeated stream reconnections
+- push delivery failures, exhausted retries, and subscription cleanup
+- community maintenance failures
+
+Configure [Google and Web Push](configuration.md#google-web-sign-in) only when
+needed. VAPID private keys belong in the secret store. Use HTTPS and preserve
+the public key pair across deployments. Disable upstream proxy buffering for
+`/realm/events`; its heartbeat interval is 15 seconds. Browser installation and
+push do not replace native platform release verification.
+
+Operational logs can contain request IPs and URLs. Apply the host's appropriate
+log retention/access controls independently of the opt-in analytics aggregates.
+Never add Authorization headers, message text, Google credentials, or push
+endpoint/key details to logs.
 
 ## Release checklist
 

@@ -47,3 +47,12 @@ test('updates tokens without losing the signed-in persona', () => {
   assert.equal(session.payload.keys.refreshToken, 'refresh');
   assert.equal(session.payload.persona.userId, 'user-1');
 });
+
+test('signing out clears account-scoped offline announcements', () => {
+  const storage = createStorage({ 'everymusic.offline-feed.v1': 'synthetic cached feed' });
+  const session = new Nucleus({ storage });
+  session.login({ userId: 'user-1' }, { accessToken: 'access', refreshToken: 'refresh' });
+  session.logout();
+  assert.equal(storage.getItem('everymusic.offline-feed.v1'), null);
+  assert.equal(session.authorized, false);
+});

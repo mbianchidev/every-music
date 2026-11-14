@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "Every.music",
+  "short_name": "Every.music",
+  "description": "Find musicians, open calls, and your next collaboration.",
+  "lang": "en",
+  "start_url": "/#feed",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090a0d",
+  "theme_color": "#090a0d",
+  "icons": [
+    { "src": "/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

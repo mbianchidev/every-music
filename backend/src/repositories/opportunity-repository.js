@@ -28,10 +28,12 @@ export class OpportunityRepository {
     return result.rows[0];
   }
 
-  async findById(announcementId, executor = realmConnector) {
+  async findById(announcementId, executor = realmConnector, viewerId = null) {
     const query = `
       SELECT a.*,
-             u.email as creator_email,
+             p.artist_name as creator_name,
+             EXISTS(SELECT 1 FROM saved_announcements sa WHERE sa.announcement_id = a.id AND sa.user_id = $2) AS is_saved,
+             (SELECT reaction_type FROM announcement_reactions ar WHERE ar.announcement_id = a.id AND ar.user_id = $2) AS my_reaction,
              array_agg(DISTINCT jsonb_build_object(
                'instrument_id', ai.instrument_id,
                'name', i.name,
@@ -46,20 +48,20 @@ export class OpportunityRepository {
                'url', al.url
              )) FILTER (WHERE al.id IS NOT NULL) as links
       FROM announcements a
-      LEFT JOIN users u ON a.user_id = u.id
+      LEFT JOIN profiles p ON a.user_id = p.user_id
       LEFT JOIN announcement_instruments ai ON a.id = ai.announcement_id
       LEFT JOIN instruments i ON ai.instrument_id = i.id
       LEFT JOIN announcement_genres ag ON a.id = ag.announcement_id
       LEFT JOIN genres g ON ag.genre_id = g.id
       LEFT JOIN announcement_links al ON a.id = al.announcement_id
       WHERE a.id = $1 AND a.is_deleted = false
-      GROUP BY a.id, u.email
+      GROUP BY a.id, p.artist_name
     `;
-    const result = await executor.execute(query, [announcementId]);
+    const result = await executor.execute(query, [announcementId, viewerId]);
     return result.rows[0] || null;
   }
 
-  async findByUserId(userId) {
+  async findByUserId(userId, { page = 1, pageSize = 20, limit = pageSize } = {}) {
     const query = `
       SELECT a.*, 
              COUNT(DISTINCT ar.id) as reactions_count
@@ -67,9 +69,10 @@ export class OpportunityRepository {
       LEFT JOIN announcement_reactions ar ON a.id = ar.announcement_id
       WHERE a.user_id = $1 AND a.is_deleted = false
       GROUP BY a.id
-      ORDER BY a.created_at DESC
+      ORDER BY a.created_at DESC, a.id
+      LIMIT $2 OFFSET $3
     `;
-    const result = await realmConnector.execute(query, [userId]);
+    const result = await realmConnector.execute(query, [userId, limit, (page - 1) * pageSize]);
     return result.rows;
   }
 
@@ -110,7 +113,7 @@ export class OpportunityRepository {
     }
 
     if (filters.searchTerm) {
-      whereConditions.push(`(a.title ILIKE $${paramIndex} OR a.description ILIKE $${paramIndex})`);
+      whereConditions.push(`(a.title || ' ' || a.description) ILIKE $${paramIndex}`);
       params.push(`%${filters.searchTerm}%`);
       paramIndex++;
     }
@@ -120,15 +123,20 @@ export class OpportunityRepository {
     const pageSize = pagination.pageSize || 20;
     const limit = pagination.limit || pageSize;
     const offset = ((pagination.page || 1) - 1) * pageSize;
+    const viewerIndex = paramIndex++;
+    params.push(filters.userId || null);
 
+    const sorts = { newest: 'a.created_at DESC', oldest: 'a.created_at ASC', title: 'a.title ASC', city: "COALESCE(a.city, '') ASC", popular: 'a.likes_count DESC' };
     const query = `
       SELECT a.id, a.user_id, a.title, a.description, a.picture_url,
              a.city, a.state, a.country, a.is_remote, a.is_cover_band,
              a.views_count, a.likes_count, a.dislikes_count,
-             a.created_at, a.expires_at
+             a.created_at, a.expires_at,
+             EXISTS(SELECT 1 FROM saved_announcements sa
+               WHERE sa.announcement_id = a.id AND sa.user_id = $${viewerIndex}) AS is_saved
       FROM announcements a
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY a.created_at DESC
+      ORDER BY ${sorts[filters.sort] || sorts.newest}, a.id
       LIMIT $${paramIndex++} OFFSET $${paramIndex}
     `;
 
@@ -178,7 +186,7 @@ export class OpportunityRepository {
     const query = `
       UPDATE announcements
       SET ${updates.join(', ')}
-      WHERE id = $${paramIndex++} AND user_id = $${paramIndex}
+      WHERE id = $${paramIndex++} AND user_id = $${paramIndex} AND is_deleted = FALSE
       RETURNING *
     `;
 
@@ -186,14 +194,14 @@ export class OpportunityRepository {
     return result.rows[0] || null;
   }
 
-  async deleteAnnouncement(announcementId, userId) {
+  async deleteAnnouncement(announcementId, userId, executor = realmConnector) {
     const query = `
       UPDATE announcements
       SET is_deleted = true
       WHERE id = $1 AND user_id = $2
       RETURNING id
     `;
-    const result = await realmConnector.execute(query, [announcementId, userId]);
+    const result = await executor.execute(query, [announcementId, userId]);
     return result.rows[0] || null;
   }
 
@@ -257,15 +265,6 @@ export class OpportunityRepository {
     }
   }
 
-  async incrementViews(announcementId) {
-    const query = `
-      UPDATE announcements
-      SET views_count = views_count + 1
-      WHERE id = $1
-    `;
-    await realmConnector.execute(query, [announcementId]);
-  }
-
   async recordReaction(announcementId, userId, reactionType, executor = realmConnector) {
     const query = `
       INSERT INTO announcement_reactions (announcement_id, user_id, reaction_type)
@@ -284,6 +283,10 @@ export class OpportunityRepository {
     return result.rows[0];
   }
 
+  async lockAnnouncement(announcementId, executor) {
+    await executor.execute('SELECT id FROM announcements WHERE id = $1 FOR UPDATE', [announcementId]);
+  }
+
   async recalculateReactions(announcementId, executor = realmConnector) {
     const query = `
       UPDATE announcements
@@ -300,24 +303,24 @@ export class OpportunityRepository {
     await executor.execute(query, [announcementId]);
   }
 
-  async saveAnnouncement(announcementId, userId) {
+  async saveAnnouncement(announcementId, userId, executor = realmConnector) {
     const query = `
       INSERT INTO saved_announcements (announcement_id, user_id)
       VALUES ($1, $2)
       ON CONFLICT (announcement_id, user_id) DO NOTHING
       RETURNING *
     `;
-    const result = await realmConnector.execute(query, [announcementId, userId]);
+    const result = await executor.execute(query, [announcementId, userId]);
     return result.rows[0];
   }
 
-  async unsaveAnnouncement(announcementId, userId) {
+  async unsaveAnnouncement(announcementId, userId, executor = realmConnector) {
     const query = `
       DELETE FROM saved_announcements
       WHERE announcement_id = $1 AND user_id = $2
       RETURNING id
     `;
-    const result = await realmConnector.execute(query, [announcementId, userId]);
+    const result = await executor.execute(query, [announcementId, userId]);
     return result.rows[0] || null;
   }
 
@@ -327,14 +330,14 @@ export class OpportunityRepository {
     const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
-      SELECT a.*, sa.created_at as saved_at
+      SELECT a.*, sa.created_at as saved_at, TRUE AS is_saved
       FROM saved_announcements sa
       JOIN announcements a ON sa.announcement_id = a.id
       WHERE sa.user_id = $1
         AND a.is_deleted = false
         AND a.is_published = true
         AND (a.expires_at IS NULL OR a.expires_at > NOW())
-      ORDER BY sa.created_at DESC
+      ORDER BY sa.created_at DESC, a.id
       LIMIT $2 OFFSET $3
     `;
     const result = await realmConnector.execute(query, [userId, limit, offset]);

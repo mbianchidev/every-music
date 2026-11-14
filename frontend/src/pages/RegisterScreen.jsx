@@ -2,6 +2,7 @@ import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import GoogleSignIn from '../components/GoogleSignIn.jsx';
 
 class RegisterScreen extends Component {
   constructor(props) {
@@ -140,6 +141,7 @@ class RegisterScreen extends Component {
               </button>
             </p>
           </form>
+          <GoogleSignIn />
         </div>
       </div>
     );

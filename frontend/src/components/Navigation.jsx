@@ -10,16 +10,15 @@ const Navigation = ({ active }) => {
   return (
     <nav className="nav" aria-label="Primary">
       {items.map((item) => (
-        <button
+        <a
           key={item.id}
           className={`nav-item ${active === item.id ? 'nav-item-active' : ''}`}
-          type="button"
-          aria-current={active === item.id ? 'page' : undefined}
-          onClick={() => { window.location.hash = item.hash; }}
+          href={item.hash}
+          aria-current={window.location.hash.split('?')[0] === item.hash ? 'page' : undefined}
         >
           <span className="nav-icon" aria-hidden="true">{item.icon}</span>
           <span>{item.label}</span>
-        </button>
+        </a>
       ))}
     </nav>
   );

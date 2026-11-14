@@ -82,6 +82,8 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -90,6 +92,11 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: npm ci
+      - name: Install browser test dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx --no-install playwright install --with-deps chromium
       - name: Bootstrap, migrate, and smoke test
         working-directory: backend
         env:
@@ -98,7 +105,10 @@ jobs:
           CIPHER_PRIMARY_KEY: integration-primary-key-that-is-at-least-32-characters
           CIPHER_REFRESH_KEY: integration-refresh-key-that-is-at-least-32-characters
           PORTAL_ORIGINS: http://localhost:3000
+          GOOGLE_IDENTITY_KEY: synthetic.apps.googleusercontent.com
+          MIGRATION_BASE_REF: HEAD^1
         run: |
+          npm run test:migrations
           npm run bootstrap
           npm run migrate
           npm start > /tmp/everymusic-nexus.log 2>&1 &
@@ -113,6 +123,21 @@ jobs:
           done
           curl --fail http://127.0.0.1:8080/health/ready
           npm run smoke
+          npm run test:integration
+      - name: Test production browser journeys and accessibility
+        working-directory: frontend
+        env:
+          REALM_ENV: test
+          REALM_CONNECTION: postgresql://everymusic:integration-password@127.0.0.1:5432/everymusic
+        run: npm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-failure-evidence
+          path: frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   tauri:
     name: Tauri check

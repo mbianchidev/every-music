@@ -11,7 +11,9 @@ independently deployed business microservices.
 Browser -> Vite (development) or nginx (Compose) -> Fastify /realm -> PostgreSQL
 Tauri WebView ---------------------------------> absolute API URL -> PostgreSQL
 Fastify -> SMTP (verification/reset mail)
-Fastify -> Google identity verification (optional API endpoint)
+Fastify -> Google identity verification (optional web sign-in)
+Fastify -> Web Push services (optional, generic notification payloads)
+PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
 Compose names the services `spectrum-web`, `realm-nexus`, and `realm-store`.
@@ -47,7 +49,7 @@ commits.
 `frontend/src/main.jsx` maps hash routes to screens and guards authenticated
 screens. Screens use shared components and `lib/conduit.js` for API requests.
 `lib/nucleus.js` stores the current persona and tokens in `sessionStorage`,
-not a persistent offline cache.
+not permanent local storage. Theme preference alone uses `localStorage`.
 
 The default fetch transport is bound to the browser global receiver. Tests can
 inject a custom transport. Requests time out after 12 seconds and produce typed
@@ -57,9 +59,24 @@ authentication failures clear the session, while network failures preserve it.
 Screens display recoverable errors rather than treating failed requests as
 empty data.
 
-The UI covers email accounts, basic profile editing, feed/publishing/deletion,
-and saved calls. More detailed profile/search/catalog/reaction/project operations
-exist in the API without corresponding screens. See [current limitations](../README.md#current-limitations).
+Resource hooks abort outdated reads and reload invalidated data without
+replacing form drafts. Session changes also invalidate in-flight authenticated
+results and refresh responses, preventing one account's late response from
+overwriting the next account. Route changes move focus to main content;
+background refreshes do not steal focus.
+
+The UI includes discovery/filter/sort/page controls, profile/catalog/project
+editors, full detail and announcement editing/comment/reaction actions,
+messaging, notification preferences, and opt-in reach analytics.
+See [usage](usage.md) for user workflows.
+
+The production web build emits a manifest and versioned service worker. It
+precaches only the app shell and known build assets, never `/realm` or other
+API responses. A separate account-bound `sessionStorage` entry keeps only the
+last exact feed query for 24 hours. Offline feed reads are labelled; private
+APIs fail visibly, mutations are not queued, and failed forms keep their input.
+Signing out clears the cached feed and browser push subscription. Native shells
+skip service-worker registration.
 
 ## Authentication and external services
 
@@ -74,8 +91,56 @@ for retrying a lost response. Later reuse revokes account sessions; password res
 also revokes refresh sessions.
 
 `PORTAL_ORIGINS` controls CORS; its first entry also supplies the base for
-verification and reset links. The optional Google endpoint verifies an ID token,
-but no Google sign-in button is implemented in the client.
+verification and reset links. The optional web Google button uses the official
+Identity Services SDK and a five-minute, single-use, hashed nonce. The API
+verifies Google's signature/audience/expiry/email and signed nonce before
+creating the application session. Google credentials are not persisted.
+Matching email alone never links a password account. Google users may use
+verified password recovery to add password sign-in without losing Google login,
+including for native clients where embedded Google sign-in is disabled.
+
+## Community persistence and delivery
+
+Migration `003_community.sql` is additive and idempotent. It adds media,
+conversations/membership, messages, block lists, comments, preferences,
+notifications, push subscriptions, Google challenges, daily analytics, and
+structured project collaborator data. Trigram indexes support keyword/city
+search and indexed relation lookups; ID tie-breakers stabilize live pages.
+New installs and prior schemas converge through the same migrations.
+
+Messages belong to a canonical pair of users. Every read/write verifies
+membership; either party's block prevents sends. A per-sender client UUID makes
+retries idempotent. Per-member read/archive state is independent, and deleting
+text leaves a visible tombstone. Data is access-controlled, not end-to-end
+encrypted. Hosts must protect the database and backups.
+
+Managed image uploads are decoded by Sharp, constrained by bytes/pixels/frame
+count, stripped of metadata, and encoded as bounded WebP. Bytes live in
+PostgreSQL, with owner/purpose checks when attached to a profile/announcement.
+Private or unattached images require uploader authentication. Published images
+can be cached by browsers; removing a reference does not recall copies already
+downloaded.
+
+Small PostgreSQL notifications are emitted through the transaction executor,
+so clients only see committed changes. Each API process holds one dedicated
+LISTEN connection and fans out public or user-targeted SSE invalidations.
+Events contain identifiers/types, never message text or tokens. Backpressure,
+per-process connection caps, expiration and shutdown close streams cleanly.
+Reconnect reloads authoritative HTTP state; there is no event-history promise.
+
+Notification records and user preferences are persisted with their triggering
+mutations. Workers atomically lease pending push rows using `SKIP LOCKED` and
+retry up to three times. Browser endpoints/keys are validated and restricted
+to supported push providers. Payloads are generic; gone subscriptions are
+deleted. Notifications created while push is off are not replayed on opt-in.
+Hourly maintenance removes expired challenges, unreferenced media after a day,
+notifications after 90 days, and aggregates outside the 30-day reporting window.
+
+Analytics requires both actor and content owner opt-in and excludes self-views.
+Only daily resource/kind counts are retained, not actor identity or message
+content. Message counts are not linked to conversations. Preference row locks
+serialize consent changes with collection; opt-out clears the owner's totals.
+Operational request logs remain separate from analytics.
 
 ## Operational boundaries and extension points
 

@@ -37,7 +37,6 @@ export class Conduit {
 
   async request(path, options = {}) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     const headers = new Headers(options.headers);
 
     if (options.body !== undefined) {
@@ -55,6 +54,11 @@ export class Conduit {
       headers.set('Authorization', `Bearer ${accessToken}`);
     }
 
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const abort = () => controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    if (options.signal?.aborted) controller.abort();
+    let streaming = false;
     try {
       const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
         method: options.method || 'GET',
@@ -62,6 +66,10 @@ export class Conduit {
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         signal: controller.signal,
       });
+      if (options.stream && response.ok) {
+        streaming = true;
+        return response;
+      }
       const text = await response.text();
       let payload = null;
 
@@ -91,6 +99,8 @@ export class Conduit {
         throw error;
       }
 
+      if (options.signal?.aborted) throw error;
+
       if (error.name === 'AbortError') {
         throw new ApiError('The request timed out. Check your connection and try again.', {
           code: 'REQUEST_TIMEOUT',
@@ -104,6 +114,7 @@ export class Conduit {
       });
     } finally {
       clearTimeout(timeout);
+      if (!streaming) options.signal?.removeEventListener('abort', abort);
     }
   }
 
@@ -125,6 +136,9 @@ export class Conduit {
       body: { refreshToken },
     })
       .then((keys) => {
+        if (this.session.payload.keys?.refreshToken !== refreshToken) {
+          throw new ApiError('Your sign-in changed while this request was running. Try again.', { code: 'SESSION_CHANGED', status: 409 });
+        }
         this.session.updateTokens(keys);
         return keys;
       })
@@ -141,26 +155,40 @@ export class Conduit {
   }
 
   async transmit(path, options = {}) {
+    const userId = this.session.payload.persona?.userId;
+    const accessToken = this.session.payload.keys?.accessToken;
+    const ensureSession = () => {
+      if (options.auth && this.session.payload.persona?.userId !== userId) {
+        throw new ApiError('Your sign-in changed while this request was running. Try again.', { code: 'SESSION_CHANGED', status: 409 });
+      }
+    };
     try {
-      return await this.request(path, options);
+      const result = await this.request(path, options);
+      ensureSession();
+      return result;
     } catch (error) {
+      ensureSession();
       if (!options.auth || error.status !== 401 || options.retry === false) {
         throw error;
       }
 
       try {
-        await this.refreshSession();
+        if (this.session.payload.keys?.accessToken === accessToken) await this.refreshSession();
       } catch (refreshError) {
+        ensureSession();
         if (refreshError.status === 401) {
           this.expireSession();
         }
         throw refreshError;
       }
 
-      return this.request(path, {
+      ensureSession();
+      const result = await this.request(path, {
         ...options,
         retry: false,
       });
+      ensureSession();
+      return result;
     }
   }
 }

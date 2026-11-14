@@ -23,7 +23,7 @@ tests. Keep actual `.env` files untracked.
 
 From the repository root, copy `backend/.env.example` to `backend/.env`.
 Create an empty PostgreSQL database and set `REALM_CONNECTION` to its URL.
-The role must be able to create tables and the `uuid-ossp` extension.
+The role must be able to create tables and the `uuid-ossp` and `pg_trgm` extensions.
 Generate a different value for each signing key:
 
 ```bash
@@ -97,6 +97,53 @@ expired-session behavior, and offline recovery. Use synthetic accounts and
 follow the [manual accessibility checklist](../ACCESSIBILITY.md).
 Mocked API screenshots must be labelled; they do not prove the live stack works.
 
+### Community API, migration, and browser tests
+
+Use a dedicated PostgreSQL instance/database containing **only synthetic
+fixtures**. Do not point these commands at a shared deployment. Export
+`REALM_ENV=test`, `REALM_CONNECTION`, and two distinct test signing keys before
+running them. Bootstrap/migrate the empty test database using the commands
+above. Dependencies must be installed in both packages.
+
+```bash
+(cd backend && GOOGLE_IDENTITY_KEY=synthetic.apps.googleusercontent.com npm run test:integration)
+(cd backend && MIGRATION_BASE_REF=origin/master npm run test:migrations)
+(cd frontend && npx --no-install playwright install chromium)
+(cd frontend && npm run test:e2e)
+```
+
+`test:integration` exercises real Fastify authentication, PostgreSQL
+transactions, relation edits, case-normalized identifiers, visibility,
+concurrent reactions, media decoding/ownership, conversation retries/blocking,
+notification preferences, analytics consent, live HTTP streams, and push job
+retry/cleanup. Google credential verification and outbound push transport are
+narrow synthetic provider stubs; no real account, SMTP delivery, or push
+provider is contacted.
+
+`test:migrations` needs a role with `CREATEDB` on that isolated instance and a
+local Git ref for the previous schema. It creates two uniquely named temporary
+databases, runs the actual migration runner against fresh/prior schemas,
+replays migration 003, compares columns/indexes/constraints, checks legacy
+rows and consent defaults, then drops only the databases it created.
+CI fetches both merge parents and uses `HEAD^1` as the base.
+
+`test:e2e` starts its own API on 55474 and a production Vite preview on 4179;
+those ports must be free. It seeds/cleans synthetic accounts, uses the actual
+API/database, and checks two-user messaging, publishing/editing images,
+projects, filters/pages, bookmarks/comments/reactions, notifications, analytics,
+offline shell/feed, failed-edit recovery, account-bound cache cleanup,
+system/light/dark preferences, keyboard focus, 320px reflow, and axe checks.
+Do not treat its browser checks as a native screen-reader certification.
+On Linux, use `playwright install --with-deps chromium` when system browser
+libraries are missing. Failure traces/screenshots are in ignored
+`frontend/test-results/`. Browser tests use an elevated global request budget
+to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+
+Live Google consent/sign-in and browser push subscription/delivery still require
+configured provider credentials, HTTPS/browser permission, and target-platform
+checks. They cannot be established by synthetic provider stubs. The PWA is
+emitted by production builds, not the development server.
+
 ### Dependency install policy
 
 The backend overrides the deprecated transitive `node-domexception` package with
@@ -130,6 +177,11 @@ PR updates. The analysis matrix stops remaining languages if one fails, leaving
 the workflow failed rather than reporting partial analysis as success. The
 desktop packaging matrix still collects results for every platform on failure.
 
+The PostgreSQL job additionally verifies fresh/upgrade migration convergence,
+community API contracts, and the production browser journeys. It installs
+Chromium and uploads failure evidence. These checks do not publish installers,
+federated records, or provider notifications.
+
 ## Integration smoke test
 
 With the local API running against the same isolated database:
@@ -162,6 +214,14 @@ See [architecture](architecture.md) for where each request/state transition live
 4. Add integration coverage when behavior spans SQL and HTTP.
 
 Migration `001_hash_auth_tokens.sql` invalidates existing refresh sessions and outstanding email/reset links because legacy plaintext token records cannot be safely converted.
+
+Migration `003_community.sql` adds the community tables and project collaborator
+column, plus `pg_trgm` and search indexes. Index creation runs inside the existing
+transactional migration model, not `CONCURRENTLY`; plan an appropriate migration
+window for large installations. It is additive, preserves existing records and
+sessions, and defaults analytics/push off. Application rollback can leave these
+extra tables/columns in place; do not drop messages or media as an automatic
+rollback. Use a reviewed forward fix or deliberately restore a verified backup.
 
 ## Coding conventions
 

@@ -167,3 +167,11 @@ Before distributing a package:
 3. Test sign-in, refresh, sign-out, verification, password reset, and API-offline recovery.
 4. Confirm the production API URL is embedded.
 5. Confirm CSP and backend CORS permit only intended origins.
+
+Native clients skip the PWA service worker and Web Push registration. They use
+the same authenticated live events for in-app messages/notifications and need
+a reachable API. Google web sign-in is deliberately disabled in embedded
+WebViews; a Google account can add password sign-in through verified password
+recovery and then use that password in the native client. Check both themes,
+keyboard/assistive technology, image previews (the CSP permits `blob:`), and
+conversation focus on each actual platform before distribution.

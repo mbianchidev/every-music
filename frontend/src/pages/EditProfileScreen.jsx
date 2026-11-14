@@ -6,6 +6,10 @@ import Spinner from '../components/Spinner.jsx';
 import FormField from '../components/FormField.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import CatalogSelections from '../components/CatalogSelections.jsx';
+import ImageInput from '../components/ImageInput.jsx';
+import ProjectManager from '../components/ProjectManager.jsx';
+import { uploadImage } from '../lib/media.js';
 
 class EditProfileScreen extends Component {
   constructor(props) {
@@ -16,6 +20,14 @@ class EditProfileScreen extends Component {
       lastName: '',
       city: '',
       bio: '',
+      profilePictureUrl: null,
+      imageFile: null,
+      instruments: [],
+      genres: [],
+      instrumentIds: [],
+      genreIds: [],
+      experience: {},
+      loaded: false,
       loading: true,
       saving: false,
       error: '',
@@ -29,13 +41,24 @@ class EditProfileScreen extends Component {
   loadProfile = async () => {
     this.setState({ loading: true, error: '' });
     try {
-      const data = await conduit.transmit('/profiles/me', { auth: true });
+      const [data, instrumentCatalog, genreCatalog] = await Promise.all([
+        conduit.transmit('/profiles/me', { auth: true }),
+        conduit.transmit('/catalog/instruments'),
+        conduit.transmit('/catalog/genres'),
+      ]);
       this.setState({
         artistName: data.artistName || '',
         firstName: data.firstName || '',
         lastName: data.lastName || '',
         city: data.city || '',
         bio: data.bio || '',
+        profilePictureUrl: data.profilePictureUrl,
+        instruments: instrumentCatalog.instruments,
+        genres: genreCatalog.genres,
+        instrumentIds: data.instruments.map(item => item.instrument_id),
+        genreIds: data.genres.map(item => item.genre_id),
+        experience: Object.fromEntries(data.instruments.map(item => [item.instrument_id, { skillLevel: item.skill_level, yearsExperience: item.years_experience }])),
+        loaded: true,
         loading: false,
       });
     } catch (error) {
@@ -45,7 +68,7 @@ class EditProfileScreen extends Component {
 
   handleSave = async (event) => {
     event.preventDefault();
-    const { artistName, firstName, lastName, city, bio } = this.state;
+    const { artistName, firstName, lastName, city, bio, instrumentIds, genreIds, experience, imageFile } = this.state;
 
     if (!artistName.trim()) {
       this.setState({ error: 'Artist name is required.' });
@@ -55,6 +78,11 @@ class EditProfileScreen extends Component {
     this.setState({ saving: true, error: '' });
 
     try {
+      let profilePictureUrl = this.state.profilePictureUrl;
+      if (imageFile) {
+        profilePictureUrl = (await uploadImage(imageFile, 'profile')).url;
+        this.setState({ profilePictureUrl, imageFile: null });
+      }
       const updated = await conduit.transmit('/profiles/me', {
         method: 'PUT',
         auth: true,
@@ -64,6 +92,9 @@ class EditProfileScreen extends Component {
           lastName: lastName.trim(),
           city: city.trim(),
           bio: bio.trim(),
+          profilePictureUrl,
+          instruments: instrumentIds.map(instrumentId => ({ instrumentId, skillLevel: experience[instrumentId]?.skillLevel || 'beginner', yearsExperience: experience[instrumentId]?.yearsExperience ?? 0 })),
+          genreIds,
         },
       });
       nucleus.mutate(updated);
@@ -85,7 +116,7 @@ class EditProfileScreen extends Component {
       );
     }
 
-    if (error && !artistName && !firstName && !lastName && !city && !bio) {
+    if (error && !this.state.loaded) {
       return (
         <div className="container">
           <PageHeader eyebrow="Your identity" title="EDIT PROFILE" />
@@ -101,6 +132,8 @@ class EditProfileScreen extends Component {
         {error && <div className="error" role="alert">{error}</div>}
 
         <form className="form-stack" onSubmit={this.handleSave}>
+          <ImageInput id="profile-image" label="Profile image" value={this.state.profilePictureUrl} disabled={saving}
+            onChange={profilePictureUrl => this.setState({ profilePictureUrl })} onFile={imageFile => this.setState({ imageFile })} />
           <FormField id="profile-artist-name" label="Artist name" required>
             <input className="input" value={artistName} onChange={(event) => this.setState({ artistName: event.target.value })} maxLength="255" disabled={saving} />
           </FormField>
@@ -116,6 +149,12 @@ class EditProfileScreen extends Component {
           <FormField id="profile-bio" label="Bio">
             <textarea className="input" style={{ minHeight: '140px', resize: 'vertical' }} value={bio} onChange={(event) => this.setState({ bio: event.target.value })} maxLength="5000" disabled={saving} />
           </FormField>
+          <CatalogSelections instruments={this.state.instruments} genres={this.state.genres}
+            instrumentIds={this.state.instrumentIds} genreIds={this.state.genreIds}
+            onInstruments={instrumentIds => this.setState({ instrumentIds })} onGenres={genreIds => this.setState({ genreIds })}
+            experience={this.state.experience} disabled={saving} onExperience={(id, key, value) => this.setState(state => ({
+              experience: { ...state.experience, [id]: { ...state.experience[id], [key]: value } },
+            }))} />
 
           <div className="button-row">
             <button className="btn btn-primary" type="submit" disabled={saving}>
@@ -126,6 +165,7 @@ class EditProfileScreen extends Component {
             </button>
           </div>
         </form>
+        <ProjectManager />
 
         <Navigation active="profile" />
       </div>

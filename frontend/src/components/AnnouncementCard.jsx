@@ -1,10 +1,14 @@
-const AnnouncementCard = ({ post, actions }) => {
+import { mediaUrl } from '../lib/media.js';
+
+const AnnouncementCard = ({ post, actions, expanded = false }) => {
   const city = post.location?.city;
 
   return (
     <article className="card announcement-card">
-      <h2 className="heading-md">{post.title}</h2>
-      <p className="announcement-description">{post.description}</p>
+      {post.pictureUrl && <img className="content-image" src={mediaUrl(post.pictureUrl)} alt={`Announcement image: ${post.title}`} width="480" height="300" loading="lazy" />}
+      <h2 className="heading-md"><a href={`#announcement?id=${post.id}`}>{post.title}</a></h2>
+      {post.isPublished === false && <p className="eyebrow">Draft, visible only to you</p>}
+      <p className={expanded ? 'detail-text' : 'announcement-description'}>{post.description}</p>
 
       {post.instruments?.length > 0 && (
         <div className="tag-list" aria-label="Instruments">

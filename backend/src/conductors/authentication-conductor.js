@@ -5,6 +5,9 @@ import { cipherEngine } from '../engines/cipher-engine.js';
 import { mailDispatcher } from '../engines/mail-dispatcher.js';
 import { googleIdentityBridge } from '../engines/google-identity-bridge.js';
 import { InputValidator } from '../validators/input-validator.js';
+import { randomBytes, createHash } from 'node:crypto';
+import { realmConfig } from '../../config/realm.js';
+import { requestError } from '../engines/request-error.js';
 
 function sendValidationError(reply, details) {
   return reply.code(400).send({
@@ -163,7 +166,7 @@ export class AuthenticationConductor {
 
     try {
       const identity = await identityRepository.findByEmail(email);
-      const passwordMatches = identity?.auth_provider === 'email'
+      const passwordMatches = Boolean(identity?.password_hash)
         && await cipherEngine.validatePassword(password, identity.password_hash);
 
       if (!passwordMatches) {
@@ -216,14 +219,24 @@ export class AuthenticationConductor {
 
   async loginWithGoogle(request, reply) {
     const idToken = request.body?.idToken;
+    const challengeId = request.body?.challengeId;
 
-    if (!idToken) {
-      return sendValidationError(reply, ['Google ID token is required']);
+    if (typeof idToken !== 'string' || !idToken || idToken.length > 10000
+      || !challengeId || !InputValidator.validateUuid(challengeId, 'Challenge').valid) {
+      return sendValidationError(reply, ['Google ID token and a valid one-time challenge are required']);
     }
 
     try {
       const googleUser = await googleIdentityBridge.verifyCredential(idToken);
-      if (!googleUser.emailVerified) {
+      if (typeof googleUser.nonce !== 'string' || !googleUser.nonce || !googleUser.googleId
+        || !InputValidator.validateEmail(googleUser.email).valid) {
+        throw requestError(401, 'INVALID_GOOGLE_CHALLENGE', 'Restart Google sign-in and try again');
+      }
+      const consumed = await realmConnector.execute(`
+        DELETE FROM google_challenges WHERE id = $1 AND nonce_hash = $2 AND expires_at > NOW() RETURNING id`,
+      [challengeId, createHash('sha256').update(googleUser.nonce).digest('hex')]);
+      if (!consumed.rowCount) throw requestError(401, 'INVALID_GOOGLE_CHALLENGE', 'Google sign-in expired or was already used. Try again.');
+      if (googleUser.emailVerified !== true) {
         return reply.code(403).send({
           success: false,
           error: {
@@ -234,6 +247,7 @@ export class AuthenticationConductor {
       }
 
       let identity = await identityRepository.findByGoogleId(googleUser.googleId);
+      let isNewUser = false;
 
       if (!identity) {
         const emailIdentity = await identityRepository.findByEmail(googleUser.email);
@@ -260,6 +274,7 @@ export class AuthenticationConductor {
           }, executor);
           return createdIdentity;
         });
+        isNewUser = true;
       }
 
       if (identity.is_active === false) {
@@ -277,8 +292,9 @@ export class AuthenticationConductor {
         return this.issueSession(identity, executor);
       });
 
-      return reply.code(200).send({ success: true, data: session });
+      return reply.code(200).send({ success: true, data: { ...session, isNewUser } });
     } catch (error) {
+      if (error.statusCode) throw error;
       request.log.error({ err: error }, 'Google login failed');
       return reply.code(502).send({
         success: false,
@@ -288,6 +304,18 @@ export class AuthenticationConductor {
         },
       });
     }
+  }
+
+  async googleChallenge(request, reply) {
+    if (!realmConfig.googleGateway.identityKey) {
+      throw requestError(503, 'GOOGLE_NOT_CONFIGURED', 'Google sign-in is not configured on this server');
+    }
+    const nonce = randomBytes(32).toString('base64url');
+    const { rows } = await realmConnector.execute(
+      'INSERT INTO google_challenges (nonce_hash) VALUES ($1) RETURNING id',
+      [createHash('sha256').update(nonce).digest('hex')],
+    );
+    return reply.code(201).send({ success: true, data: { id: rows[0].id, nonce } });
   }
 
   async verifyEmail(request, reply) {

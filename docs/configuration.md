@@ -42,7 +42,7 @@ startup. Mail settings are mandatory in production.
 | `REALM_USER` | Required for discrete configuration | Database user |
 | `REALM_PASSWORD` | Required for discrete configuration | Database password |
 | `REALM_POOL_MIN` | `2` (0-100) | Minimum pool setting, not greater than maximum |
-| `REALM_POOL_MAX` | `10` (1-100) | Maximum database connections per API process |
+| `REALM_POOL_MAX` | `10` (1-100) | Maximum pooled connections per API process; live updates use one additional dedicated connection |
 | `CIPHER_PRIMARY_KEY` | Required, at least 32 characters | Access-token signing key |
 | `CIPHER_REFRESH_KEY` | Required, at least 32 characters and different from primary | Refresh-token signing key |
 | `TOKEN_ISSUER` | `every.music` | Expected token issuer |
@@ -51,7 +51,10 @@ startup. Mail settings are mandatory in production.
 | `REFRESH_LIFESPAN_DAYS` | `30` (1-90) | Refresh-session lifetime |
 | `REFRESH_ROTATION_GRACE_SECONDS` | `30` (5-120) | Retry window for a lost rotation response |
 | `GOOGLE_IDENTITY_KEY` | Unset | Optional Google OAuth client ID |
-| `GOOGLE_IDENTITY_LOCK` | Unset | Optional Google client secret; both Google settings are needed |
+| `GOOGLE_IDENTITY_LOCK` | Unset | Legacy setting, no longer required or used by the Google ID-token flow |
+| `VAPID_PUBLIC_KEY` | Unset | Optional Web Push public key, exposed to the signed-in client |
+| `VAPID_PRIVATE_KEY` | Unset | Matching Web Push private key, server-only |
+| `VAPID_SUBJECT` | Unset | HTTPS or `mailto:` operator contact; required with the VAPID keys |
 | `MAIL_GATEWAY` | Required in production | Authenticated SMTP hostname |
 | `MAIL_PORT` | `587` (1-65535) | SMTP port; transport uses STARTTLS, not implicit TLS on 465 |
 | `MAIL_IDENTITY` | Required in production | SMTP username |
@@ -60,7 +63,7 @@ startup. Mail settings are mandatory in production.
 | `PORTAL_ORIGINS` | `http://localhost:3000` | Comma-separated exact CORS origins; first is used for email links |
 | `RATE_WINDOW_MS` | `900000` (at least 1000) | Rate-limit window in milliseconds |
 | `RATE_THRESHOLD` | `150` (at least 1) | Requests allowed per client/window |
-| `UPLOAD_BYTE_LIMIT` | `5242880` (at least 1024) | Maximum request body size, not a media-upload feature |
+| `UPLOAD_BYTE_LIMIT` | `5242880` (at least 1024) | Maximum JSON body size, including base64 image uploads; images themselves are capped at 2 MiB |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -75,6 +78,63 @@ Key rotation invalidates tokens signed with the old key. Do not change signing
 keys as a troubleshooting shortcut without planning session invalidation.
 Email verification/reset links use the first origin; a working CORS allowlist
 alone does not ensure links point to the correct web client.
+
+### Google web sign-in
+
+Create a **Web application** OAuth client in Google Cloud, configure its consent
+screen/test users, and register the exact web app origins (for example
+`http://localhost:3000` for development and your production HTTPS origin).
+Set `GOOGLE_IDENTITY_KEY` to its client ID and restart the API. No `VITE_*`
+setting, redirect callback, or client secret is needed for this GIS ID-token
+flow. The client discovers the public ID from `/realm/auth/google/config`.
+
+The official Google button appears on sign-in and registration when configured.
+Each attempt has a five-minute, single-use nonce, verified against Google's
+signed credential on the server. Existing email accounts are not automatically
+linked by matching email. Google credentials are not persisted by the client.
+Google does not permit this flow in embedded native WebViews. A Google user
+can add password sign-in through verified password recovery on that account's
+email, without losing Google login, and use the password in native clients.
+
+The supplied nginx policy permits only the Google GIS script, frame, style,
+and connection paths in addition to the application's existing sources.
+Keep equivalent CSP rules if replacing nginx.
+
+### Browser push and live updates
+
+Generate a VAPID pair once, from `backend/`:
+
+```bash
+node --input-type=module -e "import { generateVAPIDKeys } from 'web-push'; console.log(generateVAPIDKeys())"
+```
+
+Keep the private key in runtime secrets. Set both keys and `VAPID_SUBJECT`
+together; startup rejects partial or mismatched configuration. The public key
+is not a secret. Preserve the pair across deployments. After rotation, users
+should enable push again in Settings.
+
+Push needs a production web build, HTTPS (or localhost during development),
+service-worker/Push API support, and explicit browser permission. iOS requires
+a supported Home Screen installation. Native WebViews do not use web push.
+The user can enable up to five browsers or disable all devices in Settings.
+Only Chrome/FCM, Mozilla, Apple, and Windows browser push endpoints are accepted;
+arbitrary webhook URLs and non-HTTPS services are rejected.
+
+Push payloads contain a generic event title and a protected app link, never
+message text. Delivery is best-effort, with up to three attempts; expired
+subscriptions are removed. Check API logs for delivery errors. Google and push
+provider behavior needs live credentials/platform permission testing.
+
+Live changes use authenticated `fetch` event streams, not access tokens in
+URLs. PostgreSQL LISTEN/NOTIFY fans out small invalidation events across API
+processes, with one listener per process. Each process allows at most three
+streams per user and 1,000 total. Heartbeats run every 15 seconds; streams end at access
+token expiration and reconnect through normal session refresh. A reconnect
+reloads current state, so notification loss does not lose stored messages.
+The client also reconnects if no stream bytes arrive for 45 seconds.
+Disable proxy buffering/compression for event streams and allow idle timeouts
+longer than 15 seconds. The supplied nginx config already disables buffering.
+Review `RATE_THRESHOLD` for shared proxies and busy deployments.
 
 ## Compose settings
 
@@ -91,7 +151,7 @@ API, and web host bindings are local by default.
 | `API_BIND_ADDRESS` / `API_PORT` | `127.0.0.1` / `8080` |
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
 
-Compose also forwards signing, token issuer/audience/lifetime/grace, Google,
+Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
 SMTP, pool, rate-limit, and body-size settings listed above. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
