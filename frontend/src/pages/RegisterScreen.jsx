@@ -1,6 +1,8 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import { t } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
+import LanguageSelect from '../components/LanguageSelect.jsx';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import GoogleSignIn from '../components/GoogleSignIn.jsx';
@@ -32,7 +34,7 @@ class RegisterScreen extends Component {
       this.setState({ termsVersion: legal.termsVersion });
     } catch (error) {
       console.error('The current Terms of Use could not be loaded', error);
-      this.setState({ termsError: error.message });
+      this.setState({ termsError: errorText(error) });
     }
   };
 
@@ -44,12 +46,12 @@ class RegisterScreen extends Component {
   validate() {
     const { email, password, confirmPassword } = this.state;
 
-    if (!email.includes('@')) return 'Enter a valid email address.';
-    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!email.includes('@')) return t('auth.register.invalidEmail');
+    if (password.length < 8) return t('auth.register.passwordLength');
     if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-      return 'Password needs uppercase, lowercase, and a number.';
+      return t('auth.register.passwordMix');
     }
-    if (password !== confirmPassword) return 'Passwords do not match.';
+    if (password !== confirmPassword) return t('auth.register.mismatch');
     if (!this.state.acceptTerms) return t('legal.register.required');
     return '';
   }
@@ -76,11 +78,11 @@ class RegisterScreen extends Component {
         },
       });
       this.setState({
-        successMessage: response.message,
+        successMessage: response.verificationEmailSent === false ? t('auth.register.createdNoEmail') : t('auth.register.created'),
         loading: false,
       });
     } catch (error) {
-      this.setState({ error: error.message, loading: false });
+      this.setState({ error: errorText(error), loading: false });
       if (error.code === 'TERMS_VERSION_CHANGED') this.setState({ acceptTerms: false }, this.loadTerms);
     }
   };
@@ -89,11 +91,11 @@ class RegisterScreen extends Component {
     return (
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
-          <p className="eyebrow">Account created</p>
-          <h1 className="heading-lg">Check your email</h1>
+          <p className="eyebrow">{t('auth.register.successEyebrow')}</p>
+          <h1 className="heading-lg">{t('auth.register.successTitle')}</h1>
           <div className="success" role="status">{this.state.successMessage}</div>
           <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-            Go to sign in
+            {t('auth.goToSignIn')}
           </button>
         </div>
       </div>
@@ -113,17 +115,18 @@ class RegisterScreen extends Component {
     return (
       <div className="container-narrow center-content">
         <div style={{ width: '100%' }}>
+          <LanguageSelect compact />
           <PageHeader
-            eyebrow="New member"
-            title="Find your people"
-            subtitle="Create your account, verify your email, then build your profile."
+            eyebrow={t('auth.register.eyebrow')}
+            title={t('auth.register.title')}
+            subtitle={t('auth.register.subtitle')}
           />
 
           {this.inviteCode() && <p className="status-message">{t('monetization.register.invited')}</p>}
           {error && <div className="error" role="alert">{error}</div>}
 
           <form className="form-stack" onSubmit={this.handleRegister}>
-            <FormField id="register-email" label="Email" required>
+            <FormField id="register-email" label={t('auth.fields.email')} required>
               <input
                 type="email"
                 className="input"
@@ -137,8 +140,8 @@ class RegisterScreen extends Component {
 
             <FormField
               id="register-password"
-              label="Password"
-              hint="At least 8 characters with uppercase, lowercase, and a number."
+              label={t('auth.fields.password')}
+              hint={t('auth.register.passwordHint')}
               required
             >
               <input
@@ -151,7 +154,7 @@ class RegisterScreen extends Component {
               />
             </FormField>
 
-            <FormField id="register-confirm-password" label="Confirm password" required>
+            <FormField id="register-confirm-password" label={t('auth.fields.confirmPassword')} required>
               <input
                 type="password"
                 className="input"
@@ -179,13 +182,13 @@ class RegisterScreen extends Component {
             </div>
 
             <button className="btn btn-primary" type="submit" disabled={loading || !termsVersion}>
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? t('auth.register.submitting') : t('auth.register.submit')}
             </button>
 
             <p>
-              Already a member?{' '}
+              {t('auth.register.member')}{' '}
               <button className="text-link" type="button" onClick={() => { window.location.hash = '#login'; }}>
-                Sign in
+                {t('auth.login.submit')}
               </button>
             </p>
           </form>

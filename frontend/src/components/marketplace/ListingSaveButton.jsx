@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import Icon from '../Icon.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 export default function ListingSaveButton({ listing, mode = 'toggle', onChanged = () => {}, disabled = false }) {
   const { t } = useI18n();
@@ -18,7 +19,7 @@ export default function ListingSaveButton({ listing, mode = 'toggle', onChanged 
       setSaved(!removing);
       setMessage(t(removing ? 'marketplace.actions.unsavedMessage' : 'marketplace.actions.savedMessage'));
       onChanged(!removing);
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const label = mode === 'remove' ? t('marketplace.actions.unsaveLabel', { title: listing.title })

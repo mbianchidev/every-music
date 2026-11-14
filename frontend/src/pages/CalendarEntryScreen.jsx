@@ -13,6 +13,7 @@ import Spinner from '../components/Spinner.jsx';
 import Avatar from '../components/Avatar.jsx';
 import EntityPicker from '../components/EntityPicker.jsx';
 import CalendarEntryForm from '../components/CalendarEntryForm.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function Participants({ entry, own, busy, onRemove }) {
   const { t } = useI18n();
@@ -62,7 +63,7 @@ export default function CalendarEntryScreen({ route }) {
       resource.reload();
       if (focus) document.getElementById(focus)?.focus();
       return result;
-    } catch (failure) { setError(failure.message); return null; }
+    } catch (failure) { setError(errorText(failure)); return null; }
     finally { setBusy(false); }
   };
   const path = `/calendar/entries/${entry?.id}`;
@@ -90,7 +91,7 @@ export default function CalendarEntryScreen({ route }) {
     try {
       await conduit.transmit(path, { method: 'DELETE', auth: true });
       window.location.hash = entry.organization ? `#organization?id=${entry.organization.id}` : '#calendar';
-    } catch (failure) { setError(failure.message); setBusy(false); }
+    } catch (failure) { setError(errorText(failure)); setBusy(false); }
   };
   const removeInvitee = async person => {
     const self = person.userId === own;
@@ -101,13 +102,13 @@ export default function CalendarEntryScreen({ route }) {
       if (self) { window.location.hash = '#calendar'; return; }
       setMessage(t('calendar.entry.inviteeRemoved')); resource.reload();
       document.getElementById('entry-people-heading')?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const download = async () => {
     setError('');
     try { await downloadEntryIcs(entry); }
-    catch (failure) { setError(`${t('calendar.entry.downloadFailed')} ${failure.message}`); }
+    catch (failure) { setError(`${t('calendar.entry.downloadFailed')} ${errorText(failure)}`); }
   };
   const links = entry ? mapLinks(entry) : null;
   const viewerZone = localTimeZone();

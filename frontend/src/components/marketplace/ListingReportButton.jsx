@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import FormField from '../FormField.jsx';
 import ModalDialog from '../ModalDialog.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 export default function ListingReportButton({ listing }) {
   const { t } = useI18n();
@@ -19,7 +20,7 @@ export default function ListingReportButton({ listing }) {
       await conduit.transmit(`/marketplace/listings/${listing.id}/reports`, { method: 'POST', auth: true, body: { category, details, consent } });
       setOpen(false); setDetails(''); setConsent(false);
       setSuccess(t('marketplace.report.success'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

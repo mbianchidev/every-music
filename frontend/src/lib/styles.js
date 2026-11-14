@@ -812,6 +812,14 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
 .band-chat-unread-list li.has-unread { border-color: var(--brand-ink); background: var(--brand-soft); }
 .band-chat-unread-list a { font-weight: 600; }
 .band-chat-count { color: var(--brand-ink); font-weight: 700; }
+/* i18n-ui */
+.language-select { display: grid; gap: 6px; max-width: 320px; }
+.language-select.is-compact { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; max-width: none; margin-bottom: 12px; }
+.language-select.is-compact .input { width: auto; min-width: 9rem; }
+.language-select.is-compact .field-error { flex-basis: 100%; text-align: end; }
+@media (max-width: 360px) {
+  .theme-control select { max-width: 90px; }
+}
 `;
 
 export default styles;

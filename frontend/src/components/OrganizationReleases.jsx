@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { RELEASE_TYPES, can } from '../lib/organizations.js';
 import FormField from './FormField.jsx';
 import LinkListEditor from './LinkListEditor.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const blank = { title: '', releaseType: 'single', releaseDate: '', links: [] };
 
@@ -20,7 +21,7 @@ export default function OrganizationReleases({ organization, onChanged }) {
   const run = async (operation, success) => {
     setBusy(true); setError(''); setMessage('');
     try { await operation(); setMessage(success); onChanged(); return true; }
-    catch (failure) { setError(failure.message); return false; }
+    catch (failure) { setError(errorText(failure)); return false; }
     finally { setBusy(false); }
   };
   const save = async event => {

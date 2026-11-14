@@ -4,6 +4,7 @@ import { useResource } from '../../lib/resources.js';
 import { useI18n } from '../../lib/i18n.js';
 import Spinner from '../Spinner.jsx';
 import ErrorState from '../ErrorState.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Premium perk: paid plans may hide first-party sponsored cards.
 export default function SponsoredSettings() {
@@ -24,7 +25,7 @@ export default function SponsoredSettings() {
       resource.reload();
     } catch (failure) {
       setPending(null);
-      setError(failure.message);
+      setError(errorText(failure));
     } finally { setBusy(false); }
   };
   return (

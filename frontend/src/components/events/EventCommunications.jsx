@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import { COMMUNICATION_KINDS } from '../../lib/events.js';
 import FormField from '../FormField.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Official updates from the organizers, shown near the top of the event page.
 export default function EventCommunications({ event }) {
@@ -41,7 +42,7 @@ export function EventCommunicationForm({ event, onChanged }) {
       await conduit.transmit(`/gigs/${event.id}/communications`, { method: 'POST', auth: true, body: { kind, body } });
       setBody(''); setMessage(t('events.communications.sent'));
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

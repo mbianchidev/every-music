@@ -8,6 +8,7 @@ import Spinner from './Spinner.jsx';
 import ErrorState from './ErrorState.jsx';
 import TwoFactorSettings from './TwoFactorSettings.jsx';
 import ReauthenticationFields, { emptyReauthentication, reauthenticationBody, reauthenticationReady } from './ReauthenticationFields.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function useAction() {
   const [busy, setBusy] = useState(false);
@@ -15,7 +16,7 @@ function useAction() {
   const [message, setMessage] = useState('');
   const run = async (operation) => {
     setBusy(true); setError(''); setMessage('');
-    try { setMessage(await operation() || ''); } catch (failure) { setError(failure.message); } finally { setBusy(false); }
+    try { setMessage(await operation() || ''); } catch (failure) { setError(errorText(failure)); } finally { setBusy(false); }
   };
   const feedback = <>
     {error && <p className="error" role="alert">{error}</p>}

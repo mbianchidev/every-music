@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 // Blocks a musician from their profile. Blocking also removes follows in
 // both directions; conversations keep their own block rules.
@@ -16,7 +17,7 @@ export default function BlockButton({ userId, name, blocked, onChanged = () => {
       await conduit.transmit(`/profiles/${userId}/block`, { method: blocked ? 'DELETE' : 'POST', auth: true });
       setMessage(t(blocked ? 'profileExtras.block.unblocked' : 'profileExtras.block.blocked', { name }));
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

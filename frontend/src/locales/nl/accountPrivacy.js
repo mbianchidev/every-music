@@ -7,6 +7,7 @@ export default {
   findHeading: 'Vind mensen die je kent',
   findIntro: 'Kies contacten of plak e-mailadressen. Je browser zet elk adres om in een eenrichtingscode (een SHA-256-hash) voordat er iets wordt verstuurd. Alleen die codes worden vergeleken met mensen die gevonden willen worden, en niets van je zoekopdracht wordt bewaard. Telefoonnummers worden nooit gebruikt of verzameld.',
   pick: 'Kies uit contacten',
+  hashUnavailable: 'Deze browser kan contacten niet veilig hashen. Werk hem bij en probeer het opnieuw.',
   picked: { one: '{count} adres toegevoegd uit je contacten.', other: '{count} adressen toegevoegd uit je contacten.' },
   pasteLabel: 'E-mailadressen',
   pasteHint: 'Scheid adressen met komma\'s, spaties of nieuwe regels. Maximaal 500 tegelijk.',

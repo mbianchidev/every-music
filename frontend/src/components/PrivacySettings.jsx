@@ -7,6 +7,7 @@ import Spinner from './Spinner.jsx';
 import ErrorState from './ErrorState.jsx';
 import FormField from './FormField.jsx';
 import MusicianCard from './MusicianCard.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function FindPeople() {
   const { t } = useI18n();
@@ -22,7 +23,7 @@ function FindPeople() {
       const picked = await pickContactEmails();
       setText(previous => [...new Set([...extractEmails(previous), ...picked])].join('\n'));
       setStatus(t('accountPrivacy.picked', { count: picked.length }));
-    } catch (failure) { if (failure.name !== 'AbortError') setError(failure.message); }
+    } catch (failure) { if (failure.name !== 'AbortError') setError(errorText(failure)); }
   };
   const search = async event => {
     event.preventDefault();
@@ -34,7 +35,7 @@ function FindPeople() {
       const result = await conduit.transmit('/contacts/match', { method: 'POST', auth: true, body: { hashes } });
       setResults(result.musicians);
       setStatus(result.musicians.length ? t('accountPrivacy.results', { count: result.musicians.length }) : t('accountPrivacy.noResults'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (
@@ -75,7 +76,7 @@ export default function PrivacySettings() {
     try {
       const saved = await conduit.transmit('/account/privacy', { method: 'PUT', auth: true, body: { discoverableByEmail: value } });
       setDiscoverable(saved.discoverableByEmail); setMessage(t('accountPrivacy.saved'));
-    } catch (failure) { setDiscoverable(!value); setError(failure.message); }
+    } catch (failure) { setDiscoverable(!value); setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

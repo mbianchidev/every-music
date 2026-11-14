@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
 import { can, organizationHref } from '../lib/organizations.js';
 import EntityPicker from './EntityPicker.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Booking agency rosters and label signings. Agencies and labels propose a
 // band; a band manager accepts or declines from "Your pages".
@@ -22,7 +23,7 @@ export default function OrganizationRelations({ organization, onChanged }) {
   const run = async (operation, success) => {
     setBusy(true); setError(''); setMessage('');
     try { await operation(); setMessage(success); onChanged(); managed.reload(); }
-    catch (failure) { setError(failure.message); }
+    catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const title = organization.kind === 'booking_agency' ? t('organizations.relations.roster')

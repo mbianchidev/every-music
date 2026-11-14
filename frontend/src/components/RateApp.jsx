@@ -7,6 +7,7 @@ import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
 import Icon from './Icon.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function RateApp() {
   const { t } = useI18n();
@@ -30,7 +31,7 @@ export default function RateApp() {
       setThanks(rating);
       own.reload();
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
       if (failure.code === 'RATING_EXISTS') own.reload();
     } finally { setBusy(false); }
   };

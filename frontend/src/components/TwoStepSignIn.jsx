@@ -3,6 +3,7 @@ import conduit from '../lib/conduit.js';
 import { finishSignIn } from '../lib/sign-in.js';
 import { useI18n } from '../lib/i18n.js';
 import FormField from './FormField.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function TwoStepSignIn({ challenge, onCancel }) {
   const { t } = useI18n();
@@ -27,7 +28,7 @@ export default function TwoStepSignIn({ challenge, onCancel }) {
       });
       finishSignIn(response);
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
       setBusy(false);
       setRefocus(value => value + 1);
     }
@@ -39,7 +40,7 @@ export default function TwoStepSignIn({ challenge, onCancel }) {
       setCurrent(previous => ({ ...previous, ...result }));
       setMessage(result.codeSent ? t('twoStep.resent') : '');
       if (!result.codeSent) setError(t('twoStep.notSent'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const toggle = () => { setRecovery(value => !value); setCode(''); setError(''); setRefocus(value => value + 1); };

@@ -8,6 +8,7 @@ import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
 import Pagination from './Pagination.jsx';
 import Icon from './Icon.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function Stars({ value }) {
   const { t, formatNumber } = useI18n();
@@ -63,7 +64,7 @@ function Reviews({ profile, own }) {
   const act = async (operation, success) => {
     setBusy(true); setError(''); setMessage('');
     try { await operation(); setMessage(success); resource.reload(); }
-    catch (failure) { setError(failure.message); }
+    catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const submit = event => {
@@ -83,7 +84,7 @@ function Reviews({ profile, own }) {
       setDraft({ stars: 0, body: '' });
     }, t('reviews.reviews.removed'));
   };
-  const name = profile.artistName || 'Musician';
+  const name = profile.artistName || t('app.routes.musician');
   return (
     <section className="detail-section" aria-labelledby="reviews-heading" id="reviews">
       <h2 className="heading-md" id="reviews-heading">{t('reviews.reviews.title')}</h2>
@@ -152,7 +153,7 @@ function Rating({ profile, own }) {
     try {
       await conduit.transmit(`/profiles/${profile.userId}/rating`, { method, auth: true, ...(method === 'PUT' ? { body: { stars } } : {}) });
       setMessage(success); resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

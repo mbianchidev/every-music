@@ -6,8 +6,10 @@ import Navigation from './Navigation.jsx';
 import Brand from './Brand.jsx';
 import Icon from './Icon.jsx';
 import Avatar from './Avatar.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function AppStatus({ session, routeName, pageTitle }) {
+  const { t } = useI18n();
   const [preference, setPreference] = useState(document.documentElement.dataset.themePreference || 'system');
   const [themeError, setThemeError] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
@@ -63,7 +65,7 @@ export default function AppStatus({ session, routeName, pageTitle }) {
       setThemeError('');
     } catch (error) {
       console.warn('Theme preference could not be saved', error);
-      setThemeError('Theme changed for this tab, but browser storage is unavailable.');
+      setThemeError(t('app.header.themeStorage'));
     }
   };
   const installApp = async () => {
@@ -73,7 +75,7 @@ export default function AppStatus({ session, routeName, pageTitle }) {
       setInstall(null);
     } catch (error) {
       console.error('App installation failed', error);
-      setPwaError('Installation could not start. Use your browser menu to install Every.music.');
+      setPwaError(t('app.header.installFailed'));
     }
   };
   return (
@@ -81,31 +83,31 @@ export default function AppStatus({ session, routeName, pageTitle }) {
     {session.authorized && <Navigation routeName={routeName} unreadCount={notifications.data?.unreadCount || 0} isAdmin={account.data?.role === 'admin'} />}
     <header className="app-tools">
       <div className="header-brand"><Brand href={session.authorized ? '#feed' : '#login'} /></div>
-      {session.authorized && <div className="header-context"><span>Workspace</span><Icon name="chevron" size={14} /><span>{pageTitle}</span></div>}
+      {session.authorized && <div className="header-context"><span>{t('app.header.workspace')}</span><Icon name="chevron" size={14} /><span>{pageTitle}</span></div>}
       <div className="header-actions">
       {session.authorized && <p className={`connection-status ${!online ? 'is-offline' : live === 'live' ? 'is-live' : 'is-connecting'}`} role="status">
-        <span className="status-dot" aria-hidden="true" /><span className="connection-label" aria-hidden="true">{!online ? 'Offline' : live === 'live' ? 'Live' : 'Connecting'}</span>
-        <span className="sr-only">{!online ? 'Offline' : live === 'live' ? 'Live updates connected' : 'Live updates reconnecting. You can still refresh lists.'}</span>
+        <span className="status-dot" aria-hidden="true" /><span className="connection-label" aria-hidden="true">{!online ? t('app.header.offline') : live === 'live' ? t('app.header.live') : t('app.header.connecting')}</span>
+        <span className="sr-only">{!online ? t('app.header.offline') : live === 'live' ? t('app.header.liveConnected') : t('app.header.liveReconnecting')}</span>
       </p>}
       <div className="theme-control">
-        <label className="sr-only" htmlFor="theme-preference">Color theme</label>
+        <label className="sr-only" htmlFor="theme-preference">{t('app.header.theme')}</label>
         <Icon name="theme" size={16} />
         <select id="theme-preference" value={preference} onChange={changeTheme}>
-          <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+          <option value="system">{t('app.header.themeSystem')}</option><option value="light">{t('app.header.themeLight')}</option><option value="dark">{t('app.header.themeDark')}</option>
         </select>
       </div>
-      {install && <button className="text-link" type="button" onClick={installApp}>Install app</button>}
-      {update && <button className="text-link" type="button" onClick={update}>Update app</button>}
-      {session.authorized && <a className="header-profile" href="#profile" aria-label="Open your profile">
+      {install && <button className="text-link" type="button" onClick={installApp}>{t('app.header.install')}</button>}
+      {update && <button className="text-link" type="button" onClick={update}>{t('app.header.update')}</button>}
+      {session.authorized && <a className="header-profile" href="#profile" aria-label={t('app.header.profile')}>
         {session.persona?.artistName ? <Avatar name={session.persona.artistName} src={session.persona.profilePictureUrl} /> : <span className="avatar"><Icon name="user" size={18} /></span>}
       </a>}
       </div>
     </header>
     <div className="global-notices">
-      {!online && <p className="status-message" role="status">You are offline. Saved calls are read-only. Reconnect to save changes or send messages.</p>}
+      {!online && <p className="status-message" role="status">{t('app.header.offlineNotice')}</p>}
       {(themeError || pwaError) && <p className="field-error" role="alert">{themeError || pwaError}</p>}
-      {online && session.authorized && notifications.error && <p className="field-error" role="alert">Notifications: {notifications.error} <button className="text-link" type="button" onClick={notifications.reload}>Retry notifications</button></p>}
-      {online && session.authorized && account.error && <p className="field-error" role="alert">Account permissions: {account.error} <button className="text-link" type="button" onClick={account.reload}>Retry permissions</button></p>}
+      {online && session.authorized && notifications.error && <p className="field-error" role="alert">{t('app.header.notificationsError', { error: notifications.error })} <button className="text-link" type="button" onClick={notifications.reload}>{t('app.header.retryNotifications')}</button></p>}
+      {online && session.authorized && account.error && <p className="field-error" role="alert">{t('app.header.permissionsError', { error: account.error })} <button className="text-link" type="button" onClick={account.reload}>{t('app.header.retryPermissions')}</button></p>}
     </div>
     </>
   );

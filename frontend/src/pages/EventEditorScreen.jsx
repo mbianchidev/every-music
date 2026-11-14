@@ -12,6 +12,7 @@ import EventsNav from '../components/events/EventsNav.jsx';
 import ChosenEntity from '../components/events/ChosenEntity.jsx';
 import LineupEditor from '../components/events/LineupEditor.jsx';
 import EventImagesInput from '../components/events/EventImagesInput.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function TicketLinks({ links, onChange, disabled }) {
   const { t } = useI18n();
@@ -64,7 +65,7 @@ export default function EventEditorScreen({ route }) {
       setGenres(catalog.genres);
       if (existing) { setEvent(existing); setDraft(eventToDraft(existing)); }
       setLoaded(true);
-    }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
+    }).catch(failure => { if (!controller.signal.aborted) setError(errorText(failure)); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [id, revision]);
@@ -83,7 +84,7 @@ export default function EventEditorScreen({ route }) {
       });
       window.location.hash = `#event?id=${saved.id}`;
     } catch (failure) {
-      setError(failure.message); setSaving(false);
+      setError(errorText(failure)); setSaving(false);
       requestAnimationFrame(() => document.getElementById('event-editor-error')?.focus());
     }
   };

@@ -1,6 +1,8 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import Spinner from '../components/Spinner.jsx';
+import { t } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 class VerifyEmailScreen extends Component {
   constructor(props) {
@@ -19,15 +21,15 @@ class VerifyEmailScreen extends Component {
   verify = async () => {
     const token = this.props.route.query.get('token');
     if (!token) {
-      this.setState({ loading: false, error: 'This verification link is incomplete.' });
+      this.setState({ loading: false, error: t('auth.verify.incomplete') });
       return;
     }
 
     try {
-      const response = await conduit.transmit(`/auth/verify-email?token=${encodeURIComponent(token)}`);
-      this.setState({ loading: false, message: response.message });
+      await conduit.transmit(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+      this.setState({ loading: false, message: t('auth.verify.done') });
     } catch (error) {
-      this.setState({ loading: false, error: error.message });
+      this.setState({ loading: false, error: errorText(error) });
     }
   };
 
@@ -37,14 +39,14 @@ class VerifyEmailScreen extends Component {
     return (
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
-          <p className="eyebrow">Account verification</p>
-          <h1 className="heading-lg">Verify your email</h1>
-          {loading && <Spinner label="Verifying your email" />}
+          <p className="eyebrow">{t('auth.verify.eyebrow')}</p>
+          <h1 className="heading-lg">{t('auth.verify.title')}</h1>
+          {loading && <Spinner label={t('auth.verify.loading')} />}
           {error && <div className="error" role="alert">{error}</div>}
           {message && <div className="success" role="status">{message}</div>}
           {!loading && (
             <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-              Go to sign in
+              {t('auth.goToSignIn')}
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
+import { errorText } from '../../lib/error-text.js';
 
 export default function EventRsvp({ event, onChanged }) {
   const { t, formatNumber } = useI18n();
@@ -15,7 +16,7 @@ export default function EventRsvp({ event, onChanged }) {
       else await conduit.transmit(`/gigs/${event.id}/attendance`, { method: 'DELETE', auth: true });
       setMessage(t(body ? 'events.rsvp.saved' : 'events.rsvp.removed'));
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const closed = event.status === 'cancelled' || event.visibility !== 'published';

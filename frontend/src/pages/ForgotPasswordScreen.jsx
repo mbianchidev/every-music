@@ -2,6 +2,8 @@ import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import { t } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 class ForgotPasswordScreen extends Component {
   constructor(props) {
@@ -19,20 +21,20 @@ class ForgotPasswordScreen extends Component {
     const email = this.state.email.trim();
 
     if (!email.includes('@')) {
-      this.setState({ error: 'Enter a valid email address.' });
+      this.setState({ error: t('auth.register.invalidEmail') });
       return;
     }
 
     this.setState({ loading: true, error: '', message: '' });
 
     try {
-      const response = await conduit.transmit('/auth/password-reset/initiate', {
+      await conduit.transmit('/auth/password-reset/initiate', {
         method: 'POST',
         body: { email },
       });
-      this.setState({ loading: false, message: response.message });
+      this.setState({ loading: false, message: t('auth.forgot.sent') });
     } catch (error) {
-      this.setState({ loading: false, error: error.message });
+      this.setState({ loading: false, error: errorText(error) });
     }
   };
 
@@ -43,15 +45,15 @@ class ForgotPasswordScreen extends Component {
       <div className="container-narrow center-content">
         <div style={{ width: '100%' }}>
           <PageHeader
-            eyebrow="Account recovery"
-            title="Forgot your password?"
-            subtitle="We will email a secure password reset link if the account exists."
+            eyebrow={t('auth.recovery')}
+            title={t('auth.forgot.title')}
+            subtitle={t('auth.forgot.subtitle')}
           />
           {error && <div className="error" role="alert">{error}</div>}
           {message && <div className="success" role="status">{message}</div>}
 
           <form className="form-stack" onSubmit={this.handleSubmit}>
-            <FormField id="forgot-password-email" label="Email" required>
+            <FormField id="forgot-password-email" label={t('auth.fields.email')} required>
               <input
                 type="email"
                 className="input"
@@ -63,10 +65,10 @@ class ForgotPasswordScreen extends Component {
               />
             </FormField>
             <button className="btn btn-primary" type="submit" disabled={loading || Boolean(message)}>
-              {loading ? 'Sending...' : 'Send reset link'}
+              {loading ? t('auth.forgot.sending') : t('auth.forgot.submit')}
             </button>
             <button className="text-link" type="button" onClick={() => { window.location.hash = '#login'; }}>
-              Return to sign in
+              {t('auth.forgot.back')}
             </button>
           </form>
         </div>

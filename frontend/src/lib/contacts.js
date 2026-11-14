@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 // Contact matching sends only SHA-256 hashes of normalized email addresses.
 // The normalization must match the server's (NFC, trimmed, lowercase).
 export const MAX_CONTACTS = 500;
@@ -10,7 +12,7 @@ export function extractEmails(text) {
 }
 
 export async function hashEmails(emails, subtle = globalThis.crypto?.subtle) {
-  if (!subtle) throw new Error('This browser cannot hash contacts securely. Update it and try again.');
+  if (!subtle) throw new Error(t('accountPrivacy.hashUnavailable'));
   const encoder = new TextEncoder();
   return Promise.all(emails.map(async (email) => {
     const digest = await subtle.digest('SHA-256', encoder.encode(normalizeEmail(email)));

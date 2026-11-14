@@ -2,6 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { useI18n } from '../../lib/i18n.js';
 import { uploadImage } from '../../lib/media.js';
 import ManagedImage from '../ManagedImage.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Uploads chosen photos immediately (purpose "listing") and keeps an ordered
 // list of managed URLs. The first photo is the cover image.
@@ -27,7 +28,7 @@ export default function ListingPhotosInput({ photos, onChange, max, disabled = f
         next = [...next, (await uploadImage(file, 'listing')).url];
         onChange(next);
       }
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); onBusy(false); }
   };
   const remove = index => {

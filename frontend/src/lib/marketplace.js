@@ -46,13 +46,12 @@ export function formatMoney(minor, currency, locale) {
 }
 
 export function formatPrice(listing, locale) {
-  const t = (key, params) => translate(locale, `marketplace.${key}`, params);
-  if (listing.priceMode === 'free') return t('price.free');
-  if (listing.priceMode === 'contact') return t('price.contact');
-  if (listing.priceMinor === null || listing.priceMinor === undefined) return t('price.negotiable');
+  if (listing.priceMode === 'free') return translate(locale, 'marketplace.price.free');
+  if (listing.priceMode === 'contact') return translate(locale, 'marketplace.price.contact');
+  if (listing.priceMinor === null || listing.priceMinor === undefined) return translate(locale, 'marketplace.price.negotiable');
   let amount = formatMoney(listing.priceMinor, listing.currency, locale);
-  if (listing.rateUnit) amount = t(`price.per.${listing.rateUnit}`, { amount });
-  return listing.priceMode === 'negotiable' ? t('price.negotiableAmount', { amount }) : amount;
+  if (listing.rateUnit) amount = translate(locale, `marketplace.price.per.${listing.rateUnit}`, { amount });
+  return listing.priceMode === 'negotiable' ? translate(locale, 'marketplace.price.negotiableAmount', { amount }) : amount;
 }
 
 export function categoryLabel(listing, locale) {

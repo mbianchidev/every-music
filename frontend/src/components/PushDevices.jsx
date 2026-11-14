@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
 import Spinner from './Spinner.jsx';
 import ErrorState from './ErrorState.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function PushDevices() {
   const { t, formatDate } = useI18n();
@@ -23,7 +24,7 @@ export default function PushDevices() {
       setMessage(t('devices.removed', { device: t(`devices.platform.${device.platform}`) }));
       resource.reload();
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
     } finally {
       setBusy('');
     }

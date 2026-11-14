@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.jsx';
 import MarketplaceNav from '../components/marketplace/MarketplaceNav.jsx';
 import ListingCard from '../components/marketplace/ListingCard.jsx';
 import ListingSaveButton from '../components/marketplace/ListingSaveButton.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function RenewButton({ listing, days, onRenewed }) {
   const { t, formatDate } = useI18n();
@@ -20,7 +21,7 @@ function RenewButton({ listing, days, onRenewed }) {
     try {
       const result = await conduit.transmit(`/marketplace/listings/${listing.id}/renew`, { method: 'POST', auth: true });
       onRenewed(t('marketplace.actions.renewed', { date: formatDate(result.expiresAt) }));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

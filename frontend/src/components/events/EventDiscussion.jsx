@@ -8,6 +8,7 @@ import ErrorState from '../ErrorState.jsx';
 import Pagination from '../Pagination.jsx';
 import Avatar from '../Avatar.jsx';
 import EventReportButton from './EventReportButton.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Attendee board: people going or interested and the organizers can read and
 // post; authors, organizers, and administrators can delete messages.
@@ -27,7 +28,7 @@ export default function EventDiscussion({ event }) {
       await conduit.transmit(`/gigs/${event.id}/posts`, { method: 'POST', auth: true, body: { body } });
       setBody(''); setPage(1); setMessage(t('events.discussion.posted'));
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const remove = async item => {
@@ -38,7 +39,7 @@ export default function EventDiscussion({ event }) {
       setMessage(t('events.discussion.deleted'));
       resource.reload();
       document.getElementById('event-discussion-heading')?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
   };
   return (
     <section className="detail-section event-discussion" aria-labelledby="event-discussion-heading">

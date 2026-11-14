@@ -10,6 +10,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import CatalogSelections from '../components/CatalogSelections.jsx';
 import MarketplaceNav from '../components/marketplace/MarketplaceNav.jsx';
 import ListingPhotosInput from '../components/marketplace/ListingPhotosInput.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const LISTING_TYPES = ['sell', 'wanted', 'lesson', 'service_offer', 'service_wanted', 'endorsement'];
 
@@ -41,7 +42,7 @@ export default function ListingEditorScreen({ route }) {
         setDraft(listingToDraft(listing));
       }
       setCatalog({ marketplace, instruments: instruments.instruments, genres: genres.genres }); setLoaded(true);
-    }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
+    }).catch(failure => { if (!controller.signal.aborted) setError(errorText(failure)); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [id, revision]);
@@ -71,7 +72,7 @@ export default function ListingEditorScreen({ route }) {
         method: id ? 'PATCH' : 'POST', auth: true, body: result.body,
       });
       window.location.hash = `#listing?id=${listing.id}`;
-    } catch (failure) { setError(failure.message); setSaving(false); }
+    } catch (failure) { setError(errorText(failure)); setSaving(false); }
   };
   const busy = saving || uploading;
   return (

@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import FormField from '../FormField.jsx';
 import ModalDialog from '../ModalDialog.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Organizer tools on the event page: status changes (which post an official
 // update for cancellations and postponements) and deletion.
@@ -21,7 +22,7 @@ export default function EventManageActions({ event, onChanged }) {
       await conduit.transmit(`/gigs/${event.id}`, { method: 'PATCH', auth: true, body: { status, statusNote: note.trim() || null } });
       setOpen(false); setNote(''); setMessage(t('events.status.done'));
       onChanged();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const remove = async () => {
@@ -30,7 +31,7 @@ export default function EventManageActions({ event, onChanged }) {
     try {
       await conduit.transmit(`/gigs/${event.id}`, { method: 'DELETE', auth: true });
       window.location.hash = '#my-events?tab=organizing';
-    } catch (failure) { setMessage(''); setError(failure.message); setBusy(false); }
+    } catch (failure) { setMessage(''); setError(errorText(failure)); setBusy(false); }
   };
   const statuses = ['scheduled', 'postponed', 'cancelled'].filter(value => value !== event.scheduledStatus);
   return <>

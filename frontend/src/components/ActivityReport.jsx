@@ -1,9 +1,13 @@
 import { useId } from 'react';
+import { useI18n } from '../lib/i18n.js';
 
-const names = { profile_view: 'Profile views', announcement_view: 'Announcement views', like: 'Likes', save: 'Saves', message: 'Messages received' };
+const kinds = ['profile_view', 'announcement_view', 'like', 'save', 'message'];
 
-export default function ActivityReport({ daily, content, caption = 'Reach of your latest 100 announcements (last 30 days)' }) {
+export default function ActivityReport({ daily, content, caption }) {
+  const { t, formatDate, formatNumber } = useI18n();
   const heading = useId();
+  const name = kind => t(`ui.activity.kinds.${kind}`);
+  const day = value => formatDate(`${value}T00:00:00`);
   const totals = {};
   const days = {};
   for (const row of daily) {
@@ -12,23 +16,23 @@ export default function ActivityReport({ daily, content, caption = 'Reach of you
   }
   const maximum = Math.max(1, ...Object.values(days));
   return <>
-    <dl className="metric-grid">{Object.entries(names).map(([key, label]) => <div className="card" key={key}><dt>{label}</dt><dd>{totals[key] || 0}</dd></div>)}</dl>
+    <dl className="metric-grid">{kinds.map(key => <div className="card" key={key}><dt>{name(key)}</dt><dd>{formatNumber(totals[key] || 0)}</dd></div>)}</dl>
     <section aria-labelledby={heading}>
-      <h2 className="heading-md" id={heading}>Daily activity</h2>
-      {!daily.length && <p>No opted-in activity recorded yet.</p>}
-      <div className="chart" aria-hidden="true">{Object.entries(days).map(([day, count]) => <div className="chart-row" key={day}>
-        <span>{day}</span><div className="chart-bar" style={{ width: `${count / maximum * 100}%` }} /><span>{count}</span>
+      <h2 className="heading-md" id={heading}>{t('ui.activity.daily')}</h2>
+      {!daily.length && <p>{t('ui.activity.none')}</p>}
+      <div className="chart" aria-hidden="true">{Object.entries(days).map(([date, count]) => <div className="chart-row" key={date}>
+        <span>{day(date)}</span><div className="chart-bar" style={{ width: `${count / maximum * 100}%` }} /><span>{formatNumber(count)}</span>
       </div>)}</div>
       {!!daily.length && <div className="table-wrap"><table>
-        <caption>Daily counts by activity</caption>
-        <thead><tr><th scope="col">Date</th><th scope="col">Activity</th><th scope="col">Count</th></tr></thead>
-        <tbody>{daily.map(row => <tr key={`${row.day}-${row.kind}`}><th scope="row">{row.day}</th><td>{names[row.kind]}</td><td>{row.count}</td></tr>)}</tbody>
+        <caption>{t('ui.activity.dailyCaption')}</caption>
+        <thead><tr><th scope="col">{t('ui.activity.date')}</th><th scope="col">{t('ui.activity.activity')}</th><th scope="col">{t('ui.activity.count')}</th></tr></thead>
+        <tbody>{daily.map(row => <tr key={`${row.day}-${row.kind}`}><th scope="row">{day(row.day)}</th><td>{name(row.kind)}</td><td>{formatNumber(row.count)}</td></tr>)}</tbody>
       </table></div>}
     </section>
     <div className="table-wrap"><table>
-      <caption>{caption}</caption>
-      <thead><tr><th scope="col">Announcement</th><th scope="col">Views</th><th scope="col">Likes</th><th scope="col">Saves</th></tr></thead>
-      <tbody>{content.map(item => <tr key={item.id}><th scope="row"><a href={`#announcement?id=${item.id}`}>{item.title}</a></th><td>{item.views}</td><td>{item.likes}</td><td>{item.saves}</td></tr>)}</tbody>
+      <caption>{caption || t('ui.activity.contentCaption')}</caption>
+      <thead><tr><th scope="col">{t('ui.activity.announcement')}</th><th scope="col">{t('ui.activity.views')}</th><th scope="col">{t('ui.activity.likes')}</th><th scope="col">{t('ui.activity.saves')}</th></tr></thead>
+      <tbody>{content.map(item => <tr key={item.id}><th scope="row"><a href={`#announcement?id=${item.id}`}>{item.title}</a></th><td>{formatNumber(item.views)}</td><td>{formatNumber(item.likes)}</td><td>{formatNumber(item.saves)}</td></tr>)}</tbody>
     </table></div>
   </>;
 }

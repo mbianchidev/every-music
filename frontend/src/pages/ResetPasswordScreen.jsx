@@ -1,6 +1,8 @@
 import { Component } from 'react';
 import conduit from '../lib/conduit.js';
 import FormField from '../components/FormField.jsx';
+import { t } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 class ResetPasswordScreen extends Component {
   constructor(props) {
@@ -20,17 +22,17 @@ class ResetPasswordScreen extends Component {
     const { password, confirmPassword } = this.state;
 
     if (!token) {
-      this.setState({ error: 'This password reset link is incomplete.' });
+      this.setState({ error: t('auth.reset.incomplete') });
       return;
     }
 
     if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-      this.setState({ error: 'Password needs 8 characters, uppercase, lowercase, and a number.' });
+      this.setState({ error: t('auth.reset.passwordRules') });
       return;
     }
 
     if (password !== confirmPassword) {
-      this.setState({ error: 'Passwords do not match.' });
+      this.setState({ error: t('auth.register.mismatch') });
       return;
     }
 
@@ -43,7 +45,7 @@ class ResetPasswordScreen extends Component {
       });
       this.setState({ loading: false, success: true });
     } catch (error) {
-      this.setState({ loading: false, error: error.message });
+      this.setState({ loading: false, error: errorText(error) });
     }
   };
 
@@ -53,19 +55,19 @@ class ResetPasswordScreen extends Component {
     return (
       <div className="container-narrow center-content">
         <div className="card" style={{ width: '100%' }}>
-          <p className="eyebrow">Account recovery</p>
-          <h1 className="heading-lg">Reset password</h1>
+          <p className="eyebrow">{t('auth.recovery')}</p>
+          <h1 className="heading-lg">{t('auth.reset.title')}</h1>
           {error && <div className="error" role="alert">{error}</div>}
           {success ? (
             <>
-              <div className="success" role="status">Password updated. All previous sessions were signed out.</div>
+              <div className="success" role="status">{t('auth.reset.done')}</div>
               <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#login'; }}>
-                Sign in
+                {t('auth.login.submit')}
               </button>
             </>
           ) : (
             <form className="form-stack" onSubmit={this.handleSubmit}>
-              <FormField id="reset-password" label="New password" required>
+              <FormField id="reset-password" label={t('auth.fields.newPassword')} required>
                 <input
                   type="password"
                   className="input"
@@ -75,7 +77,7 @@ class ResetPasswordScreen extends Component {
                   disabled={loading}
                 />
               </FormField>
-              <FormField id="reset-confirm-password" label="Confirm new password" required>
+              <FormField id="reset-confirm-password" label={t('auth.fields.confirmNewPassword')} required>
                 <input
                   type="password"
                   className="input"
@@ -86,7 +88,7 @@ class ResetPasswordScreen extends Component {
                 />
               </FormField>
               <button className="btn btn-primary" type="submit" disabled={loading}>
-                {loading ? 'Updating...' : 'Update password'}
+                {loading ? t('auth.reset.submitting') : t('auth.reset.submit')}
               </button>
             </form>
           )}

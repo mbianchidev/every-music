@@ -50,11 +50,16 @@ if (globalThis.document) document.documentElement.lang = current;
 
 export const getLocale = () => current;
 
-export function setLocale(code) {
+// `remember: false` applies an account's language without replacing this
+// device's own choice, so another account signing in later does not inherit it.
+export function setLocale(code, { remember = true } = {}) {
   if (!isSupportedLocale(code)) throw new Error(`Unsupported locale: ${code}`);
-  current = code;
-  try { storage()?.setItem(STORAGE_KEY, code); } catch (error) { console.warn('Could not save the language preference', error); }
+  if (remember) {
+    try { storage()?.setItem(STORAGE_KEY, code); } catch (error) { console.warn('Could not save the language preference', error); }
+  }
   if (globalThis.document) document.documentElement.lang = code;
+  if (code === current) return;
+  current = code;
   for (const listener of listeners) listener(code);
 }
 
@@ -76,6 +81,11 @@ function plural(locale, message, count) {
   return message[category] ?? message.other;
 }
 
+export function hasTranslation(key, locale = DEFAULT_LOCALE) {
+  const message = lookup(locale, key);
+  return typeof message === 'string' || (typeof message === 'object' && message !== null && typeof message.other === 'string');
+}
+
 // Keys are "<namespace>.<path>". Missing translations fall back to English,
 // then to the key itself so gaps stay visible instead of rendering blank text.
 export function translate(locale, key, params = {}) {
@@ -85,7 +95,11 @@ export function translate(locale, key, params = {}) {
     if (!reported.has(key)) { reported.add(key); console.warn(`Missing translation: ${key}`); }
     return key;
   }
-  return message.replace(/\{(\w+)\}/g, (placeholder, name) => (Object.hasOwn(params, name) ? String(params[name]) : placeholder));
+  return message.replace(/\{(\w+)\}/g, (placeholder, name) => {
+    if (!Object.hasOwn(params, name)) return placeholder;
+    const value = params[name];
+    return name === 'count' && typeof value === 'number' && Number.isFinite(value) ? new Intl.NumberFormat(locale).format(value) : String(value);
+  });
 }
 
 export const t = (key, params) => translate(current, key, params);

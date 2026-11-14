@@ -18,6 +18,7 @@ export default {
   newest: 'Page 1 contains the newest messages.',
   pages: 'Band chat pages',
   message: {
+    senderKeyMissing: 'The sender\'s messaging key is unavailable. Reload the chat.',
     from: '{name}:',
     you: 'You:',
     decrypting: 'Decrypting message...',

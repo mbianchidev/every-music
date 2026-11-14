@@ -8,6 +8,7 @@ import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import QuotaNotice, { useQuotas } from '../components/QuotaNotice.jsx';
+import { errorText } from '../lib/error-text.js';
 
 function NotifyToggle({ search, disabled, onToggle, label }) {
   const [checked, setChecked] = useState(search.notify);
@@ -42,7 +43,7 @@ export default function SavedSearchesScreen() {
       setMessage(success);
       resource.reload();
       return true;
-    } catch (failure) { setError(failure.message); return false; }
+    } catch (failure) { setError(errorText(failure)); return false; }
     finally { setBusy(''); }
   };
   const rows = resource.data?.searches || [];

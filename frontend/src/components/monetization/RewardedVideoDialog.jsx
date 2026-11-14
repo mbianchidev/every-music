@@ -4,6 +4,7 @@ import { useI18n } from '../../lib/i18n.js';
 import { videoSource } from '../../lib/monetization.js';
 import ModalDialog from '../ModalDialog.jsx';
 import Spinner from '../Spinner.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 function Player({ video, onEarned }) {
   const { t, formatNumber } = useI18n();
@@ -19,7 +20,7 @@ function Player({ video, onEarned }) {
     started.current = true;
     conduit.transmit(`/rewards/videos/${video.id}/views`, { method: 'POST', auth: true })
       .then(data => setView({ ...data, issuedAt: Date.now() }))
-      .catch(failure => setError(failure.message));
+      .catch(failure => setError(errorText(failure)));
   }, [video.id]);
   useEffect(() => {
     if (!view || result) return undefined;
@@ -33,7 +34,7 @@ function Player({ video, onEarned }) {
       const data = await conduit.transmit('/rewards/views/complete', { method: 'POST', auth: true, body: { token: view.token } });
       setResult(data);
       onEarned?.(data);
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

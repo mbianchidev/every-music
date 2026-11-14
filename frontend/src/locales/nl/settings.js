@@ -1,0 +1,38 @@
+export default {
+  eyebrow: 'Jouw ruimte',
+  title: 'Instellingen',
+  subtitle: 'Blijf op de hoogte op jouw voorwaarden. Jij kiest wat wordt gedeeld en gemeten.',
+  loading: 'Voorkeuren laden',
+  saved: 'Voorkeuren opgeslagen.',
+  language: {
+    heading: 'Taal',
+    description: 'Kies de taal voor menu\'s, knoppen en meldingen. Die wordt in je account opgeslagen en gebruikt op elk apparaat waarop je inlogt. Wat leden schrijven, wordt niet vertaald.',
+    saveFailed: 'De taal is op dit apparaat gewijzigd, maar kon niet in je account worden opgeslagen: {reason}',
+  },
+  preferences: {
+    legend: 'Meldingen en statistieken',
+    messages: 'Nieuwe berichten',
+    announcements: 'Nieuwe oproepen van muzikanten die ik volg',
+    engagements: 'Reacties en likes op mijn oproepen',
+    profileViews: 'Dagelijkse meldingen over profielweergaven (alleen met toestemming voor statistieken)',
+    analytics: 'Doe mee met privacyvriendelijke statistieken over interactie',
+    platformAnalytics: 'Neem mijn activiteit waarvoor ik toestemming gaf mee in de totaalstatistieken voor beheerders',
+    analyticsNote: 'Statistieken staan standaard uit. Als zowel jij als de eigenaar van de inhoud toestemming geven, tellen we weergaven, likes, bewaringen en berichten als dagtotalen. Er worden geen bezoekers-ID\'s, IP-adressen, berichtteksten of trackers van derden opgeslagen in de statistieken. Dagrapporten verlopen na 30 dagen; als je je toestemming intrekt, worden die totalen verwijderd. Openbare tellers van oproepen, berichten, reacties en bladwijzers blijven bewaard.',
+    platformNote: 'Totaalstatistieken voor het platform vragen een tweede toestemming van beide muzikanten. Beheerders zien de totale dagelijkse activiteit en het bereik van openbare oproepen met toestemming, geen individuele bezoekers of privéberichten. Alleen nieuwe activiteit telt mee. Als je dit uitzet, worden de platformtotalen voor je eigen inhoud verwijderd en stoppen nieuwe bijdragen; eerdere anonieme bijdragen aan andere inhoud zijn niet individueel herkenbaar.',
+    save: 'Voorkeuren opslaan',
+  },
+  push: {
+    heading: 'Pushmeldingen in de browser',
+    intro: 'Push gebruikt de meldingstoestemming van je browser en de pushdienst die op deze server is ingesteld. Het is optioneel en staat standaard uit.',
+    notConfigured: 'Pushmeldingen in de browser zijn niet ingesteld op deze server. Meldingen in de app werken nog steeds.',
+    enable: 'Push inschakelen in deze browser',
+    disable: 'Push uitschakelen op alle apparaten',
+    enabled: 'Pushmeldingen in de browser staan aan. Meldingen bevatten geen berichttekst.',
+    disabled: 'Push uitgeschakeld op alle apparaten.',
+  },
+  offline: {
+    heading: 'Installeren en offline gebruiken',
+    install: 'Gebruik App installeren hierboven als die verschijnt, of het menu Installeren / Toevoegen aan beginscherm van je browser. De webapp bewaart de basis van de app en je laatste passende feedresultaten voor dit browsertabblad, maximaal 24 uur. Privégesprekken, profielen en API-antwoorden worden nooit door de service worker bewaard.',
+    changes: 'Offline wijzigingen blijven in het open formulier staan en worden niet automatisch verstuurd. Maak opnieuw verbinding en verstuur ze opnieuw. Uitloggen wist de bewaarde feed en meldt deze browser af voor push.',
+  },
+};

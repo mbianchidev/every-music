@@ -8,6 +8,7 @@ import Icon from './Icon.jsx';
 import Spinner from './Spinner.jsx';
 import ProductTour from './ProductTour.jsx';
 import UpdateInstructions from './UpdateInstructions.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Help and legal pages stay reachable while the app asks for an update or
 // for acceptance of new terms, so people can read what they are agreeing to.
@@ -46,7 +47,7 @@ function TermsPrompt({ state, onAccepted }) {
       await conduit.transmit('/legal/acceptance', { method: 'POST', auth: true, body: { termsVersion: state.termsVersion } });
       onAccepted();
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
       if (failure.code === 'TERMS_VERSION_CHANGED') onAccepted();
       setBusy('');
     }

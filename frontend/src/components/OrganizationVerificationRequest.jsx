@@ -6,6 +6,7 @@ import { uploadImage } from '../lib/media.js';
 import FormField from './FormField.jsx';
 import ErrorState from './ErrorState.jsx';
 import Spinner from './Spinner.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Lets the leader of a page ask administrators to verify it. Requests share
 // the verification queue with profile verification.
@@ -27,7 +28,7 @@ export default function OrganizationVerificationRequest({ organization }) {
     if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024) { setError(t('organizationVerification.documentType')); return; }
     setBusy(true); setError('');
     try { setDocument(await uploadImage(file, 'verification')); }
-    catch (failure) { setError(failure.message); }
+    catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const submit = async submitted => {
@@ -39,7 +40,7 @@ export default function OrganizationVerificationRequest({ organization }) {
       });
       setNote(''); setDocument(null); setMessage(t('organizationVerification.submitted'));
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const cancel = async () => {
@@ -48,7 +49,7 @@ export default function OrganizationVerificationRequest({ organization }) {
       await conduit.transmit(`/organizations/${organization.id}/verification-request/${resource.data.request.id}`, { method: 'DELETE', auth: true });
       setMessage(t('organizationVerification.cancelled'));
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const request = resource.data?.request;

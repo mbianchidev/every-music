@@ -3,6 +3,7 @@ import { useI18n } from '../../lib/i18n.js';
 import { uploadImage } from '../../lib/media.js';
 import { LIMITS } from '../../lib/events.js';
 import ManagedImage from '../ManagedImage.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Uploads chosen images immediately (purpose "event"); the first is the cover.
 export default function EventImagesInput({ images, onChange, disabled = false, onBusy = () => {} }) {
@@ -28,7 +29,7 @@ export default function EventImagesInput({ images, onChange, disabled = false, o
         next = [...next, (await uploadImage(file, 'event')).url];
         onChange(next);
       }
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); onBusy(false); }
   };
   const move = index => {

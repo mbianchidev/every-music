@@ -7,6 +7,7 @@ import ErrorState from '../ErrorState.jsx';
 import FormField from '../FormField.jsx';
 import Pagination from '../Pagination.jsx';
 import SponsoredCardForm from './SponsoredCardForm.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 const SECTIONS = ['overview', 'cards', 'offers', 'grants'];
 const sum = values => Object.values(values ?? {}).reduce((total, value) => total + value, 0);
@@ -41,7 +42,7 @@ function Cards({ data }) {
       await conduit.transmit(`/admin/sponsored-cards/${card.id}`, { method: 'DELETE', auth: true });
       setMessage(t('monetization.admin.cards.deleted'));
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
   };
   const done = () => {
     setEditing(null); setMessage(t('monetization.admin.form.saved')); resource.reload();
@@ -99,7 +100,7 @@ function Offers({ data, onSent }) {
       setMessage(t('monetization.admin.offers.sent', { count: result.recipients }));
       setDraft({ headline: '', message: '', link: '', audience: draft.audience });
       onSent();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>
@@ -156,7 +157,7 @@ function Grants({ data, onGranted }) {
       setMessage(t('monetization.admin.grants.granted', { points: formatNumber(result.points), balance: formatNumber(result.balance) }));
       setDraft({ email: '', points: '', note: draft.note });
       onGranted();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

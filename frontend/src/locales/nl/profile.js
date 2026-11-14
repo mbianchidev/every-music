@@ -1,0 +1,21 @@
+export default {
+  title: 'Mijn profiel',
+  subtitle: 'Iets over jou. Een goede plek om een samenwerking te beginnen.',
+  loading: 'Je profiel laden',
+  incomplete: 'Maak je profiel compleet zodat andere muzikanten je kunnen vinden.',
+  complete: 'Profiel aanvullen',
+  signOut: 'Uitloggen',
+  signingOut: 'Bezig met uitloggen...',
+  preferences: 'Voorkeuren',
+  analytics: 'Mijn statistieken',
+  editor: {
+    subtitle: 'Je sound, je ervaring en waar je aan werkt.',
+    nameRequired: 'Een artiestennaam is verplicht.',
+    image: 'Profielfoto',
+    artistName: 'Artiestennaam',
+    firstName: 'Voornaam',
+    lastName: 'Achternaam',
+    bio: 'Bio',
+    save: 'Profiel opslaan',
+  },
+};

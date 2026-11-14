@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '../lib/i18n.js';
 import { openAttachment } from '../lib/band-chat.js';
 import { ATTACHMENT_TYPES } from '../lib/attachment-types.js';
+import { errorText } from '../lib/error-text.js';
 
 // Downloads, verifies and decrypts one attachment on this device. Pictures
 // open automatically; audio waits for an explicit request.
@@ -16,7 +17,7 @@ export default function ChatAttachment({ attachment, senderName }) {
       setState({ url: URL.createObjectURL(blob), loading: false, error: '' });
     } catch (failure) {
       console.warn('Band chat attachment unavailable', { id: attachment.id, code: failure.code });
-      setState({ url: null, loading: false, error: `${t('bandChat.attachment.failed')} ${failure.message}` });
+      setState({ url: null, loading: false, error: `${t('bandChat.attachment.failed')} ${errorText(failure)}` });
     }
   };
   useEffect(() => { if (kind === 'image') void load(); }, [attachment.id]);

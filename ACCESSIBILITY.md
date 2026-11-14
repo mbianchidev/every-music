@@ -98,6 +98,14 @@ alternatives, audio players and the band message report dialog; profiles add
 review approval controls and star radios. Check them the same way, including
 that encrypted attachments announce their loading and failure states.
 
+Languages: the document's `lang` attribute always matches the interface
+language (English, Dutch, or Italian) and changes together with it, so screen
+readers switch pronunciation. Language names in the picker carry their own
+`lang` attribute. Member-written content has no language metadata and is read
+with the interface language. Check the sign-in and Settings language pickers,
+longer Dutch and Italian labels at 200% zoom and 320px, and that status and
+error announcements arrive in the chosen language.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

@@ -3,6 +3,7 @@ import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
 import { CLIENT_VERSION, detectPlatform } from '../lib/app-version.js';
 import FormField from './FormField.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/;
 const EMPTY = { name: '', email: '', subject: '', message: '', steps: '', link: '', website: '', diagnostics: false };
@@ -58,7 +59,7 @@ export default function SupportForm({ kind, authorized }) {
       setValues(EMPTY);
       setSent(t(authorized ? 'help.form.sentSignedIn' : 'help.form.sent'));
     } catch (failure) {
-      setError(failure.message);
+      setError(errorText(failure));
     } finally {
       setBusy(false);
     }

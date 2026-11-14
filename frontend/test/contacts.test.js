@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, webcrypto } from 'node:crypto';
 import { contactPickerAvailable, extractEmails, hashEmails, pickContactEmails } from '../src/lib/contacts.js';
+import { registerCatalog } from '../src/lib/i18n.js';
+import accountPrivacy from '../src/locales/en/accountPrivacy.js';
+
+registerCatalog('en', 'accountPrivacy', accountPrivacy);
 
 test('pasted contacts are extracted, normalized, and deduplicated', () => {
   assert.deepEqual(extractEmails('Demo <Demo.Person@Example.TEST>, demo.person@example.test;\nsecond@example.test not-an-address @nobody'), [

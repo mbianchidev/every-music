@@ -4,6 +4,7 @@ import { useI18n } from '../lib/i18n.js';
 import { useResource } from '../lib/resources.js';
 import FormField from './FormField.jsx';
 import Pagination from './Pagination.jsx';
+import { errorText } from '../lib/error-text.js';
 
 // Administrator queue for claims on community-maintained venues. Decisions
 // are audited by the API and notify every affected claimant.
@@ -23,7 +24,7 @@ export default function OrganizationClaimReview() {
       await conduit.transmit(`/admin/organization-claims/${claim.id}`, { method: 'PATCH', auth: true, body: { decision, note: notes[claim.id]?.trim() || null } });
       setMessage(t(`organizations.admin.decided.${decision}`, { venue: claim.organization.name })); resource.reload();
       document.getElementById('claims-heading')?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

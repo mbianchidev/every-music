@@ -12,6 +12,7 @@ import FormField from '../components/FormField.jsx';
 import ImageInput from '../components/ImageInput.jsx';
 import CatalogSelections from '../components/CatalogSelections.jsx';
 import LinkListEditor from '../components/LinkListEditor.jsx';
+import { errorText } from '../lib/error-text.js';
 
 const blank = {
   kind: 'band', managed: true, name: '', slug: '', title: '', bio: '', pictureUrl: null,
@@ -62,7 +63,7 @@ export default function OrganizationEditorScreen({ route }) {
       if (organization && !can(organization, 'manage_profile')) throw new Error(t('organizations.editor.notAllowed'));
       if (organization) setDraft(fromOrganization(organization));
       setContext({ genres: genres.genres, businessPages: plan.limits.businessPages !== false, organization });
-    }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
+    }).catch(failure => { if (!controller.signal.aborted) setError(errorText(failure)); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [id, revision]);
@@ -81,7 +82,7 @@ export default function OrganizationEditorScreen({ route }) {
       const saved = await conduit.transmit(`/organizations${id ? `/${context.organization.id}` : ''}`, { method: id ? 'PATCH' : 'POST', auth: true, body });
       window.location.hash = `#organization?id=${saved.id}`;
     } catch (failure) {
-      setError(failure.details?.length ? `${failure.message}: ${failure.details.join('; ')}` : failure.message);
+      setError(failure.details?.length ? `${errorText(failure)}: ${failure.details.join('; ')}` : errorText(failure));
       setSaving(false);
     }
   };
@@ -91,7 +92,7 @@ export default function OrganizationEditorScreen({ route }) {
     try {
       await conduit.transmit(`/organizations/${context.organization.id}`, { method: 'DELETE', auth: true });
       window.location.hash = '#your-pages';
-    } catch (failure) { setError(failure.message); setSaving(false); }
+    } catch (failure) { setError(errorText(failure)); setSaving(false); }
   };
   const kindLabel = t(`organizations.kinds.${draft.kind}`);
   const leader = ['leader', 'maintainer'].includes(context?.organization?.viewer?.role);

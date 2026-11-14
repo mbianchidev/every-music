@@ -11,6 +11,7 @@ import OrganizationCard from '../components/OrganizationCard.jsx';
 import { PostList } from '../components/OrganizationPosts.jsx';
 import Icon from '../components/Icon.jsx';
 import BandChatUnreadList from '../components/BandChatUnreadList.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function YourPagesScreen() {
   const { t } = useI18n();
@@ -25,7 +26,7 @@ export default function YourPagesScreen() {
     try {
       await operation(); setMessage(success); resource.reload();
       document.getElementById(focus)?.focus();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   const data = resource.data;

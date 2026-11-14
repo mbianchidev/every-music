@@ -1,0 +1,38 @@
+export default {
+  eyebrow: 'Your space',
+  title: 'Settings',
+  subtitle: 'Stay in the loop on your terms. You choose what is shared and measured.',
+  loading: 'Loading preferences',
+  saved: 'Preferences saved.',
+  language: {
+    heading: 'Language',
+    description: 'Choose the language for menus, buttons, and messages. It is saved to your account and used on every device you sign in to. What members write is not translated.',
+    saveFailed: 'The language changed on this device, but it could not be saved to your account: {reason}',
+  },
+  preferences: {
+    legend: 'Notifications and analytics',
+    messages: 'New messages',
+    announcements: 'New announcements from musicians I follow',
+    engagements: 'Comments and reactions on my announcements',
+    profileViews: 'Daily profile-view notifications (only with analytics consent)',
+    analytics: 'Opt in to privacy-friendly engagement analytics',
+    platformAnalytics: 'Include my opted-in activity in aggregate admin analytics',
+    analyticsNote: 'Analytics is off by default. When both you and the content owner opt in, we count views, likes, saves, and messages as daily totals. No visitor IDs, IP addresses, message text, or third-party trackers are stored in analytics. Daily reports expire after 30 days; opting out deletes those totals. Public announcement counters, messages, reactions, and bookmarks are retained.',
+    platformNote: 'Platform aggregates require a second opt-in from both musicians. Administrators see aggregate daily activity and reach of opted-in public calls, not individual visitors or private message text. Only new activity is included. Disabling it removes platform totals for your own content and stops new contributions; already anonymous contributions to other content cannot be identified individually.',
+    save: 'Save preferences',
+  },
+  push: {
+    heading: 'Browser push',
+    intro: 'Push uses your browser\'s notification permission and this server\'s configured push service. It is optional and disabled by default.',
+    notConfigured: 'Browser push is not configured on this server. In-app notifications still work.',
+    enable: 'Enable push on this browser',
+    disable: 'Disable push on all devices',
+    enabled: 'Browser push enabled. Notifications do not contain message text.',
+    disabled: 'Push disabled on all devices.',
+  },
+  offline: {
+    heading: 'Install and use offline',
+    install: 'Use Install app above when offered, or your browser\'s Install / Add to Home Screen menu. The production web app saves its shell and your latest matching feed results for this browser tab, for up to 24 hours. Private conversations, profiles, and API responses are never saved by the service worker.',
+    changes: 'Offline changes stay in the open form and are not sent automatically. Reconnect and submit again. Signing out clears the saved feed and unsubscribes this browser from push.',
+  },
+};

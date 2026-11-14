@@ -3,6 +3,7 @@ import conduit from '../../lib/conduit.js';
 import { useI18n } from '../../lib/i18n.js';
 import FormField from '../FormField.jsx';
 import ModalDialog from '../ModalDialog.jsx';
+import { errorText } from '../../lib/error-text.js';
 
 // Administrator removal of a listing. The API rechecks the live admin role,
 // resolves open listing reports, notifies people, and writes the audit log.
@@ -18,7 +19,7 @@ export default function ListingModerationButton({ listing, onRemoved = () => {},
       await conduit.transmit(`/admin/marketplace/listings/${listing.id}`, { method: 'DELETE', auth: true, body: { note } });
       setOpen(false); setNote('');
       onRemoved();
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <>

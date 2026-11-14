@@ -2,6 +2,7 @@ import { useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { useI18n } from '../lib/i18n.js';
 import FormField from './FormField.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export const emptyReauthentication = { password: '', emailCode: '', code: '' };
 
@@ -28,7 +29,7 @@ export default function ReauthenticationFields({ id, security, values, onChange,
     try {
       const result = await conduit.transmit(path, { method: 'POST', auth: true, body: {} });
       setStatus(t(messageKey, { destination: result.destinationHint }));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (

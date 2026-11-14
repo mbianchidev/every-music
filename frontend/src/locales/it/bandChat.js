@@ -18,6 +18,7 @@ export default {
   newest: 'La pagina 1 contiene i messaggi più recenti.',
   pages: 'Pagine della chat della band',
   message: {
+    senderKeyMissing: 'La chiave dei messaggi del mittente non è disponibile. Ricarica la chat.',
     from: '{name}:',
     you: 'Tu:',
     decrypting: 'Decifratura del messaggio...',

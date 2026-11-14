@@ -1,0 +1,38 @@
+export default {
+  eyebrow: 'Il tuo spazio',
+  title: 'Impostazioni',
+  subtitle: 'Resta aggiornato alle tue condizioni. Sei tu a scegliere cosa condividere e misurare.',
+  loading: 'Caricamento delle preferenze',
+  saved: 'Preferenze salvate.',
+  language: {
+    heading: 'Lingua',
+    description: 'Scegli la lingua di menu, pulsanti e messaggi. Viene salvata nel tuo account e usata su ogni dispositivo da cui accedi. I testi scritti dagli iscritti non vengono tradotti.',
+    saveFailed: 'La lingua è cambiata su questo dispositivo, ma non è stato possibile salvarla nel tuo account: {reason}',
+  },
+  preferences: {
+    legend: 'Notifiche e statistiche',
+    messages: 'Nuovi messaggi',
+    announcements: 'Nuovi annunci dei musicisti che segui',
+    engagements: 'Commenti e reazioni ai miei annunci',
+    profileViews: 'Notifiche giornaliere sulle visite al profilo (solo con il consenso alle statistiche)',
+    analytics: 'Attiva statistiche di interazione rispettose della privacy',
+    platformAnalytics: 'Includi la mia attività consentita nelle statistiche aggregate per gli amministratori',
+    analyticsNote: 'Le statistiche sono disattivate per impostazione predefinita. Quando sia tu sia il proprietario del contenuto date il consenso, contiamo visualizzazioni, like, salvataggi e messaggi come totali giornalieri. Nelle statistiche non vengono salvati ID dei visitatori, indirizzi IP, testi dei messaggi o tracker di terze parti. I resoconti giornalieri scadono dopo 30 giorni; se revochi il consenso, quei totali vengono eliminati. I contatori pubblici degli annunci, i messaggi, le reazioni e i segnalibri vengono conservati.',
+    platformNote: 'Le statistiche aggregate della piattaforma richiedono un secondo consenso da entrambi i musicisti. Gli amministratori vedono l\'attività giornaliera aggregata e la portata degli annunci pubblici con consenso, non i singoli visitatori né i testi dei messaggi privati. Viene inclusa solo la nuova attività. Disattivandole elimini i totali della piattaforma per i tuoi contenuti e interrompi i nuovi contributi; i contributi già anonimi ad altri contenuti non sono identificabili singolarmente.',
+    save: 'Salva preferenze',
+  },
+  push: {
+    heading: 'Notifiche push del browser',
+    intro: 'Le notifiche push usano il permesso di notifica del browser e il servizio push configurato su questo server. Sono facoltative e disattivate per impostazione predefinita.',
+    notConfigured: 'Le notifiche push del browser non sono configurate su questo server. Le notifiche nell\'app funzionano comunque.',
+    enable: 'Attiva le notifiche push in questo browser',
+    disable: 'Disattiva le notifiche push su tutti i dispositivi',
+    enabled: 'Notifiche push del browser attivate. Le notifiche non contengono il testo dei messaggi.',
+    disabled: 'Notifiche push disattivate su tutti i dispositivi.',
+  },
+  offline: {
+    heading: 'Installa e usa offline',
+    install: 'Usa Installa app qui sopra quando compare, oppure il menu Installa / Aggiungi a schermata Home del browser. La web app salva la struttura dell\'app e gli ultimi risultati del feed per questa scheda del browser, fino a 24 ore. Le conversazioni private, i profili e le risposte delle API non vengono mai salvati dal service worker.',
+    changes: 'Le modifiche fatte offline restano nel modulo aperto e non vengono inviate automaticamente. Riconnettiti e inviale di nuovo. Uscendo dall\'account cancelli il feed salvato e annulli l\'iscrizione di questo browser alle notifiche push.',
+  },
+};

@@ -13,6 +13,8 @@ test('interpolates parameters and selects plural forms per locale', () => {
   assert.equal(translate('it', 'sample.greeting', { name: 'Ada' }), 'Ciao Ada');
   assert.equal(translate('en', 'sample.songs', { count: 1 }), '1 song');
   assert.equal(translate('it', 'sample.songs', { count: 3 }), '3 brani');
+  assert.equal(translate('it', 'sample.songs', { count: 12000 }), '12.000 brani');
+  assert.equal(translate('en', 'sample.songs', { count: 1200 }), '1,200 songs');
 });
 
 test('falls back to English, then to the visible key', () => {

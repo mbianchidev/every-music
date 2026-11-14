@@ -18,6 +18,7 @@ export default {
   newest: 'Pagina 1 bevat de nieuwste berichten.',
   pages: 'Pagina\'s van de bandchat',
   message: {
+    senderKeyMissing: 'De berichtensleutel van de afzender is niet beschikbaar. Laad de chat opnieuw.',
     from: '{name}:',
     you: 'Jij:',
     decrypting: 'Bericht ontsleutelen...',

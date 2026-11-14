@@ -5,6 +5,7 @@ import { can } from '../lib/organizations.js';
 import { blankEntry, entryBody } from '../lib/calendar.js';
 import CalendarView from './CalendarView.jsx';
 import CalendarEntryForm from './CalendarEntryForm.jsx';
+import { errorText } from '../lib/error-text.js';
 
 export default function BandCalendar({ organization }) {
   const { t } = useI18n();
@@ -17,7 +18,7 @@ export default function BandCalendar({ organization }) {
     try {
       const entry = await conduit.transmit('/calendar/entries', { method: 'POST', auth: true, body: entryBody(draft, { creating: true }) });
       window.location.hash = `#calendar-entry?id=${entry.id}`;
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return (
