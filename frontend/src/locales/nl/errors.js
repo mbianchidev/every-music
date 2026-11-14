@@ -71,7 +71,7 @@ export default {
     CALENDAR_PERMISSION_REQUIRED: 'Je hebt geen toestemming om deze agenda te wijzigen.',
     LEADER_REQUIRED: 'Alleen de beheerder van de pagina kan dit doen.',
     PROTECTED_ACCOUNT: 'Beheerders kunnen zichzelf of andere beheerders hier niet schorsen.',
-    MESSAGING_UNAVAILABLE: 'Je kunt deze persoon geen berichten sturen.',
+    MESSAGING_UNAVAILABLE: 'Je kunt deze muzikant geen berichten sturen.',
     INVALID_IMAGE: 'Kies een JPEG- of PNG-afbeelding van maximaal 2 MiB.',
     IMAGE_ALT_REQUIRED: 'Beschrijf de afbeelding voor mensen die hem niet kunnen zien.',
     INVALID_TIME_ZONE: 'Kies een geldige tijdzone.',

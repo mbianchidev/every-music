@@ -485,6 +485,33 @@ optional rewarded video (a linked `https` video file or an upload), offer
 broadcasts, and points grants for events. Card changes, uploads, offers, and
 grants are recorded in the audit log.
 
+### Language
+
+The interface is available in English, Dutch (Nederlands), and Italian
+(Italiano). Choose a language with the **Language** control at the top of the
+sign-in and registration screens, or under **Settings > Language** after
+signing in. The change applies at once, without reloading, and screen readers
+pronounce each language name correctly in the list. Dates, times, and numbers
+follow the chosen language. What members write (announcements, messages,
+reviews, listings) is shown as written and is not translated.
+
+Before you sign in, the choice is kept on this device (or taken from your
+browser language the first time). After you sign in, the language belongs to
+your account and is saved on the server, so it follows you to every device:
+
+- If your account already has a language, it replaces the one on the sign-in
+  screen.
+- If it has none yet, the language you used to sign in is saved to it once.
+- Signing out returns the sign-in screen to this device's own choice, so the
+  next person who signs in on a shared device does not inherit your language.
+
+Notification emails use the same account language; push notifications still
+show the server's English summary. Errors returned by the server are shown in
+your language when the app knows the error; otherwise the server's own
+(English) explanation is shown rather than hiding it. If the language cannot be
+saved to your account, Settings says so and the change still applies on this
+device.
+
 ### Themes, analytics, and installation
 
 The **Color theme** control offers System, Light, and Dark. An explicit choice

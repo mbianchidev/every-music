@@ -626,8 +626,8 @@ not registration fields or client claims.
 | GET | `/realm/notifications` | Paginated notifications plus `unreadCount` |
 | PATCH | `/realm/notifications` | `{ "read": true }`, mark all own notifications read |
 | PATCH | `/realm/notifications/:notificationId` | Same body, only the user's notification |
-| GET | `/realm/preferences` | Current booleans plus optional `pushPublicKey` |
-| PUT | `/realm/preferences` | Partial boolean updates |
+| GET | `/realm/preferences` | Current booleans, `locale`, plus optional `pushPublicKey` |
+| PUT | `/realm/preferences` | Partial boolean updates and/or `{ "locale": "en" \| "nl" \| "it" }` |
 | POST | `/realm/push/subscriptions` | `{ "endpoint": "<https URL>", "keys": { "p256dh": "...", "auth": "..." } }`, 201 |
 | DELETE | `/realm/push/subscriptions` | `{ "endpoint": "<current browser URL>" }`, 200 |
 
@@ -639,7 +639,9 @@ in-app/push/email defaults are defined in
 are never listed. Preferences are `messages`,
 `announcements`, `engagements` (default true), `profileViews`, `push`, and
 `analytics`, and `platformAnalytics` (default false), plus the optional
-interface `locale` (`en`, `nl`, or `it`; `null` until chosen). Platform consent requires
+interface `locale` (`en`, `nl`, or `it`; `null` until chosen). The web client reads
+`locale` after sign-in or session restore and applies it; when it is `null`, the
+client saves the language used on the sign-in screen once. Platform consent requires
 personal analytics; disabling personal analytics also disables platform
 aggregates. Announcement alerts are for followed musicians.
 Profile-view alerts are anonymous and limited to one per UTC day when both

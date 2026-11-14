@@ -120,13 +120,16 @@ test('the account language is kept for the tab only for the same account', async
 
 test('API errors are localized by code and keep the server text when the code is unknown', () => {
   const api = (code, message, status = 400) => Object.assign(new Error(message), { name: 'ApiError', code, status });
-  assert.equal(errorText(api('RATE_LIMIT_EXCEEDED', 'Too many requests, please slow down', 429), 'it'), itErrors.codes.RATE_LIMIT_EXCEEDED);
-  assert.equal(errorText(api('NETWORK_ERROR', 'Unable to reach Every.music.', 0), 'en'), enErrors.codes.NETWORK_ERROR);
+  const blocked = api('MESSAGING_UNAVAILABLE', 'Messaging is unavailable for this musician', 403);
+  assert.equal(errorText(blocked, 'en'), 'Messaging is unavailable for this musician');
+  assert.equal(errorText(blocked, 'it'), itErrors.codes.MESSAGING_UNAVAILABLE);
+  assert.equal(errorText(api('RATE_LIMIT_EXCEEDED', 'Too many requests, please slow down', 429), 'en'), enErrors.codes.RATE_LIMIT_EXCEEDED);
+  assert.equal(errorText(api('NETWORK_ERROR', 'Unable to reach Every.music.', 0), 'it'), itErrors.codes.NETWORK_ERROR);
   assert.equal(errorText(api('SOMETHING_NEW', 'A specific server explanation'), 'it'), 'A specific server explanation');
   assert.equal(errorText(api('VALIDATION_ERROR', 'Title is too short'), 'en'), 'Title is too short');
   assert.equal(errorText(api('VALIDATION_ERROR', 'Title is too short'), 'it'), `${itErrors.codes.VALIDATION_ERROR} (Title is too short)`);
   assert.equal(errorText(api('VALIDATION_ERROR', 'Request validation failed'), 'en'), enErrors.codes.VALIDATION_ERROR);
-  assert.equal(errorText(api('REQUEST_FAILED', '', 503), 'it'), itErrors.status.server);
+  assert.equal(errorText(api('REQUEST_FAILED', 'Request failed with status 503', 503), 'it'), itErrors.status.server);
   assert.equal(errorText(api(undefined, '', 0), 'it'), itErrors.unknown);
 });
 

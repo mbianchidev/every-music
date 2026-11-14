@@ -71,7 +71,7 @@ export default {
     CALENDAR_PERMISSION_REQUIRED: 'Non hai il permesso di modificare questo calendario.',
     LEADER_REQUIRED: 'Solo il responsabile della pagina può farlo.',
     PROTECTED_ACCOUNT: 'Gli amministratori non possono sospendere se stessi o altri amministratori da qui.',
-    MESSAGING_UNAVAILABLE: 'Non puoi inviare messaggi a questa persona.',
+    MESSAGING_UNAVAILABLE: 'Non è possibile inviare messaggi a questo musicista.',
     INVALID_IMAGE: 'Scegli un\'immagine JPEG o PNG fino a 2 MiB.',
     IMAGE_ALT_REQUIRED: 'Descrivi l\'immagine per chi non può vederla.',
     INVALID_TIME_ZONE: 'Scegli un fuso orario valido.',

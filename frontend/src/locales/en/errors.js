@@ -71,7 +71,7 @@ export default {
     CALENDAR_PERMISSION_REQUIRED: 'You do not have permission to change this calendar.',
     LEADER_REQUIRED: 'Only the page leader can do this.',
     PROTECTED_ACCOUNT: 'Administrators cannot suspend themselves or other administrators here.',
-    MESSAGING_UNAVAILABLE: 'You cannot message this person.',
+    MESSAGING_UNAVAILABLE: 'Messaging is unavailable for this musician.',
     INVALID_IMAGE: 'Choose a JPEG or PNG image up to 2 MiB.',
     IMAGE_ALT_REQUIRED: 'Describe the image for people who cannot see it.',
     INVALID_TIME_ZONE: 'Choose a valid time zone.',

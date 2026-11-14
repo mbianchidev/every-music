@@ -69,6 +69,14 @@ device records: theme, language, verified messaging fingerprints, the tour
 completion fallback, and the dismissed update notice. The Cookie policy page
 lists every key; the app sets no cookies of its own.
 
+All interface text comes from `src/locales/<locale>/<namespace>.js` through
+`lib/i18n.js`. `lib/locale-preference.js` keeps the signed-out device language
+(`localStorage`) apart from the signed-in account language (server preference,
+cached per account in `sessionStorage`) and updates `<html lang>`. The shell
+re-renders when the language changes, so screens switch without a reload.
+`lib/error-text.js` turns `ApiError` codes into localized messages and falls
+back to the server's message for codes it does not know.
+
 The default fetch transport is bound to the browser global receiver. Tests can
 inject a custom transport. Requests time out after 12 seconds and produce typed
 `ApiError` objects. An authenticated 401 triggers one shared refresh across

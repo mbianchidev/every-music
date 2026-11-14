@@ -385,7 +385,8 @@ seed and manifest together.
 - Put user-facing client text in `frontend/src/locales/<locale>/<namespace>.js`
   for `en`, `nl`, and `it`, and render it with `t('<namespace>.<key>')` or
   `useI18n()` from `lib/i18n.js`. Vite discovers new namespace files
-  automatically; missing translations fall back to English.
+  automatically; missing translations fall back to English. See
+  [Interface languages](#interface-languages).
 - Create notifications with `notificationRepository` and a kind from
   `backend/src/engines/notification-catalog.js`; pass `params` so clients can
   localize them.
@@ -413,6 +414,66 @@ seed and manifest together.
 - Treat `undefined` relation fields as “leave unchanged” and empty arrays as “clear all”.
 - Surface recoverable UI errors and provide retry actions. Do not turn request failures into empty states.
 - Prefer native HTML semantics before ARIA.
+
+## Interface languages
+
+Every string a person can see or hear goes through a catalog: visible text,
+`aria-label`, `alt`, `title`, placeholders, `window.confirm()` prompts,
+document titles (route `title` getters in `main.jsx`), and messages of errors
+thrown in the client. Product and brand names (Every.music, Google, Stripe,
+Premium, Partner) stay untranslated.
+
+- **Keys.** Use `t('<namespace>.<path>')` with a literal key whenever you can,
+  so the catalog test can check it. Dynamic keys are fine for server enums
+  (`` t(`reports.status.${status}`) ``); fall back to the raw value with
+  `hasTranslation()` when the server may send values the client does not know.
+- **Parameters and plurals.** Interpolate with `{name}` and pass plural counts
+  as `count` to a `{ one, other }` object. Never build sentences by
+  concatenating translated fragments; when a sentence contains a link or a
+  `<time>`, use `richText()` from `lib/rich-text.jsx` with a template such as
+  `'Posted by {name} on {date}'`.
+- **Dates and numbers.** Use `formatDate` and `formatNumber` from `useI18n()`
+  (or the module exports) instead of `toLocaleString()`.
+- **Components.** Function components use `useI18n()`. Class components and
+  plain modules may call `t()`; the shell re-renders the whole tree when the
+  language changes.
+- **Errors.** Show request failures with `errorText(error)` from
+  `lib/error-text.js`. It maps known `ApiError` codes to `errors.codes.*`,
+  keeps the server message for unknown codes, and keeps the message of
+  client-side errors, which must already be created with `t()`. Add a code to
+  all three `errors.js` catalogs when a new server error is common enough to
+  deserve its own wording.
+- **Translations.** Write natural Dutch and Italian with the informal
+  "je"/"tu", matching existing terminology (oproep/annuncio for announcements,
+  pagina for organization pages).
+
+`frontend/test/locale-catalogs.test.js` runs with `npm test` and fails when:
+
+- a namespace or key exists in one locale but not in another,
+- a translation drops or adds an `{placeholder}` (plural forms may leave
+  `{count}` implicit),
+- a plural object lacks its `one` or `other` form, or
+- a literal `t('...')` key (or the static prefix of a template key) used in
+  `frontend/src` is missing from the English catalog.
+
+To add a language:
+
+1. Add `{ code, label }` to `SUPPORTED_LOCALES` in `frontend/src/lib/i18n.js`,
+   with the label written in that language.
+2. Copy `frontend/src/locales/en/` to `frontend/src/locales/<code>/` and
+   translate every file; the catalog test reports anything missing.
+3. Allow the code in the `user_preferences.locale` check constraint
+   (`schema.sql` plus a new migration) and in the `locale` enum of
+   `PUT /realm/preferences` (`backend/src/orchestrators/community-orchestrator.js`),
+   and add email templates in `backend/src/engines/notification-email.js`.
+4. Update the language list in [usage](usage.md#language) and extend
+   `frontend/e2e/i18n-ui.spec.js`.
+
+`e2e/i18n-ui.spec.js` switches the language on the sign-in screen and in
+Settings, checks the Dutch and Italian feed, musicians, settings, events,
+marketplace and store screens (headings, document titles, `<html lang>`, axe),
+and confirms the choice survives reloads and sign-in without leaking to the
+next account on the same device. Other browser suites keep running in English.
 
 ## Documentation and releases
 

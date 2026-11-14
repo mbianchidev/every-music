@@ -95,7 +95,11 @@ export function translate(locale, key, params = {}) {
     if (!reported.has(key)) { reported.add(key); console.warn(`Missing translation: ${key}`); }
     return key;
   }
-  return message.replace(/\{(\w+)\}/g, (placeholder, name) => (Object.hasOwn(params, name) ? String(params[name]) : placeholder));
+  return message.replace(/\{(\w+)\}/g, (placeholder, name) => {
+    if (!Object.hasOwn(params, name)) return placeholder;
+    const value = params[name];
+    return name === 'count' && typeof value === 'number' && Number.isFinite(value) ? new Intl.NumberFormat(locale).format(value) : String(value);
+  });
 }
 
 export const t = (key, params) => translate(current, key, params);
