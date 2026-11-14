@@ -405,9 +405,9 @@ tbody th { font-weight: 500; }
 .application-summary .heading-md { margin: 0; }
 .application-status { margin-left: auto; font-size: 12px; }
 .application-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; }
-.application-label { margin: 6px 0 4px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.025em; }
-.application-details .tag-list { margin-bottom: 4px; }
-.application-details .detail-text { margin: 0; }
+.application-label { margin: 0 0 6px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.025em; }
+.application-details { display: grid; gap: 14px; }
+.application-details .tag-list, .application-details .detail-text, .application-group .tag-list { margin: 0; }
 .application-links { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .application-links li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
 .application-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -416,6 +416,8 @@ tbody th { font-weight: 500; }
 .application-card .compact-actions { margin-top: 0; }
 .application-form .status-message { margin: 0; }
 .application-fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.application-fieldset legend { padding: 0; }
+.application-fieldset > .btn { justify-self: start; }
 .application-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
 @media (max-width: 900px) {
   .application-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }

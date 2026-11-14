@@ -41,7 +41,10 @@ function ApplyForm({ post, onSent, onCancel }) {
     try {
       await conduit.transmit(`/announcements/${post.id}/applications`, {
         method: 'POST', auth: true,
-        body: { message: form.message, instrumentIds: form.instrumentIds, links: form.links.filter(link => link.url.trim()) },
+        body: {
+          message: form.message, instrumentIds: form.instrumentIds,
+          links: form.links.filter(link => link.url.trim()).map(({ linkType, url }) => ({ linkType, url: url.trim() })),
+        },
       });
       onSent();
     } catch (failure) {

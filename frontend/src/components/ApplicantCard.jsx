@@ -54,12 +54,12 @@ export default function ApplicantCard({ application, showAnnouncement = false, o
         {!announcement.isOpen && <span className="tag tag-muted">{t('applications.card.closed')}</span>}
       </p>}
       <p className="field-hint"><time dateTime={application.createdAt}>{t('applications.card.appliedOn', { date: formatDate(application.createdAt) })}</time></p>
-      {!!applicant.instruments.length && <>
+      {!!applicant.instruments.length && <div className="application-group">
         <h3 className="application-label">{t('applications.card.plays')}</h3>
         <div className="tag-list">{applicant.instruments.map(item => (
           <span className="tag tag-muted" key={item.instrumentId}>{item.skillLevel ? `${item.name} (${t(`applications.skill.${item.skillLevel}`)})` : item.name}</span>
         ))}</div>
-      </>}
+      </div>}
       <ApplicationDetails application={application} />
       <div className="application-controls">
         <FormField id={`application-status-${id}`} label={t('applications.card.statusLabel', { name })}

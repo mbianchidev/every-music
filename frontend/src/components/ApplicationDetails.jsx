@@ -5,15 +5,15 @@ export default function ApplicationDetails({ application, messageLabel, Heading 
   const { t } = useI18n();
   return (
     <div className="application-details">
-      {!!application.instruments.length && <>
+      {!!application.instruments.length && <div>
         <Heading className="application-label">{t('applications.card.canCover')}</Heading>
         <div className="tag-list">{application.instruments.map(item => <span className="tag" key={item.instrumentId}>{item.name}</span>)}</div>
-      </>}
-      {application.message && <>
+      </div>}
+      {application.message && <div>
         <Heading className="application-label">{messageLabel || t('applications.card.message')}</Heading>
         <p className="detail-text">{application.message}</p>
-      </>}
-      {!!application.links.length && <>
+      </div>}
+      {!!application.links.length && <div>
         <Heading className="application-label">{t('applications.card.links')}</Heading>
         <ul className="application-links">{application.links.map((link, index) => (
           <li key={`${link.url}-${index}`}>
@@ -21,7 +21,7 @@ export default function ApplicationDetails({ application, messageLabel, Heading 
             <span className="field-hint">{link.url}</span>
           </li>
         ))}</ul>
-      </>}
+      </div>}
     </div>
   );
 }
