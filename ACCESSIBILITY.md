@@ -55,6 +55,13 @@ analytics tables, image previews, theme changes, and offline error/recovery.
 New announcements and messages should not steal focus or discard typed drafts.
 Unread/blocked/offline states have text, not color-only signals.
 
+Also check generated recovery-key fields, saved-key acknowledgement, unlock
+errors, key reset warnings, current/historical fingerprint comparison, and
+return focus when a verified message replaces its warning control. Reports must
+explain exactly what is disclosed before the required consent checkbox.
+Administrator overview/queue/audit/detail states and decision confirmations need
+the same keyboard, contrast, narrow-screen and screen-reader checks.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

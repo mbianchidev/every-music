@@ -141,7 +141,9 @@ only the external Google SDK and credential verification replaced by synthetic
 provider fixtures. Install/share browser adapters are also controlled so tests
 do not install software or change the host clipboard.
 Messaging journeys generate real client keys, send actual signed/encrypted
-envelopes, unlock after reload, and retain drafts/read/focus behavior.
+envelopes, lock/reject wrong recovery keys, unlock after reload, reset identities
+and reverify older history in a fresh browser context while retaining drafts,
+read state and focus.
 The Google account journey also restores a genuine earlier first-party session
 in a second isolated context, submits selected signed report evidence, grants
 the other actor admin using the real operator CLI, and verifies report removal,
