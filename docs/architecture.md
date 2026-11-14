@@ -184,7 +184,9 @@ Every organization-scoped write authorizes through
 process runs `OrganizationFeedImporter`, which leases due bands with
 `SKIP LOCKED`, fetches their public YouTube feeds outside transactions with a
 fixed host, timeout, and size cap, and stores new videos and follower
-notifications atomically. See the [organization model](organizations.md).
+notifications atomically. The client loads organization screens on demand
+through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
+the shell. See the [organization model](organizations.md).
 
 ## Operational boundaries and extension points
 

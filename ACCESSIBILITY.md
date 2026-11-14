@@ -61,6 +61,9 @@ return focus when a verified message replaces its warning control. Reports must
 explain exactly what is disclosed before the required consent checkbox.
 Administrator overview/queue/audit/detail states and decision confirmations need
 the same keyboard, contrast, narrow-screen and screen-reader checks.
+Organization pages add member editors and permission checkboxes, invitation
+and request responses, the venue claim dialog, search-as-you-type pickers,
+and the admin claim and verification tools; check them the same way.
 
 ## Known limitations and reporting
 
