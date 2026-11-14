@@ -135,17 +135,23 @@ class CalendarRepository {
   }
 
   // Locks an entry the viewer may edit. Viewers without the right get 403,
-  // everyone else 404, so entry IDs do not reveal private calendars.
+  // everyone else 404, so entry IDs do not reveal private calendars. Band
+  // entries authorize through requireMember with the calendar permission.
   async lockManaged(executor, entryId, userId) {
     const { rows } = await executor.execute(`
-      SELECT e.*, ${calendarVisibleTo('e', '$2::uuid')} AS visible, ${canManageSql('e', '$2::uuid')} AS can_manage
+      SELECT e.*, ${calendarVisibleTo('e', '$2::uuid')} AS visible
       FROM calendar_entries e WHERE e.id = $1 FOR UPDATE OF e`, [entryId, userId]);
     const entry = rows[0];
     if (!entry?.visible) throw notFound();
-    if (!entry.can_manage) {
-      throw requestError(403, 'CALENDAR_PERMISSION_REQUIRED', entry.organization_id
-        ? 'You need the calendar permission for this band to change this entry'
-        : 'Only the organizer can change this entry');
+    if (entry.organization_id) {
+      try {
+        await organizationRepository.requireMember(executor, entry.organization_id, userId, 'manage_calendar');
+      } catch (error) {
+        if (error.code !== 'ORGANIZATION_PERMISSION_REQUIRED') throw error;
+        throw requestError(403, 'CALENDAR_PERMISSION_REQUIRED', 'You need the calendar permission for this band to change this entry');
+      }
+    } else if (entry.owner_id !== userId) {
+      throw requestError(403, 'CALENDAR_PERMISSION_REQUIRED', 'Only the organizer can change this entry');
     }
     return entry;
   }

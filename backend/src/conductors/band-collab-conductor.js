@@ -96,9 +96,15 @@ export class BandCollabConductor {
     return ok(reply, { active: false });
   };
 
+  // Unknown or revoked tokens answer directly instead of through the error
+  // handler, so calendar apps polling an old link do not flood the error log.
   feed = async (request, reply) => {
     const body = await calendarRepository.feed(request.params.file.slice(0, -'.ics'.length), this.origin);
-    if (!body) throw requestError(404, 'CALENDAR_FEED_NOT_FOUND', 'This calendar feed does not exist or was revoked');
+    if (!body) {
+      return reply.code(404).send({
+        success: false, error: { code: 'CALENDAR_FEED_NOT_FOUND', message: 'This calendar feed does not exist or was revoked' },
+      });
+    }
     return sendCalendar(reply, body);
   };
 
