@@ -29,6 +29,38 @@ function parseBoolean(value, fallback = false) {
   throw new Error(`Expected a boolean value, received "${value}"`);
 }
 
+// [limit key, wishlist name, free default, premium default]; null means unlimited.
+export const ENTITLEMENT_LIMITS = [
+  ['maxActiveAnnouncements', 'MAX_ANNOUNCEMENT_LIMIT', 5, null],
+  ['maxSavedSearches', 'MAX_FILTERS_SAVED', 1, 20],
+  ['announcementStats', 'SEE_ADS_STATS', false, true],
+  ['maxProjectsShown', 'MAX_PROJECTS_SHOWN', 3, null],
+  ['maxContentShown', 'MAX_CONTENT_SHOWN', 3, null],
+  ['maxSavedAnnouncements', 'MAX_SAVABLE_ADS', 10, null],
+  ['announcementExpiryDays', 'EXPIRATION_DATE_DAY_LIMIT', 30, null],
+  ['profileVisits', 'SEE_PROFILE_VISITS', false, true],
+];
+
+function parseLimit(value, fallback, name) {
+  if (value === undefined || value === '') return fallback;
+  if (typeof fallback === 'boolean') {
+    try { return parseBoolean(value); } catch { throw new Error(`${name} must be true or false`); }
+  }
+  if (value === 'unlimited') return null;
+  return parseInteger(value, fallback, name, { minimum: 1, maximum: 100000 });
+}
+
+function createEntitlements(env) {
+  const plan = (prefix, index) => Object.fromEntries(ENTITLEMENT_LIMITS.map((definition) => {
+    const [key, name] = definition;
+    return [key, parseLimit(env[`${prefix}_${name}`], definition[index], `${prefix}_${name}`)];
+  }));
+  const partnerRequired = parseBoolean(env.PARTNER_PLAN_REQUIRED, false);
+  const free = { ...plan('FREE', 2), businessPages: !partnerRequired };
+  const premium = { ...plan('PREMIUM', 3), businessPages: !partnerRequired };
+  return { free, premium, partner: { ...premium, businessPages: true } };
+}
+
 function parseOrigins(value) {
   return (value || 'http://localhost:3000')
     .split(',')
@@ -124,6 +156,7 @@ export function createRealmConfig(env = process.env) {
       credential: env.MAIL_CREDENTIAL,
       senderAlias: env.MAIL_SENDER_ALIAS,
     },
+    entitlements: createEntitlements(env),
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),

@@ -322,9 +322,14 @@ not registration fields or client claims.
 | DELETE | `/realm/push/subscriptions` | `{ "endpoint": "<current browser URL>" }`, 200 |
 
 All require authentication. Notification objects contain `id`, `kind`,
-`title`, `link`, `readAt`, and `createdAt`. Preferences are `messages`,
+`title`, `link`, `params`, `readAt`, and `createdAt`. `title` is an English
+fallback; clients localize from `kind` and the `params` object. Kinds and their
+in-app/push/email defaults are defined in
+`backend/src/engines/notification-catalog.js`; kinds without an in-app channel
+are never listed. Preferences are `messages`,
 `announcements`, `engagements` (default true), `profileViews`, `push`, and
-`analytics`, and `platformAnalytics` (default false). Platform consent requires
+`analytics`, and `platformAnalytics` (default false), plus the optional
+interface `locale` (`en`, `nl`, or `it`; `null` until chosen). Platform consent requires
 personal analytics; disabling personal analytics also disables platform
 aggregates. Announcement alerts are for followed musicians.
 Profile-view alerts are anonymous and limited to one per UTC day when both
@@ -338,6 +343,24 @@ removes all account subscriptions. DELETE removes only the calling user's
 matching browser endpoint. Old, already-read, and push-disabled-at-creation
 notifications are not delivered later on opt-in. Notifications expire after
 90 days; a worker cleans them up hourly.
+
+## Plans and limits
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/entitlements/me` | `{ plan, limits, entitlements }` for the caller |
+| GET | `/realm/admin/users/:userId/entitlements` | Admin-only, same shape for another user |
+| POST | `/realm/admin/users/:userId/entitlements` | Admin-only `{ "plan": "premium" \| "partner", "days": 1-3650 }`; omit `days` for no end date; 201 |
+| DELETE | `/realm/admin/entitlements/:entitlementId` | Admin-only revocation |
+
+`plan` is the highest active plan: `free`, `premium`, or `partner`. `limits`
+contains `maxActiveAnnouncements`, `maxSavedSearches`, `maxProjectsShown`,
+`maxContentShown`, `maxSavedAnnouncements`, and `announcementExpiryDays`
+(integers, or `null` for unlimited), plus the feature switches
+`announcementStats`, `profileVisits`, and `businessPages`. Operators configure
+the values; see [configuration](configuration.md#plans-and-limits). Features
+that exceed a limit return 403 `PLAN_LIMIT_REACHED`. Admin grants and revocations
+are recorded in the audit log.
 
 ## Analytics
 

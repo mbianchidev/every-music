@@ -3,6 +3,8 @@ import { requestError } from '../engines/request-error.js';
 import { validateMessageEnvelope } from '../engines/message-security.js';
 import { messagingKeyRepository, publicMessagingKey } from './messaging-key-repository.js';
 import { publishEvent, publishAdminEvent } from './event-publisher.js';
+import { notificationRepository } from './notification-repository.js';
+import { publicMediaReferences } from '../engines/media-references.js';
 export { publishEvent } from './event-publisher.js';
 
 export const preferenceColumns = {
@@ -13,6 +15,7 @@ export const preferenceColumns = {
   push: 'push',
   analytics: 'analytics',
   platformAnalytics: 'platform_analytics',
+  locale: 'locale',
 };
 
 export function messageView(row) {
@@ -34,7 +37,8 @@ class CommunityRepository {
              COALESCE(p.profile_views, FALSE) AS "profileViews",
              COALESCE(p.push, FALSE) AS push,
              COALESCE(p.analytics, FALSE) AS analytics,
-             COALESCE(p.platform_analytics, FALSE) AS "platformAnalytics"
+             COALESCE(p.platform_analytics, FALSE) AS "platformAnalytics",
+             p.locale
       FROM users u LEFT JOIN user_preferences p ON p.user_id = u.id
       WHERE u.id = $1`, [userId]);
     return rows[0];
@@ -69,34 +73,18 @@ class CommunityRepository {
     });
   }
 
-  async notify(executor, { userId, kind, title, link, key, preference = 'engagements' }) {
-    const column = preferenceColumns[preference];
-    if (!column) throw new Error('Unknown notification preference');
-    const { rows } = await executor.execute(`
-      INSERT INTO notifications (user_id, kind, title, link, event_key, push_sent)
-      SELECT u.id, $2, $3, $4, $5, NOT COALESCE(p.push, FALSE) FROM users u
-      LEFT JOIN user_preferences p ON p.user_id = u.id
-      WHERE u.id = $1 AND u.is_active = TRUE AND u.is_deleted = FALSE
-        AND COALESCE(p.${column}, $6)
-      ON CONFLICT (event_key) DO NOTHING RETURNING id`,
-    [userId, kind, title, link, key ?? null, preference !== 'profileViews']);
-    if (rows.length) await publishEvent(executor, 'notifications.changed', { userId, id: rows[0].id });
+  // Legacy entry point; the kind's catalog entry decides preference gating.
+  async notify(executor, { userId, kind, title, link, key, params }) {
+    return notificationRepository.create(executor, { userId, kind, title, link, key, params });
   }
 
   async announcementPublished(executor, announcement) {
-    await executor.execute(`
-      WITH inserted AS (
-        INSERT INTO notifications (user_id, kind, title, link, event_key, push_sent)
-        SELECT f.follower_id, 'announcement', 'A musician you follow published an announcement',
-          $2, 'announcement:' || $3 || ':' || f.follower_id, NOT COALESCE(p.push, FALSE)
-        FROM followers f JOIN users u ON u.id = f.follower_id AND u.is_active = TRUE AND u.is_deleted = FALSE
-        LEFT JOIN user_preferences p ON p.user_id = f.follower_id
-        WHERE f.following_id = $1 AND COALESCE(p.announcements, TRUE)
-        ON CONFLICT (event_key) DO NOTHING RETURNING user_id, id
-      )
-      SELECT pg_notify('everymusic_events',
-        json_build_object('type', 'notifications.changed', 'userId', user_id, 'id', id)::text) FROM inserted`,
-    [announcement.user_id, `#announcement?id=${announcement.id}`, announcement.id]);
+    const { rows } = await executor.execute('SELECT follower_id FROM followers WHERE following_id = $1', [announcement.user_id]);
+    await notificationRepository.createMany(executor, rows.map(row => row.follower_id), {
+      kind: 'announcement', title: 'A musician you follow published an announcement',
+      link: `#announcement?id=${announcement.id}`, keyPrefix: `announcement:${announcement.id}`,
+      params: { announcementId: announcement.id, title: announcement.title },
+    });
     await publishEvent(executor, 'announcements.changed', { id: announcement.id });
   }
 
@@ -169,7 +157,7 @@ class CommunityRepository {
         WHERE conversation_id = $1 AND user_id = $2`, [id, userId]);
       if (!await messagingKeyRepository.current(recipientId, executor)) await this.notify(executor, {
         userId: recipientId, kind: 'message_request', title: 'A musician wants to start an encrypted conversation',
-        link: `#messages?id=${id}`, key: `conversation-request:${id}:${recipientId}`, preference: 'messages',
+        link: `#messages?id=${id}`, key: `conversation-request:${id}:${recipientId}`,
       });
       await publishEvent(executor, 'conversations.changed', { userId, id });
       await publishEvent(executor, 'conversations.changed', { userId: recipientId, id });
@@ -219,7 +207,7 @@ class CommunityRepository {
         WHERE conversation_id = $1`, [id, userId]);
       await this.notify(executor, {
         userId: conversation.recipient_id, kind: 'message', title: 'You have a new message',
-        link: `#messages?id=${id}`, key: `message:${rows[0].id}`, preference: 'messages',
+        link: `#messages?id=${id}`, key: `message:${rows[0].id}`,
       });
       await this.recordMetric(executor, userId, conversation.recipient_id, 'message', conversation.recipient_id);
       await publishEvent(executor, 'messages.changed', { userId, id });
@@ -306,11 +294,11 @@ class CommunityRepository {
 
   async notifications(userId, { page, pageSize }) {
     const { rows } = await realmConnector.execute(`
-      SELECT id, kind, title, link, read_at AS "readAt", created_at AS "createdAt"
-      FROM notifications WHERE user_id = $1
+      SELECT id, kind, title, link, params, read_at AS "readAt", created_at AS "createdAt"
+      FROM notifications WHERE user_id = $1 AND in_app = TRUE
       ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`, [userId, pageSize + 1, (page - 1) * pageSize]);
     const count = await realmConnector.execute(
-      'SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND read_at IS NULL', [userId],
+      'SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND in_app = TRUE AND read_at IS NULL', [userId],
     );
     return { rows, unreadCount: count.rows[0].count };
   }
@@ -343,7 +331,7 @@ class CommunityRepository {
       if (recorded && kind === 'profile_view') {
         await this.notify(executor, {
           userId: ownerId, kind: 'profile_view', title: 'Your profile was viewed today',
-          link: '#analytics', key: `profile-view:${ownerId}:${new Date().toISOString().slice(0, 10)}`, preference: 'profileViews',
+          link: '#analytics', key: `profile-view:${ownerId}:${new Date().toISOString().slice(0, 10)}`,
         });
       }
       return { recorded };
@@ -453,12 +441,7 @@ class CommunityRepository {
     id = id.toLowerCase();
     const { rows } = await realmConnector.execute(`
       SELECT m.content, m.user_id = $3 AS owned FROM media m WHERE m.id = $1 AND (
-        m.user_id = $3 OR
-        EXISTS(SELECT 1 FROM profiles p JOIN users u ON u.id = p.user_id
-          WHERE p.profile_picture_url = $2 AND u.is_active = TRUE AND u.is_deleted = FALSE) OR
-        EXISTS(SELECT 1 FROM announcements a JOIN users u ON u.id = a.user_id AND u.is_active AND NOT u.is_deleted
-          WHERE a.picture_url = $2 AND a.is_published = TRUE
-          AND a.is_deleted = FALSE AND (a.expires_at IS NULL OR a.expires_at > NOW()))
+        m.user_id = $3 OR ${publicMediaReferences.join(' OR ')}
       )`, [id, `/realm/media/${id}`, userId ?? null]);
     if (!rows.length) throw requestError(404, 'IMAGE_NOT_FOUND', 'Image not found');
     return rows[0];

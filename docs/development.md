@@ -112,6 +112,11 @@ above. Dependencies must be installed in both packages.
 (cd frontend && npm run test:e2e)
 ```
 
+`test:integration` runs `integration/community.js` and every file under
+`integration/features/`, one file at a time. Add feature suites there. Set
+`E2E_API_PORT` and `E2E_WEB_PORT` to run browser tests on ports other than the
+default 55474 and 4179.
+
 `test:integration` exercises real Fastify authentication, PostgreSQL
 transactions, relation edits, case-normalized identifiers, visibility,
 concurrent reactions, media decoding/ownership, conversation retries/blocking,
@@ -260,6 +265,17 @@ See the [messaging security guide](messaging-security.md) for recovery, trust,
 retention, provisioning and cryptographic limitations.
 
 ## Coding conventions
+
+- Put user-facing client text in `frontend/src/locales/<locale>/<namespace>.js`
+  for `en`, `nl`, and `it`, and render it with `t('<namespace>.<key>')` or
+  `useI18n()` from `lib/i18n.js`. Vite discovers new namespace files
+  automatically; missing translations fall back to English.
+- Create notifications with `notificationRepository` and a kind from
+  `backend/src/engines/notification-catalog.js`; pass `params` so clients can
+  localize them.
+- Check plan limits with `entitlementRepository` instead of hard-coding them.
+- Register publicly visible managed images in
+  `backend/src/engines/media-references.js`.
 
 - Keep HTTP envelopes consistent: `{ "success": true, "data": ... }` or `{ "success": false, "error": ... }`.
 - Use repository executors supplied by `realmConnector.transaction`; calling the global pool from inside a transaction is not atomic.

@@ -43,6 +43,24 @@ test('builds a safely encoded connection string from discrete database settings'
   );
 });
 
+test('applies wishlist freemium defaults and operator overrides', () => {
+  const defaults = createRealmConfig(validEnvironment).entitlements;
+  assert.equal(defaults.free.maxActiveAnnouncements, 5);
+  assert.equal(defaults.free.announcementStats, false);
+  assert.equal(defaults.premium.maxActiveAnnouncements, null);
+  assert.equal(defaults.premium.maxSavedSearches, 20);
+  assert.equal(defaults.partner.businessPages, true);
+  assert.equal(defaults.free.businessPages, true);
+
+  const custom = createRealmConfig({
+    ...validEnvironment, FREE_MAX_ANNOUNCEMENT_LIMIT: 'unlimited', FREE_SEE_ADS_STATS: 'true', PARTNER_PLAN_REQUIRED: 'true',
+  }).entitlements;
+  assert.equal(custom.free.maxActiveAnnouncements, null);
+  assert.equal(custom.free.announcementStats, true);
+  assert.equal(custom.free.businessPages, false);
+  assert.throws(() => createRealmConfig({ ...validEnvironment, FREE_MAX_FILTERS_SAVED: '0' }), /FREE_MAX_FILTERS_SAVED/);
+});
+
 test('rejects identical signing keys', () => {
   const config = createRealmConfig({
     ...validEnvironment,

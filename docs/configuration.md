@@ -136,6 +136,27 @@ Disable proxy buffering/compression for event streams and allow idle timeouts
 longer than 15 seconds. The supplied nginx config already disables buffering.
 Review `RATE_THRESHOLD` for shared proxies and busy deployments.
 
+## Plans and limits
+
+Freemium limits use the product plan names. Set `FREE_<NAME>` or
+`PREMIUM_<NAME>` to override a default. Numeric limits accept a positive
+integer or `unlimited`; switches accept `true`/`false`. The partner plan uses
+premium limits and can always manage business pages.
+
+| Name | Free default | Premium default | Controls |
+|---|---|---|---|
+| `MAX_ANNOUNCEMENT_LIMIT` | `5` | `unlimited` | Active (published, unexpired) announcements |
+| `MAX_FILTERS_SAVED` | `1` | `20` | Saved announcement searches with alerts |
+| `SEE_ADS_STATS` | `false` | `true` | Announcement statistics |
+| `MAX_PROJECTS_SHOWN` | `3` | `unlimited` | Projects shown on a public profile |
+| `MAX_CONTENT_SHOWN` | `3` | `unlimited` | Content links shown on a public profile |
+| `MAX_SAVABLE_ADS` | `10` | `unlimited` | Saved announcements |
+| `EXPIRATION_DATE_DAY_LIMIT` | `30` | `unlimited` | Maximum announcement lifetime in days |
+| `SEE_PROFILE_VISITS` | `false` | `true` | Seeing consenting visitors of your profile |
+
+`PARTNER_PLAN_REQUIRED` (default `false`) restricts venue, organizer, booking
+agency, and label pages to the partner plan.
+
 ## Compose settings
 
 Compose sets the API to production, listens internally on `0.0.0.0:8080`,
