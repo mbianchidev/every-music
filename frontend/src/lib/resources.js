@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import conduit from './conduit.js';
 import nucleus from './nucleus.js';
 import { offlineFeed, rememberFeed } from './offline-feed.js';
+import { errorText } from './error-text.js';
+import { t } from './i18n.js';
 
 export function useResource(path, { auth = true, events = '', cacheFeed = false, reconnect = true } = {}) {
   const account = auth ? nucleus.payload.persona?.userId : null;
@@ -19,12 +21,12 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
     const load = async () => {
       if (cacheFeed && !navigator.onLine) {
         const saved = offlineFeed(path);
-        if (!saved) throw new Error('You are offline. There is no saved copy of these results. Reconnect and retry.');
+        if (!saved) throw new Error(t('feed.offline.noCopy'));
         return saved;
       }
       const data = await conduit.transmit(path, { auth, signal: controller.signal });
       if (cacheFeed && !controller.signal.aborted && !rememberFeed(path, data, userId)) {
-        return { ...data, offlineCacheWarning: 'These results could not be saved for offline use. Browser storage may be full or unavailable.' };
+        return { ...data, offlineCacheWarning: t('feed.offline.cacheFailed') };
       }
       return data;
     };
@@ -32,7 +34,7 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
       if (!controller.signal.aborted) setState({ path, account, data, loading: false, error: '', errorCode: '' });
     }).catch(error => {
       if (!controller.signal.aborted) setState(previous => ({
-        ...previous, data: [403, 404].includes(error.status) ? null : previous.data, loading: false, error: error.message, errorCode: error.code || '',
+        ...previous, data: [403, 404].includes(error.status) ? null : previous.data, loading: false, error: errorText(error), errorCode: error.code || '',
       }));
     });
     return () => controller.abort();

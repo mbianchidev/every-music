@@ -1,4 +1,5 @@
 import conduit from './conduit.js';
+import { t } from './i18n.js';
 
 export const PIN_RADII = [5, 10, 25, 50, 100, 200, 500, 1000];
 
@@ -47,7 +48,7 @@ export function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1]);
-    reader.onerror = () => reject(new Error('The file could not be read. Choose it again.'));
+    reader.onerror = () => reject(new Error(t('ui.fileUnreadable')));
     reader.readAsDataURL(file);
   });
 }

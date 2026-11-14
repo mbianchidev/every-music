@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef } from 'react';
 import Icon from './Icon.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function ModalDialog({ title, open, onClose, children, fallbackFocusId = 'main-content' }) {
   const dialog = useRef(null);
   const previous = useRef(null);
   const heading = useId();
+  const { t, locale } = useI18n();
   useEffect(() => {
     if (open && !dialog.current.open) {
       previous.current = document.activeElement;
@@ -31,7 +33,7 @@ export default function ModalDialog({ title, open, onClose, children, fallbackFo
     const box = event.currentTarget.getBoundingClientRect();
     if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.current.close();
   }}>
-    <div className="dialog-heading"><h2 id={heading}>{title}</h2><button className="icon-button" type="button" aria-label={`Close ${title.toLowerCase()}`} onClick={() => dialog.current.close()}><Icon name="close" /></button></div>
+    <div className="dialog-heading"><h2 id={heading}>{title}</h2><button className="icon-button" type="button" aria-label={t('ui.modal.close', { title: title.toLocaleLowerCase(locale) })} onClick={() => dialog.current.close()}><Icon name="close" /></button></div>
     {open && children}
   </dialog>;
 }

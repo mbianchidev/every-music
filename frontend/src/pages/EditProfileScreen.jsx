@@ -11,6 +11,7 @@ import ProjectManager from '../components/ProjectManager.jsx';
 import AccountKindField from '../components/AccountKindField.jsx';
 import { uploadImage } from '../lib/media.js';
 import { t } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 import PlacePicker from '../components/PlacePicker.jsx';
 import ProfileLinksEditor from '../components/ProfileLinksEditor.jsx';
 
@@ -95,7 +96,7 @@ class EditProfileScreen extends Component {
         loading: false,
       });
     } catch (error) {
-      this.setState({ loading: false, error: error.message });
+      this.setState({ loading: false, error: errorText(error) });
     }
   };
 
@@ -104,7 +105,7 @@ class EditProfileScreen extends Component {
     const { artistName, firstName, lastName, city, bio, instrumentIds, genreIds, experience, imageFile, place, age, accountKind } = this.state;
 
     if (!artistName.trim()) {
-      this.setState({ error: 'Artist name is required.' });
+      this.setState({ error: t('profile.editor.nameRequired') });
       return;
     }
     if (age && (!/^\d+$/.test(age) || Number(age) < 13 || Number(age) > 120)) {
@@ -144,7 +145,7 @@ class EditProfileScreen extends Component {
       nucleus.mutate(updated);
       window.location.hash = '#profile';
     } catch (error) {
-      this.setState({ error: error.message, saving: false });
+      this.setState({ error: errorText(error), saving: false });
     }
   };
 
@@ -154,7 +155,7 @@ class EditProfileScreen extends Component {
     if (loading) {
       return (
         <div className="container">
-          <Spinner label="Loading your profile" />
+          <Spinner label={t('profile.loading')} />
         </div>
       );
     }
@@ -162,7 +163,7 @@ class EditProfileScreen extends Component {
     if (error && !this.state.loaded) {
       return (
         <div className="container">
-          <PageHeader eyebrow="Your space" title="Edit profile" />
+          <PageHeader eyebrow={t('app.nav.sections.yourSpace')} title={t('app.routes.editProfile')} />
           <ErrorState message={error} onRetry={this.loadProfile} />
         </div>
       );
@@ -170,20 +171,20 @@ class EditProfileScreen extends Component {
 
     return (
       <div className="container">
-        <PageHeader eyebrow="Your space" title="Edit profile" subtitle="Your sound, your experience, and what you are working on." />
+        <PageHeader eyebrow={t('app.nav.sections.yourSpace')} title={t('app.routes.editProfile')} subtitle={t('profile.editor.subtitle')} />
         {error && <div className="error" role="alert">{error}</div>}
 
         <form className="form-stack" onSubmit={this.handleSave}>
           <AccountKindField value={this.state.accountKind} disabled={saving} onChange={accountKind => this.setState({ accountKind })} />
-          <ImageInput id="profile-image" label="Profile image" value={this.state.profilePictureUrl} disabled={saving}
+          <ImageInput id="profile-image" label={t('profile.editor.image')} value={this.state.profilePictureUrl} disabled={saving}
             onChange={profilePictureUrl => this.setState({ profilePictureUrl })} onFile={imageFile => this.setState({ imageFile })} />
-          <FormField id="profile-artist-name" label="Artist name" required>
+          <FormField id="profile-artist-name" label={t('profile.editor.artistName')} required>
             <input className="input" value={artistName} onChange={(event) => this.setState({ artistName: event.target.value })} maxLength="255" disabled={saving} />
           </FormField>
-          <div className="form-grid"><FormField id="profile-first-name" label="First name">
+          <div className="form-grid"><FormField id="profile-first-name" label={t('profile.editor.firstName')}>
             <input className="input" value={firstName} onChange={(event) => this.setState({ firstName: event.target.value })} autoComplete="given-name" maxLength="100" disabled={saving} />
           </FormField>
-          <FormField id="profile-last-name" label="Last name">
+          <FormField id="profile-last-name" label={t('profile.editor.lastName')}>
             <input className="input" value={lastName} onChange={(event) => this.setState({ lastName: event.target.value })} autoComplete="family-name" maxLength="100" disabled={saving} />
           </FormField></div>
           <div className="form-grid"><FormField id="profile-age" label={t('profileExtras.editor.age')} hint={t('profileExtras.editor.ageHint')}>
@@ -196,7 +197,7 @@ class EditProfileScreen extends Component {
               aria-describedby="profile-open-hint" onChange={(event) => this.setState({ openToProjects: event.target.checked })} />{t('profileExtras.editor.openToProjects')}</label>
             <p className="field-hint" id="profile-open-hint">{this.state.hasActiveAnnouncement ? t('profileExtras.editor.openAutomatic') : t('profileExtras.editor.openHint')}</p>
           </div>
-          <FormField id="profile-bio" label="Bio">
+          <FormField id="profile-bio" label={t('profile.editor.bio')}>
             <textarea className="input" style={{ minHeight: '140px', resize: 'vertical' }} value={bio} onChange={(event) => this.setState({ bio: event.target.value })} maxLength="5000" disabled={saving} />
           </FormField>
           <CatalogSelections instruments={this.state.instruments} genres={this.state.genres} hideInstruments={this.state.accountKind === 'music_lover'}
@@ -225,10 +226,10 @@ class EditProfileScreen extends Component {
 
           <div className="button-row">
             <button className="btn btn-primary" type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save profile'}
+              {saving ? t('common.actions.saving') : t('profile.editor.save')}
             </button>
             <button className="btn btn-ghost" type="button" onClick={() => { window.location.hash = '#profile'; }} disabled={saving}>
-              Cancel
+              {t('common.actions.cancel')}
             </button>
           </div>
         </form>

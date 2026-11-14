@@ -1,0 +1,21 @@
+export default {
+  title: 'My profile',
+  subtitle: 'A little about you. A good place for a collaboration to start.',
+  loading: 'Loading your profile',
+  incomplete: 'Complete your profile so other musicians can find you.',
+  complete: 'Complete profile',
+  signOut: 'Sign out',
+  signingOut: 'Signing out...',
+  preferences: 'Preferences',
+  analytics: 'My analytics',
+  editor: {
+    subtitle: 'Your sound, your experience, and what you are working on.',
+    nameRequired: 'Artist name is required.',
+    image: 'Profile image',
+    artistName: 'Artist name',
+    firstName: 'First name',
+    lastName: 'Last name',
+    bio: 'Bio',
+    save: 'Save profile',
+  },
+};

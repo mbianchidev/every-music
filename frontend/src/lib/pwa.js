@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export async function registerPwa(onUpdate, onError) {
   if (!import.meta.env.PROD || globalThis.__TAURI_INTERNALS__ || !('serviceWorker' in navigator)) return null;
   try {
@@ -17,19 +19,19 @@ export async function registerPwa(onUpdate, onError) {
     return registration;
   } catch (error) {
     console.error('Offline app registration failed', error);
-    onError('Offline installation is unavailable. Reconnect and reload to try again.');
+    onError(t('app.pwa.unavailable'));
     return null;
   }
 }
 
 export async function enablePush(publicKey) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    throw new Error('This browser does not support Web Push. On iOS, install the app on your Home Screen first.');
+    throw new Error(t('app.pwa.unsupported'));
   }
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw new Error('Notifications were not allowed. Change browser permissions to try again.');
+  if (permission !== 'granted') throw new Error(t('app.pwa.denied'));
   const registration = await navigator.serviceWorker.getRegistration();
-  if (!registration?.active) throw new Error('Offline installation is not ready yet. Reload once and try again.');
+  if (!registration?.active) throw new Error(t('app.pwa.notReady'));
   const bytes = Uint8Array.from(atob(publicKey.replace(/-/g, '+').replace(/_/g, '/')), character => character.charCodeAt(0));
   const existing = await registration.pushManager.getSubscription();
   if (existing) {

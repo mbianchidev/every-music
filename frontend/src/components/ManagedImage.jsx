@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { mediaUrl } from '../lib/media.js';
+import { useI18n } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
 
 export default function ManagedImage({ src, authenticated = false, alt, ...props }) {
+  const { t } = useI18n();
   const [result, setResult] = useState(null);
   const protectedImage = authenticated && src?.startsWith('/realm/media/');
   useEffect(() => {
@@ -15,12 +18,12 @@ export default function ManagedImage({ src, authenticated = false, alt, ...props
         if (!controller.signal.aborted) {
           objectUrl = URL.createObjectURL(blob); setResult({ src, url: objectUrl });
         }
-      }).catch(failure => { if (!controller.signal.aborted) setResult({ src, error: failure.message }); })
+      }).catch(failure => { if (!controller.signal.aborted) setResult({ src, error: errorText(failure) }); })
       .finally(() => controller.abort());
     return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [src, protectedImage]);
   const current = result?.src === src ? result : null;
-  if (protectedImage && current?.error) return <p className="field-error" role="alert">Image unavailable: {current.error}</p>;
-  if (protectedImage && !current?.url) return <p role="status">Loading image preview...</p>;
+  if (protectedImage && current?.error) return <p className="field-error" role="alert">{t('ui.image.unavailable', { error: current.error })}</p>;
+  if (protectedImage && !current?.url) return <p role="status">{t('ui.image.loading')}</p>;
   return <img {...props} src={protectedImage ? current.url : mediaUrl(src)} alt={alt} />;
 }
