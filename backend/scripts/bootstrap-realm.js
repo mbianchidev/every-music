@@ -8,6 +8,10 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+if (!process.env.REALM_CONNECTION) {
+  throw new Error('REALM_CONNECTION must explicitly target a new isolated development database before bootstrap');
+}
+
 const pool = new Pool({
   connectionString: process.env.REALM_CONNECTION,
 });

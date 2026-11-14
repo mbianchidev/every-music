@@ -171,6 +171,19 @@ jobs:
       - uses: actions/checkout@v7
       - run: docker build --no-cache -t everymusic-nexus:test backend
       - run: docker build --no-cache -t everymusic-web:test frontend
+      - name: Smoke packaged image optimization
+        run: |
+          docker run --rm everymusic-nexus:test node --input-type=module -e "
+            import assert from 'node:assert/strict';
+            import sharp from 'sharp';
+            import { optimizeImage } from './src/engines/media-engine.js';
+            const input = await sharp({create:{width:80,height:60,channels:3,background:'#ff4f8b'}}).png().toBuffer();
+            const output = await optimizeImage(input.toString('base64'), 'image/png');
+            assert.equal((await sharp(output).metadata()).format, 'webp');
+            console.log('Packaged image optimization passed');
+          "
+      - name: Validate packaged nginx configuration
+        run: docker run --rm --add-host realm-nexus:127.0.0.1 everymusic-web:test nginx -t
       - name: Validate Compose
         env:
           POSTGRES_PASSWORD: compose-test-password

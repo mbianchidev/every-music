@@ -65,6 +65,10 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     const loaded = await call('/profiles/me');
     assert.equal(loaded.instruments[0].instrument_id, instrument);
     assert.equal(loaded.genres[0].genre_id, genre);
+    const searchTerm = encodeURIComponent(`${marker} artist 0`);
+    assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${instrument}&genreId=${genre}`)).profiles.length, 1);
+    assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${randomUUID()}&genreId=${genre}`)).profiles.length, 0);
+    assert.equal((await call(`/profiles/search?searchTerm=${searchTerm}&instrumentId=${instrument}&genreId=${randomUUID()}`)).profiles.length, 0);
     const project = await call('/profiles/me/projects', { method: 'POST', status: 201, body: {
       name: 'Synthetic trio', role: 'Guitar', collaborators: [{ userId: users[1].toUpperCase(), role: ' Drums ', ignored: 'not persisted' }],
     } });

@@ -181,6 +181,8 @@ The PostgreSQL job additionally verifies fresh/upgrade migration convergence,
 community API contracts, and the production browser journeys. It installs
 Chromium and uploads failure evidence. These checks do not publish installers,
 federated records, or provider notifications.
+The container job also runs the packaged image optimizer on Alpine and checks
+the nginx configuration, not only Dockerfile builds.
 
 ## Integration smoke test
 
@@ -194,8 +196,13 @@ npm run smoke
 `REALM_CONNECTION` is used for setup/cleanup, and `SMOKE_BASE_URL` defaults to
 `http://127.0.0.1:8080`. The test registers a synthetic `example.test` account,
 marks that test email verified directly in the database, exercises session
-rotation/announcements/bookmarks/logout, and deletes its own user in `finally`.
+rotation, image optimization, announcements/bookmarks, an authenticated live
+stream, and logout, then deletes its own user in `finally`.
 It does not send a real verification email or validate SMTP delivery.
+
+To exercise the nginx path, set `SMOKE_BASE_URL` to the web origin and
+`SMOKE_READINESS_URL` to the isolated API's absolute `/health/ready` URL;
+nginx deliberately exposes `/healthz`, not the API's root health routes.
 
 ## Debugging
 

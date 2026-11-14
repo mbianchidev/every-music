@@ -4,7 +4,7 @@
 
 [Quickstart](#quick-start-with-docker-compose) | [Documentation](docs/README.md) | [Build/download](docs/releases.md) | [Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) | [Roadmap](docs/main.md)
 
-[![Every.music announcement feed showing three collaboration opportunities, a saved announcement, and navigation to posting, saved calls, and profiles](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+[![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
 
 *Current web feed connected to a local API and PostgreSQL with synthetic accounts and announcements. Select the image to view it at full resolution.*
 

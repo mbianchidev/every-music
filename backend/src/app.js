@@ -11,6 +11,7 @@ import { communityOrchestrator } from './orchestrators/community-orchestrator.js
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
+import { RequestError } from './engines/request-error.js';
 
 function applySecurityHeaders(reply) {
   reply
@@ -81,7 +82,7 @@ export async function buildNexus({
       });
     }
 
-    if (error.statusCode === 429) {
+    if (error.statusCode === 429 && !(error instanceof RequestError)) {
       return reply.code(429).send({
         success: false,
         error: {
@@ -91,12 +92,13 @@ export async function buildNexus({
       });
     }
 
-    const statusCode = error.statusCode && error.statusCode < 500 ? error.statusCode : 500;
+    const statusCode = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode <= 599 ? error.statusCode : 500;
+    const internalError = statusCode >= 500 && !(error instanceof RequestError);
     return reply.code(statusCode).send({
       success: false,
       error: {
-        code: statusCode === 500 ? 'INTERNAL_ERROR' : error.code || 'REQUEST_FAILED',
-        message: statusCode === 500 && config.environment === 'production'
+        code: internalError ? 'INTERNAL_ERROR' : error.code || 'REQUEST_FAILED',
+        message: internalError && config.environment === 'production'
           ? 'An internal error occurred'
           : error.message,
       },

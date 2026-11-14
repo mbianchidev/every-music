@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRealmConfig, validateRealmConfig } from '../config/realm.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { createServer } from 'node:net';
+import { fileURLToPath } from 'node:url';
 
 const validEnvironment = {
   REALM_ENV: 'test',
@@ -61,4 +65,23 @@ test('requires mail delivery configuration in production', () => {
     () => validateRealmConfig(config),
     /Production email delivery requires/,
   );
+});
+
+test('destructive setup and smoke commands never fall back to a default database', async t => {
+  let connections = 0;
+  const server = createServer(socket => { connections += 1; socket.destroy(); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const { port } = server.address();
+  for (const script of ['bootstrap-realm.js', 'smoke.js']) {
+    await assert.rejects(promisify(execFile)(process.execPath, [`scripts/${script}`], {
+      cwd: fileURLToPath(new URL('../', import.meta.url)),
+      timeout: 5000,
+      env: {
+        ...process.env, REALM_CONNECTION: '', PGHOST: '127.0.0.1', PGPORT: String(port),
+        PGUSER: 'synthetic', PGPASSWORD: 'synthetic', PGDATABASE: 'synthetic', SMOKE_BASE_URL: `http://127.0.0.1:${port}`,
+      },
+    }), error => error.code === 1 && /REALM_CONNECTION/.test(error.stderr));
+  }
+  assert.equal(connections, 0);
 });

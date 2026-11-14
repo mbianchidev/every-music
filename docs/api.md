@@ -120,6 +120,8 @@ Profile editing takes camel-case fields plus:
 Use actual catalog IDs, not these illustrative IDs. Skill levels are
 `beginner`, `intermediate`, `advanced`, `professional`; years are 0-120.
 Omitted relation fields preserve values; `[]` clears them.
+Instrument/genre arrays are capped at 100 entries to bound transactional work;
+announcement links are capped at 20.
 
 Project create/update accepts `name` (required on create, 1-255 characters),
 `role` (up to 255), `yearsActive` (100), `description` (5000),
@@ -287,8 +289,9 @@ GET `/realm/analytics` returns only the caller's `daily` aggregate rows
 (`id`, `title`, `views`, `likes`, `saves`). The reporting window is the last
 30 database calendar days. There are no viewer IDs, IPs, message bodies,
 third-party trackers, or unique-visitor claims. Message counts are not linked
-to individual conversation IDs. Opting out deletes the caller's totals;
-hourly maintenance removes older aggregates. Operational HTTP logs are
+to individual conversation IDs. Opting out deletes the caller's daily report
+totals; public announcement counters and functional messages/reactions/bookmarks
+remain. Hourly maintenance removes older daily aggregates. Operational HTTP logs are
 separate and may contain client IPs.
 
 ## Live events

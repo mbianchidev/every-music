@@ -139,7 +139,8 @@ notifications after 90 days, and aggregates outside the 30-day reporting window.
 Analytics requires both actor and content owner opt-in and excludes self-views.
 Only daily resource/kind counts are retained, not actor identity or message
 content. Message counts are not linked to conversations. Preference row locks
-serialize consent changes with collection; opt-out clears the owner's totals.
+serialize consent changes with collection; opt-out clears the owner's daily
+report totals, not public announcement counters or functional interactions.
 Operational request logs remain separate from analytics.
 
 ## Operational boundaries and extension points

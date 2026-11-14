@@ -171,6 +171,7 @@ internet-facing deployments.
 |---|---|
 | `VITE_API_BASE_URL` | Public build-time API URL including `/realm`; defaults to `/realm` |
 | `SMOKE_BASE_URL` | Backend smoke-test API origin; defaults to `http://127.0.0.1:8080` |
+| `SMOKE_READINESS_URL` | Optional absolute API readiness URL when the smoke base points at a web proxy exposing only `/realm/`; defaults to the base origin's `/health/ready` |
 | `DESKTOP_API_BASE_URL` | GitHub repository variable used by native packaging |
 | `api_base_url` | Manual CI input overriding `DESKTOP_API_BASE_URL` for that run |
 | `CARGO_TARGET_DIR` | The release wrapper sets it to `frontend/src-tauri/target` for predictable output |

@@ -33,6 +33,7 @@ export default defineConfig({
         PORTAL_ORIGINS: 'http://127.0.0.1:4179',
         RATE_THRESHOLD: '10000',
         GOOGLE_IDENTITY_KEY: '',
+        MAIL_GATEWAY: '', MAIL_IDENTITY: '', MAIL_CREDENTIAL: '', MAIL_SENDER_ALIAS: '',
         VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '',
       },
     },

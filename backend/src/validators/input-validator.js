@@ -144,9 +144,12 @@ export class InputValidator {
     return { valid: true };
   }
 
-  static validateArray(value, fieldName) {
+  static validateArray(value, fieldName, maximumLength = 100) {
     if (value !== null && value !== undefined && !Array.isArray(value)) {
       return { valid: false, message: `${fieldName} must be an array` };
+    }
+    if (Array.isArray(value) && value.length > maximumLength) {
+      return { valid: false, message: `${fieldName} must contain at most ${maximumLength} items` };
     }
     return { valid: true };
   }
@@ -219,13 +222,13 @@ export class InputValidator {
   }
 
   static validateLinks(value) {
-    const arrayValidation = this.validateArray(value, 'Links');
+    const arrayValidation = this.validateArray(value, 'Links', 20);
     if (!arrayValidation.valid || value === null || value === undefined) {
       return arrayValidation;
     }
 
     const linkTypes = ['spotify', 'youtube', 'soundcloud', 'bandcamp', 'website', 'other'];
-    const invalid = value.length > 20 || value.some((link) => !link
+    const invalid = value.some((link) => !link
       || !linkTypes.includes(link.linkType || 'other')
       || typeof link.url !== 'string' || !link.url || link.url.length > 2048
       || !this.validateUrl(link.url).valid);
@@ -248,8 +251,7 @@ export class InputValidator {
     const page = parse(pageValue);
     const pageSize = parse(pageSizeValue);
 
-    if (!Number.isSafeInteger(page) || page < 1
-      || !Number.isSafeInteger((page - 1) * pageSize)) {
+    if (!Number.isSafeInteger(page) || page < 1) {
       return { valid: false, message: 'Page must be a positive integer' };
     }
 
@@ -258,6 +260,10 @@ export class InputValidator {
         valid: false,
         message: `Page size must be between 1 and ${maximumPageSize}`,
       };
+    }
+
+    if (!Number.isSafeInteger((page - 1) * pageSize)) {
+      return { valid: false, message: 'Page offset is too large' };
     }
 
     return {

@@ -70,7 +70,7 @@ export default function SettingsScreen() {
               <input type="checkbox" checked={draft[key]} onChange={event => setDraft(previous => ({ ...previous, [key]: event.target.checked }))} />{label}
             </label>)}
           </fieldset>
-          <p className="body-muted">Analytics is off by default. When both you and the content owner opt in, we count views, likes, saves, and messages as daily totals. No visitor IDs, IP addresses, message text, or third-party trackers are stored in analytics. Opting out deletes your collected totals. Data expires after 30 days.</p>
+          <p className="body-muted">Analytics is off by default. When both you and the content owner opt in, we count views, likes, saves, and messages as daily totals. No visitor IDs, IP addresses, message text, or third-party trackers are stored in analytics. Daily reports expire after 30 days; opting out deletes those totals. Public announcement counters, messages, reactions, and bookmarks are retained.</p>
           <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save preferences'}</button>
         </form>
         <section className="detail-section" aria-labelledby="push-heading">

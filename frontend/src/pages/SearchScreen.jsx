@@ -31,6 +31,7 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
     history.replaceState(null, '', `#${profiles ? 'musicians' : 'feed'}?${queryString({ ...filters, page })}`);
   }, [filters, page, profiles]);
   const rows = resource.data?.[kind] || [];
+  const updating = resource.loading || filters !== debounced;
   const activeFilters = ['city', 'instrumentId', 'genreId', ...(profiles ? [] : ['isRemote'])]
     .filter(key => filters[key] !== '').length + Number(filters.sort !== 'newest');
   const changePage = value => {
@@ -87,8 +88,8 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
       {resource.data?.offlineCacheWarning && <p className="status-message" role="status">{resource.data.offlineCacheWarning}</p>}
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!resource.data && !resource.error ? <Spinner label="Searching" /> : resource.data && (
-        <section aria-labelledby="results-heading" aria-busy={resource.loading}>
-          <p role="status">{resource.loading ? 'Updating results...' : rows.length ? `${rows.length} results on this page` : 'No matching results. Try different filters.'}</p>
+        <section aria-labelledby="results-heading" aria-busy={updating}>
+          <p role="status">{updating ? 'Updating results...' : rows.length ? `${rows.length} results on this page` : 'No matching results. Try different filters.'}</p>
           <div className="grid">
             {rows.map(item => profiles ? (
               <article className="card" key={item.id}>
@@ -99,7 +100,7 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
               </article>
             ) : <AnnouncementCard key={item.id} post={item} expanded={resource.data.offline} actions={<AnnouncementActions post={item} disabled={resource.data.offline} />} />)}
           </div>
-          <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={resource.loading || resource.data?.offline} />
+          <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={updating || resource.data?.offline} />
         </section>
       )}
       <Navigation active="feed" />

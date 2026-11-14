@@ -115,6 +115,8 @@ test('musicians complete profiles, collaborate, publish media, and engage throug
     await b.getByRole('searchbox', { name: 'Search musicians', exact: true }).fill(people[0].artistName);
     await b.getByLabel('Instrument', { exact: true }).selectOption(instrument.id);
     await b.getByLabel('Genre', { exact: true }).selectOption(genre.id);
+    await expect(b.getByRole('region', { name: 'Search results' })).toHaveAttribute('aria-busy', 'false');
+    await expect(b.getByRole('region', { name: 'Search results' }).getByRole('article')).toHaveCount(1);
     await b.getByRole('link', { name: people[0].artistName, exact: true }).click();
     await expect(b.getByRole('heading', { name: `${marker} trio`, exact: true })).toBeVisible();
     await b.getByRole('button', { name: 'Follow musician', exact: true }).click();
@@ -218,6 +220,9 @@ test('search and pagination return distinct bounded pages and restore filters on
   await page.reload();
   await expect(page.getByRole('searchbox', { name: 'Search announcements', exact: true })).toHaveValue(`${marker} call`);
   await expect(results.getByRole('article')).toHaveCount(3);
+  await page.getByRole('link', { name: 'Feed', exact: true }).click();
+  await expect(page.getByRole('searchbox', { name: 'Search announcements', exact: true })).toHaveValue('');
+  await expect(page.getByRole('navigation', { name: 'Results pages' }).getByRole('status')).toHaveText('Page 1');
 });
 
 test('the installed shell and saved feed work offline without caching private APIs or losing edits', async ({ page, context }) => {
@@ -289,8 +294,13 @@ test('themes persist and all principal screens support accessible names, keyboar
   await page.getByLabel('Color theme', { exact: true }).selectOption('dark');
   await page.goto('/#feed');
   await expect(page.getByRole('region', { name: 'Search results' }).getByRole('article').first()).toBeVisible();
+  await page.getByLabel('City', { exact: true }).fill('Synthetic City');
+  await expect(page.getByRole('region', { name: 'Search results' }).getByRole('img')).toHaveCount(0);
+  await page.getByText('Filters and sorting (1 active)', { exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Search results' })).toHaveAttribute('aria-busy', 'false');
   await page.getByRole('main').evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished)));
   await page.setViewportSize({ width: 1280, height: 1200 });
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expect.poll(() => page.locator('img').evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('desktop-feed.png') });
   await page.getByRole('link', { name: 'Skip to main content', exact: true }).focus();

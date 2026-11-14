@@ -59,6 +59,7 @@ class Orchestrator extends Component {
     super(props);
     this.state = {
       route: readRoute(),
+      navigation: 0,
       session: nucleus.snapshot(),
     };
   }
@@ -79,7 +80,7 @@ class Orchestrator extends Component {
   }
 
   handleRoute = () => {
-    this.setState({ route: readRoute() }, () => this.enforceRoute(true));
+    this.setState(state => ({ route: readRoute(), navigation: state.navigation + 1 }), () => this.enforceRoute(true));
   };
 
   handleSessionExpired = () => {
@@ -130,7 +131,7 @@ class Orchestrator extends Component {
     const Screen = definition.screen;
     return (
       <main id="main-content" tabIndex="-1">
-        <Screen key={`${route.name}:${route.query.get('id') || ''}`} route={route} {...definition.props} />
+        <Screen key={this.state.navigation} route={route} {...definition.props} />
       </main>
     );
   }

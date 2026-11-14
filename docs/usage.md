@@ -116,8 +116,9 @@ Analytics is off by default. Enable it in Settings to count mutually opted-in
 profile/announcement views, likes, saves, and received messages. The dashboard
 shows daily totals and per-announcement reach for 30 days, not unique visitors
 or all traffic. It stores no viewer identity, IP address, or message body in
-analytics. Turning it off deletes your collected totals. Existing functional
-messages, reactions, and bookmarks are not deleted by analytics opt-out.
+analytics. Turning it off deletes your daily report totals. Existing public
+announcement counters, messages, reactions, and bookmarks are not deleted by
+analytics opt-out.
 
 The production web build is installable using **Install app**, when offered,
 or your browser's Install/Add to Home Screen menu. Its manifest supplies the
