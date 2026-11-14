@@ -121,3 +121,101 @@ test('does not clear a session on network errors', async () => {
   );
   assert.equal(session.payload.persona.userId, 'user-1');
 });
+
+test('authenticated streams refresh expired credentials without consuming the event body', async () => {
+  const session = createSession();
+  const conduit = new Conduit({
+    session,
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/auth/refresh-token')) {
+        return jsonResponse({ success: true, data: { accessToken: 'new-access', refreshToken: 'new-refresh' } });
+      }
+      if (options.headers.get('Authorization') === 'Bearer old-access') {
+        return jsonResponse({ error: { code: 'INVALID_TOKEN' } }, 401);
+      }
+      return new Response('data: {"type":"connected"}\n\n', { headers: { 'content-type': 'text/event-stream' } });
+    },
+  });
+  const response = await conduit.transmit('/events', { auth: true, stream: true });
+  assert.match(await response.text(), /"type":"connected"/);
+  assert.equal(session.payload.keys.accessToken, 'new-access');
+});
+
+test('caller cancellation still reaches a stream after its headers arrive', async () => {
+  const controller = new AbortController();
+  const conduit = new Conduit({
+    fetchImpl: async (_url, { signal }) => new Response(new ReadableStream({
+      start(stream) {
+        signal.addEventListener('abort', () => stream.error(new DOMException('Aborted', 'AbortError')), { once: true });
+      },
+    })),
+  });
+  const response = await conduit.transmit('/events', { stream: true, signal: controller.signal });
+  const read = response.body.getReader().read();
+  controller.abort();
+  await assert.rejects(read, error => error.name === 'AbortError');
+});
+
+test('a refresh network failure keeps the session available for recovery', async () => {
+  const session = createSession();
+  const conduit = new Conduit({
+    session,
+    fetchImpl: async url => {
+      if (url.endsWith('/auth/refresh-token')) throw new TypeError('Synthetic network outage');
+      return jsonResponse({ error: { code: 'INVALID_TOKEN' } }, 401);
+    },
+  });
+  await assert.rejects(conduit.transmit('/profiles/me', { auth: true }), error => error.code === 'NETWORK_ERROR');
+  assert.equal(session.payload.persona.userId, 'user-1');
+  assert.equal(session.payload.keys.refreshToken, 'refresh-token');
+});
+
+test('a late refresh cannot overwrite the next signed-in account', async () => {
+  const session = createSession();
+  let release;
+  const conduit = new Conduit({
+    session,
+    fetchImpl: async () => new Promise(resolve => { release = resolve; }),
+  });
+  const refresh = conduit.refreshSession();
+  session.payload = { persona: { userId: 'synthetic-next-user' }, keys: { accessToken: 'next-access', refreshToken: 'next-refresh' } };
+  release(jsonResponse({ success: true, data: { accessToken: 'stale-access', refreshToken: 'stale-refresh' } }));
+  await assert.rejects(refresh, error => error.code === 'SESSION_CHANGED');
+  assert.equal(session.payload.keys.accessToken, 'next-access');
+});
+
+test('an old authenticated request cannot return another account response after sign-out', async () => {
+  const session = createSession();
+  let release;
+  const conduit = new Conduit({
+    session,
+    fetchImpl: async () => new Promise(resolve => { release = resolve; }),
+  });
+  const request = conduit.transmit('/conversations', { auth: true });
+  session.logout();
+  release(jsonResponse({ success: true, data: { conversations: [{ id: 'synthetic-private' }] } }));
+  await assert.rejects(request, error => error.code === 'SESSION_CHANGED');
+});
+
+test('a late expired response reuses credentials already refreshed by another request', async () => {
+  const session = createSession();
+  let releaseOldResponse;
+  let refreshes = 0;
+  const conduit = new Conduit({
+    session,
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/auth/refresh-token')) {
+        refreshes += 1;
+        return jsonResponse({ data: { accessToken: 'new-access', refreshToken: 'new-refresh' } });
+      }
+      if (options.headers.get('Authorization') === 'Bearer new-access') return jsonResponse({ data: { ok: true } });
+      if (url.endsWith('/slow')) return new Promise(resolve => { releaseOldResponse = resolve; });
+      return jsonResponse({ error: { code: 'INVALID_TOKEN' } }, 401);
+    },
+  });
+  const slow = conduit.transmit('/slow', { auth: true });
+  await conduit.transmit('/fast', { auth: true });
+  releaseOldResponse(jsonResponse({ error: { code: 'INVALID_TOKEN' } }, 401));
+  assert.deepEqual(await slow, { ok: true });
+  assert.equal(refreshes, 1);
+});

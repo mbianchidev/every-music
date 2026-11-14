@@ -11,7 +11,8 @@
   26.12.1 (22.12+ minimum) and PostgreSQL 16.
 - **Native client:** use a verified [CI development bundle or source build](releases.md).
   The API URL is embedded when building, and a backend is always required.
-  There is no offline mode or published app-store release.
+  Native shells require the API; offline web/PWA support is described below.
+  There is no published app-store release.
 
 The shell examples use a POSIX shell. Windows users can use WSL for Compose and
 the web stack; native Windows packaging uses Node.js, Rust, and the Windows
@@ -53,21 +54,118 @@ migrations when the API container starts.
    mail. Passwords need at least eight characters, uppercase, lowercase, and a number.
 2. Follow the email verification link, then sign in. If it expires or delivery
    fails, attempt sign-in and use **Resend verification email**.
-3. Open **Profile**, then **Create profile** or **Edit profile**. Fill in artist
-   name, first and last name, city, and biography, then save.
+3. Open **Profile**, then **Complete profile** or **Edit profile**. Fill in your
+   identity, city, biography, image, instruments/experience, and genres, then save.
 4. Open **Post**. Enter a title (5-255 characters), description (20-5000
    characters), optional city, and whether remote collaboration is welcome.
-   Publish to return to **My ads**.
+   Add optional instruments, genres, images, and music links. Publish to open
+   the announcement detail, or uncheck publishing to keep a private draft.
 5. Open **Feed** to browse calls. **Save** bookmarks a call; **Saved** lets you
-   revisit or remove it. **My ads** lets you delete your own announcements after
-   confirmation.
+   revisit or remove it. **My calls** lets you edit or delete your announcements.
 6. Use **Profile > Sign out** to end the session.
 
-The current UI does not provide search filters, pagination controls, announcement
-editing/reactions, or instrument/genre/project editors. These and Google ID-token
-sign-in are available through the [API](api.md), not corresponding UI controls.
-Contact/chat, media uploads, payments, and push notifications are not implemented.
-The feed currently displays the first search page.
+### Discover and collaborate
+
+Desktop navigation lives in the left sidebar. On mobile, Feed, Musicians,
+Post, and Messages stay in the bottom bar; **More** opens the remaining sections.
+Close that menu with its close button, Escape, or the backdrop.
+
+Feed and Musicians have keyword, city, instrument, genre, date, and sorting controls.
+Open **Filters and sorting** to show the advanced controls on any screen size.
+**Date posted** (calls) and **Joined** (musicians) select the past 7 or 30 days,
+or any time. The feed also filters remote/local collaboration. Results update after a short
+typing pause; Previous/Next controls load bounded pages. The URL preserves
+search filters and page on reload. Cards show the actual creator, instruments,
+genres, and location so you can compare results before opening a detail.
+Open a title or musician name for details.
+
+Announcement details include the creator, links, reactions, comments, saving,
+sharing, and a contact route to private messaging. Only owners can edit/delete
+announcements; commenters and announcement owners can remove comments.
+**Save** and **Saved** on a call toggle its bookmark; the Saved list also offers
+an explicit Remove action.
+Drafts and expired calls are not visible to other users. Shared deep links
+return to the requested detail after sign-in.
+
+In Edit profile, the separate **Musical projects** form creates, edits, and
+removes projects with music links, collaborator search, and individual roles.
+Projects save independently of the profile form. Profile and announcement
+images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
+uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
+stripped of metadata. Published images are public.
+
+### Messages and notifications
+
+Use **Send message** on a musician profile. Conversation history survives
+reload. First generate and save a recovery key in Messages; both musicians need
+messaging keys before a new message can be sent. Unlock with the saved recovery
+key after reload or on another device. Sign-in/password recovery cannot replace
+it. Compare fingerprints through another channel for independently verified
+key identity; changed fingerprints block trust until explicitly compared.
+Sending a failed draft again does not duplicate the message. Opening
+the newest messages marks the conversation and its message alerts read.
+Archive to hide a conversation, show archived conversations to restore it,
+or block a musician to prevent either participant sending new messages.
+New messages restore archived conversations. Removing your own message
+replaces its text for both participants; recipients cannot remove your text.
+
+New messages are end-to-end encrypted before upload. Legacy history is explicitly
+labelled and may remain plaintext in the database/backups. Recipients can
+deliberately share a selected decrypted message with an abuse report.
+There is no forward-secrecy ratchet or independent cryptographic audit; use a
+trusted HTTPS deployment and protect your devices/recovery keys. See the full
+[security model, recovery and administration guide](messaging-security.md).
+
+Use **Report musician** or **Report message** to submit a concern. Review exactly
+what you are sharing and explicitly consent; report details/selected messages
+are readable by administrators. **Your reports** shows their status.
+Administrators see a report queue, can remove reported messages or suspend
+member accounts, and have an audited report-access/action log. Admin roles are
+operator-managed, with no default administrator or private-chat browsing.
+
+**Follow musician** opts into their new-announcement alerts, subject to your
+notification preferences. Notifications also include messages, comments,
+reactions, and optional daily profile-view alerts. The notification center has
+read controls and pagination. Settings controls categories and optional
+browser push; permission is requested only when you choose to enable it.
+Push is generic and excludes message text. Configure the
+[optional providers](configuration.md#browser-push-and-live-updates) first.
+
+### Themes, analytics, and installation
+
+The **Color theme** control offers System, Light, and Dark. An explicit choice
+persists in this browser; System follows OS changes.
+
+Analytics is off by default. Enable it in Settings to count mutually opted-in
+profile/announcement views, likes, saves, and received messages. The dashboard
+shows daily totals and per-announcement reach for 30 days, not unique visitors
+or all traffic. It stores no viewer identity, IP address, or message body in
+analytics. Turning it off deletes your daily report totals. Existing public
+announcement counters, messages, reactions, and bookmarks are not deleted by
+analytics opt-out.
+
+Platform analytics is a separate default-off opt-in in Settings. It requires
+both musicians' personal and platform consent for new activity. The admin
+overview shows aggregate activity/public-call reach and operational account
+totals, not individual visitors or private messages. Existing personal history
+is not imported into it. Turning platform analytics off stops new contributions
+and clears totals for your own content; anonymous prior contributions to other
+content are not individually traceable.
+
+The production web build is installable using **Install app**, when offered,
+or your browser's Install/Add to Home Screen menu. Its manifest supplies the
+app icon, standalone display, and launch colors. Native shells do not register
+this service worker. Google sign-in is optional in the web client; see
+[provider setup](configuration.md#google-web-sign-in).
+
+The PWA saves only its static shell in the service-worker cache. The current
+tab can additionally retain the last matching feed page for up to 24 hours,
+scoped to the signed-in account. Offline results are explicitly labelled and
+read-only. There is no offline messaging, profile cache, or automatic mutation
+queue. Failed submissions retain the open form; reconnect and submit again.
+Signing out clears saved feed results and unsubscribes this browser from push.
+An **Update app** control appears when a newer shell is ready; finish editing
+before choosing it, because accepting an update reloads the app.
 
 ## Sessions and password recovery
 
@@ -93,6 +191,11 @@ reset revokes the account's refresh sessions. Never share reset links or tokens.
 | Native client cannot connect | Confirm its embedded absolute API URL ends in `/realm`, and check API CORS and native CSP |
 | API returns 429 | Wait for the configured rate window; review shared proxy traffic and rate-limit settings |
 | UI reports a network error | Check API reachability, `/realm` proxying, browser console/network logs, and allowed origins |
+| Live updates reconnect repeatedly | Check `/realm/events`, proxy buffering/timeouts, account session, and connection limits |
+| Push is unavailable | Check HTTPS, production build/service worker, VAPID keys, browser support and permission; iOS needs Home Screen installation |
+| Google button is missing or fails | Configure the web client ID and exact authorized origins; use Retry Google sign-in after the five-minute challenge expires |
+| Uploaded image is rejected | Use a real JPEG/PNG under 2 MiB/16 megapixels; animated and renamed non-image files are rejected |
+| No offline feed copy is available | Reopen the last matching feed in the same signed-in tab, or reconnect; private APIs and other search pages are not cached |
 | Changes to `.env` do not apply | Run `docker compose up -d` to recreate changed services; `restart` alone does not reload container environment |
 
 API readiness only checks PostgreSQL. It does not prove SMTP, external identity

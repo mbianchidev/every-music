@@ -1,150 +1,54 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import conduit from '../lib/conduit.js';
 import nucleus from '../lib/nucleus.js';
-import Navigation from '../components/Navigation.jsx';
+import { useResource } from '../lib/resources.js';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import ProfileDetails from '../components/ProfileDetails.jsx';
 
-class ProfileScreen extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      profile: null,
-      loading: true,
-      error: '',
-      loggingOut: false,
-    };
-  }
-
-  componentDidMount() {
-    this.loadProfile();
-  }
-
-  loadProfile = async () => {
-    this.setState({ loading: true, error: '' });
+export default function ProfileScreen() {
+  const resource = useResource('/profiles/me', { events: 'profiles.changed' });
+  const [loggingOut, setLoggingOut] = useState(false);
+  const logout = async () => {
+    setLoggingOut(true);
+    let failed = false;
     try {
-      const profile = await conduit.transmit('/profiles/me', { auth: true });
-      this.setState({ profile, loading: false });
+      const registration = await navigator.serviceWorker?.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        try {
+          await conduit.transmit('/push/subscriptions', { method: 'DELETE', auth: true, body: { endpoint: subscription.endpoint } });
+        } finally { await subscription.unsubscribe(); }
+      }
     } catch (error) {
-      this.setState({ error: error.message, loading: false });
+      failed = true;
+      console.warn('Browser push cleanup could not be confirmed', error);
     }
-  };
-
-  handleLogout = async () => {
-    this.setState({ loggingOut: true, error: '' });
-    const refreshToken = nucleus.payload.keys?.refreshToken;
-
     try {
-      await conduit.transmit('/auth/logout', {
-        method: 'POST',
-        auth: true,
-        body: { refreshToken },
-      });
+      await conduit.transmit('/auth/logout', { method: 'POST', auth: true, body: { refreshToken: nucleus.payload.keys?.refreshToken } });
     } catch (error) {
+      failed = true;
       console.warn('Server-side session revocation failed; clearing the local session', error);
     }
-
     nucleus.logout();
-    window.location.hash = '#login';
+    window.location.hash = failed ? '#login?signedOut=local-only' : '#login';
   };
-
-  renderProfile() {
-    const { profile, loggingOut } = this.state;
-
-    if (!profile?.artistName) {
-      return (
-        <div className="card">
-          <p className="eyebrow">First step</p>
-          <h2 className="heading-md">COMPLETE YOUR PROFILE</h2>
-          <p className="body-muted">Tell other musicians who you are and what you play.</p>
-          <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#edit-profile'; }}>
-            CREATE PROFILE
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <article className="card card-highlight">
-        <header>
-          <p className="eyebrow">Musician profile</p>
-          <h2 className="heading-md" style={{ color: 'var(--paper)' }}>{profile.artistName}</h2>
-          {(profile.firstName || profile.lastName) && (
-            <p className="body-muted">{profile.firstName} {profile.lastName}</p>
-          )}
-        </header>
-
-        {profile.bio && (
-          <section>
-            <h3 className="heading-md">ABOUT</h3>
-            <p>{profile.bio}</p>
-          </section>
-        )}
-
-        {profile.instruments?.length > 0 && (
-          <section>
-            <h3 className="heading-md">INSTRUMENTS</h3>
-            <div className="tag-list">
-              {profile.instruments.map((instrument) => (
-                <span className="tag" key={instrument.instrument_id}>
-                  {instrument.name} · {instrument.skill_level}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {profile.genres?.length > 0 && (
-          <section>
-            <h3 className="heading-md">GENRES</h3>
-            <div className="tag-list">
-              {profile.genres.map((genre) => (
-                <span className="tag" key={genre.genre_id}>{genre.name}</span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {profile.city && (
-          <section>
-            <h3 className="heading-md">LOCATION</h3>
-            <p>{[profile.city, profile.state, profile.country].filter(Boolean).join(', ')}</p>
-          </section>
-        )}
-
-        <div className="button-row">
-          <button className="btn btn-secondary" type="button" onClick={() => { window.location.hash = '#edit-profile'; }}>
-            EDIT PROFILE
-          </button>
-          <button className="btn btn-ghost" type="button" onClick={this.handleLogout} disabled={loggingOut}>
-            {loggingOut ? 'SIGNING OUT…' : 'SIGN OUT'}
-          </button>
-        </div>
-      </article>
-    );
-  }
-
-  render() {
-    const { loading, error, profile } = this.state;
-
-    return (
-      <div className="container">
-        <PageHeader eyebrow="Your identity" title="PROFILE" subtitle="Show collaborators what you bring to the room." />
-        {loading ? (
-          <Spinner label="Loading your profile" />
-        ) : error && !profile ? (
-          <ErrorState message={error} onRetry={this.loadProfile} />
-        ) : (
-          <>
-            {error && <div className="error" role="alert">{error}</div>}
-            {this.renderProfile()}
-          </>
-        )}
-        <Navigation active="profile" />
-      </div>
-    );
-  }
+  return (
+    <div className="container">
+      <PageHeader eyebrow="Your space" title="My profile" subtitle="A little about you. A good place for a collaboration to start." />
+      {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
+      {!resource.data && !resource.error ? <Spinner label="Loading your profile" /> : resource.data && (
+        <article className="card card-highlight">
+          {!resource.data.artistName && <p className="status-message">Complete your profile so other musicians can find you.</p>}
+          <ProfileDetails profile={resource.data} />
+          <div className="button-row">
+            <a className="btn btn-secondary" href="#edit-profile">{resource.data.artistName ? 'Edit profile' : 'Complete profile'}</a>
+            <button className="btn btn-ghost" type="button" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Signing out...' : 'Sign out'}</button>
+          </div>
+          <div className="compact-actions"><a href="#settings">Preferences</a><a href="#analytics">My analytics</a></div>
+        </article>
+      )}
+    </div>
+  );
 }
-
-export default ProfileScreen;

@@ -12,6 +12,10 @@ test('parses bounded pagination', () => {
 test('rejects invalid pagination instead of passing NaN to PostgreSQL', () => {
   assert.equal(InputValidator.parsePagination('nope', '20').valid, false);
   assert.equal(InputValidator.parsePagination('1', '101').valid, false);
+  assert.equal(InputValidator.parsePagination('2junk', '20').valid, false);
+  assert.equal(InputValidator.parsePagination('1', '2.5').valid, false);
+  assert.match(InputValidator.parsePagination('1', '2.5').message, /Page size/);
+  assert.equal(InputValidator.parsePagination('9007199254740991', '100').valid, false);
 });
 
 test('validates empty strings when a minimum length is specified', () => {
@@ -44,4 +48,9 @@ test('validates relation payloads before they reach PostgreSQL', () => {
   assert.equal(InputValidator.validateLinks([
     { linkType: 'website', url: 'javascript:alert(1)' },
   ]).valid, false);
+  const id = '11111111-1111-4111-8111-111111111111';
+  assert.equal(InputValidator.validateUuidArray(Array(100).fill(id), 'Genre IDs').valid, true);
+  assert.equal(InputValidator.validateUuidArray(Array(101).fill(id), 'Genre IDs').valid, false);
+  assert.equal(InputValidator.validateInstruments(Array(101).fill({ instrumentId: id })).valid, false);
+  assert.equal(InputValidator.validateLinks(Array(21).fill({ url: 'https://example.test' })).valid, false);
 });

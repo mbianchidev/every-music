@@ -38,10 +38,11 @@ export async function runMigrations({
   logger = console,
   connectionAttempts = 15,
   connectionDelayMilliseconds = 2000,
+  connectionString = realmConfig.realm.connectionString,
 } = {}) {
   validateRealmConfig();
 
-  const pool = new Pool({ connectionString: realmConfig.realm.connectionString });
+  const pool = new Pool({ connectionString });
 
   try {
     await waitForDatabase(pool, {

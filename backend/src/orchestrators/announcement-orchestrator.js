@@ -13,6 +13,7 @@ const announcementParamsSchema = {
 export async function announcementOrchestrator(fastify, options) {
   fastify.post('/', {
     preHandler: identityGuard,
+    schema: { body: { type: 'object' } },
   }, async (request, reply) => {
     return opportunityConductor.createAnnouncement(request, reply);
   });
@@ -44,7 +45,7 @@ export async function announcementOrchestrator(fastify, options) {
 
   fastify.put('/:announcementId', {
     preHandler: identityGuard,
-    schema: { params: announcementParamsSchema },
+    schema: { params: announcementParamsSchema, body: { type: 'object' } },
   }, async (request, reply) => {
     return opportunityConductor.updateAnnouncement(request, reply);
   });

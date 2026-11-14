@@ -4,6 +4,7 @@ const EMPTY_STATE = {
   tools: [],
   sounds: [],
 };
+export const OFFLINE_FEED_STORAGE_ID = 'everymusic.offline-feed.v1';
 
 function isSession(value) {
   return value
@@ -117,6 +118,8 @@ export class Nucleus {
   }
 
   logout() {
+    try { this.storage?.removeItem(OFFLINE_FEED_STORAGE_ID); }
+    catch (error) { console.warn('Offline announcements could not be cleared', error); }
     this.payload = { ...EMPTY_STATE };
     this.emit();
   }

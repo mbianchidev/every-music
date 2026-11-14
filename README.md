@@ -4,7 +4,7 @@
 
 [Quickstart](#quick-start-with-docker-compose) | [Documentation](docs/README.md) | [Build/download](docs/releases.md) | [Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) | [Roadmap](docs/main.md)
 
-[![Every.music announcement feed showing three collaboration opportunities, a saved announcement, and navigation to posting, saved calls, and profiles](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+[![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
 
 *Current web feed connected to a local API and PostgreSQL with synthetic accounts and announcements. Select the image to view it at full resolution.*
 
@@ -117,16 +117,23 @@ not packaged by desktop CI.
 ## Implemented features
 
 - **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
-- **Profiles:** edit your artist name, first and last name, city, and biography.
-- **Announcements:** browse the feed, publish an open call with a city and remote-collaboration option, and delete your own announcements.
+- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators and roles.
+- **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
+- **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
-- **API capabilities:** filtered profile and announcement searches, instrument and genre catalogs, musical projects, announcement updates and reactions, and optional Google ID-token sign-in. Some of these capabilities are API-only.
+- **Collaboration:** end-to-end encrypted new messages, recovery keys/fingerprints, read/archive/block controls, and notifications with optional browser push.
+- **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
+- **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
+- **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
+- **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
 
 ### Current limitations
 
-- The current UI has no Google sign-in, profile-search screen, search filters or pagination controls, announcement-editing or reaction controls, or editors for instruments, genres, and musical projects. These capabilities are exposed through the API.
-- In-app chat, push notifications, payments/subscriptions, and a media-upload workflow are not implemented. [Product vision](docs/main.md) contains proposed features and historical design ideas, not a list of shipped functionality.
-- Native shells do not bundle the backend or provide an offline mode. A reachable API is required.
+- Google sign-in needs a configured web OAuth client; browser push needs HTTPS, VAPID keys, browser support, and permission. Native WebViews use email/password, not embedded Google sign-in.
+- Legacy history and voluntarily reported excerpts remain server-readable. New-message E2EE has no ratchet/forward secrecy or independent security audit; recovery keys and trusted clients matter. See [messaging security and administration](docs/messaging-security.md).
+- Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
+- Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
+- Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 
 ## Documentation

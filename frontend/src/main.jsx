@@ -9,12 +9,20 @@ import RegisterScreen from './pages/RegisterScreen.jsx';
 import ForgotPasswordScreen from './pages/ForgotPasswordScreen.jsx';
 import VerifyEmailScreen from './pages/VerifyEmailScreen.jsx';
 import ResetPasswordScreen from './pages/ResetPasswordScreen.jsx';
-import FeedScreen from './pages/FeedScreen.jsx';
+import SearchScreen from './pages/SearchScreen.jsx';
 import ProfileScreen from './pages/ProfileScreen.jsx';
 import EditProfileScreen from './pages/EditProfileScreen.jsx';
 import CreatePostScreen from './pages/CreatePostScreen.jsx';
-import MyPostsScreen from './pages/MyPostsScreen.jsx';
-import SavedPostsScreen from './pages/SavedPostsScreen.jsx';
+import AnnouncementListScreen from './pages/AnnouncementListScreen.jsx';
+import MusicianScreen from './pages/MusicianScreen.jsx';
+import AnnouncementScreen from './pages/AnnouncementScreen.jsx';
+import MessagesScreen from './pages/MessagesScreen.jsx';
+import NotificationsScreen from './pages/NotificationsScreen.jsx';
+import SettingsScreen from './pages/SettingsScreen.jsx';
+import AnalyticsScreen from './pages/AnalyticsScreen.jsx';
+import AppStatus from './components/AppStatus.jsx';
+import AdministrationScreen from './pages/AdministrationScreen.jsx';
+import ReportsScreen from './pages/ReportsScreen.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -23,12 +31,22 @@ const ROUTES = {
   'forgot-password': { screen: ForgotPasswordScreen, title: 'Forgot password' },
   'verify-email': { screen: VerifyEmailScreen, title: 'Verify email' },
   'reset-password': { screen: ResetPasswordScreen, title: 'Reset password' },
-  feed: { screen: FeedScreen, title: 'Feed', protected: true },
+  feed: { screen: SearchScreen, title: 'Open calls', protected: true },
+  musicians: { screen: SearchScreen, props: { kind: 'profiles' }, title: 'Find musicians', protected: true },
+  musician: { screen: MusicianScreen, title: 'Musician', protected: true },
+  announcement: { screen: AnnouncementScreen, title: 'Announcement', protected: true },
   profile: { screen: ProfileScreen, title: 'Profile', protected: true },
   'edit-profile': { screen: EditProfileScreen, title: 'Edit profile', protected: true },
   create: { screen: CreatePostScreen, title: 'Create announcement', protected: true },
-  'my-posts': { screen: MyPostsScreen, title: 'My announcements', protected: true },
-  saved: { screen: SavedPostsScreen, title: 'Saved announcements', protected: true },
+  'edit-announcement': { screen: CreatePostScreen, title: 'Edit announcement', protected: true },
+  'my-posts': { screen: AnnouncementListScreen, props: { mode: 'own' }, title: 'My announcements', protected: true },
+  saved: { screen: AnnouncementListScreen, props: { mode: 'saved' }, title: 'Saved announcements', protected: true },
+  messages: { screen: MessagesScreen, title: 'Messages', protected: true },
+  notifications: { screen: NotificationsScreen, title: 'Notifications', protected: true },
+  settings: { screen: SettingsScreen, title: 'Settings', protected: true },
+  analytics: { screen: AnalyticsScreen, title: 'Analytics', protected: true },
+  reports: { screen: ReportsScreen, title: 'Your reports', protected: true },
+  admin: { screen: AdministrationScreen, title: 'Administration', protected: true },
 };
 
 function readRoute() {
@@ -45,6 +63,7 @@ class Orchestrator extends Component {
     super(props);
     this.state = {
       route: readRoute(),
+      navigation: 0,
       session: nucleus.snapshot(),
     };
   }
@@ -55,7 +74,7 @@ class Orchestrator extends Component {
     this.unsubscribe = nucleus.subscribe((session) => {
       this.setState({ session }, this.enforceRoute);
     });
-    this.enforceRoute();
+    this.enforceRoute(true);
   }
 
   componentWillUnmount() {
@@ -65,18 +84,22 @@ class Orchestrator extends Component {
   }
 
   handleRoute = () => {
-    this.setState({ route: readRoute() }, this.enforceRoute);
+    this.setState(state => ({ route: readRoute(), navigation: state.navigation + 1 }), () => this.enforceRoute(true));
   };
 
   handleSessionExpired = () => {
     window.location.hash = '#login';
   };
 
-  enforceRoute = () => {
+  enforceRoute = (focus = false) => {
     const { route, session } = this.state;
-    const definition = ROUTES[route.name];
+    const definition = Object.hasOwn(ROUTES, route.name) ? ROUTES[route.name] : undefined;
 
     if (definition?.protected && !session.authorized) {
+      try {
+        if (readRoute().name === route.name) sessionStorage.setItem('everymusic.return-to', window.location.hash);
+      }
+      catch (error) { console.warn('Could not preserve the requested page', error); }
       window.location.replace('#login');
       return;
     }
@@ -87,32 +110,32 @@ class Orchestrator extends Component {
     }
 
     document.title = `${definition?.title || 'Page not found'} · Every.music`;
-    requestAnimationFrame(() => document.getElementById('main-content')?.focus());
+    if (focus) {
+      window.scrollTo(0, 0);
+      document.getElementById('main-content')?.focus({ preventScroll: true });
+    }
   };
 
   render() {
-    const { route } = this.state;
-    const definition = ROUTES[route.name];
-
-    if (!definition) {
-      return (
-        <main className="container-narrow center-content" id="main-content" tabIndex="-1">
+    const { route, session } = this.state;
+    const definition = Object.hasOwn(ROUTES, route.name) ? ROUTES[route.name] : undefined;
+    const Screen = definition?.screen;
+    const waitingForSignIn = definition?.protected && !session.authorized;
+    return (
+      <div className={`application ${session.authorized ? 'is-authenticated' : 'is-guest'}`}>
+        <AppStatus session={session} routeName={route.name} pageTitle={definition?.title || 'Page not found'} />
+        <main id="main-content" tabIndex="-1">
+        {waitingForSignIn ? <BootScreen /> : Screen ? <Screen key={this.state.navigation} route={route} {...definition.props} /> : <div className="container-narrow center-content">
           <div className="card">
             <p className="eyebrow">404</p>
-            <h1 className="heading-lg">PAGE NOT FOUND</h1>
+            <h1 className="heading-lg">Page not found</h1>
             <button className="btn btn-primary" type="button" onClick={() => { window.location.hash = '#feed'; }}>
-              RETURN HOME
+              Return home
             </button>
           </div>
+        </div>}
         </main>
-      );
-    }
-
-    const Screen = definition.screen;
-    return (
-      <main id="main-content" tabIndex="-1">
-        <Screen route={route} />
-      </main>
+      </div>
     );
   }
 }
@@ -124,7 +147,10 @@ document.head.appendChild(styleTag);
 const root = createRoot(document.getElementById('root'));
 root.render(
   <ErrorBoundary>
-    <a className="skip-link" href="#main-content">Skip to main content</a>
+    <a className="skip-link" href="#main-content" onClick={event => {
+      event.preventDefault();
+      document.getElementById('main-content')?.focus();
+    }}>Skip to main content</a>
     <Orchestrator />
   </ErrorBoundary>,
 );

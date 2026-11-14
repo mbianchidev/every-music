@@ -76,7 +76,8 @@ export class InputValidator {
   }
 
   static validateUrl(url) {
-    if (!url) return { valid: true };
+    if (url === null || url === undefined || url === '') return { valid: true };
+    if (typeof url !== 'string' || url.length > 2048) return { valid: false, message: 'URL must be text of at most 2048 characters' };
     try {
       const parsedUrl = new URL(url);
       if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
@@ -86,6 +87,35 @@ export class InputValidator {
     } catch {
       return { valid: false, message: 'Invalid URL format' };
     }
+  }
+
+  static validateImageUrl(url) {
+    if (typeof url === 'string' && url.startsWith('/realm/media/') && url.length > 13
+      && this.validateUuid(url.slice('/realm/media/'.length), 'Image ID').valid) {
+      return { valid: true };
+    }
+    return this.validateUrl(url);
+  }
+
+  static validateCollaborators(value) {
+    if (value === undefined) return { valid: true };
+    if (!Array.isArray(value) || value.length > 20) {
+      return { valid: false, message: 'Choose at most 20 collaborators' };
+    }
+    const ids = new Set();
+    for (const collaborator of value) {
+      if (!collaborator
+        || !collaborator.userId
+        || !this.validateUuid(collaborator.userId, 'Collaborator').valid
+        || typeof collaborator.role !== 'string'
+        || !collaborator.role.trim()
+        || collaborator.role.length > 100
+        || ids.has(collaborator.userId.toLowerCase())) {
+        return { valid: false, message: 'Collaborators need unique user IDs and a role of 1-100 characters' };
+      }
+      ids.add(collaborator.userId.toLowerCase());
+    }
+    return { valid: true };
   }
 
   static validateCoordinates(latitude, longitude) {
@@ -114,15 +144,18 @@ export class InputValidator {
     return { valid: true };
   }
 
-  static validateArray(value, fieldName) {
+  static validateArray(value, fieldName, maximumLength = 100) {
     if (value !== null && value !== undefined && !Array.isArray(value)) {
       return { valid: false, message: `${fieldName} must be an array` };
+    }
+    if (Array.isArray(value) && value.length > maximumLength) {
+      return { valid: false, message: `${fieldName} must contain at most ${maximumLength} items` };
     }
     return { valid: true };
   }
 
   static validateBoolean(value, fieldName) {
-    if (value !== null && value !== undefined && typeof value !== 'boolean') {
+    if (value !== undefined && typeof value !== 'boolean') {
       return { valid: false, message: `${fieldName} must be true or false` };
     }
     return { valid: true };
@@ -180,7 +213,7 @@ export class InputValidator {
     const invalid = value.some((instrument) => !instrument
       || !uuidPattern.test(instrument.instrumentId)
       || (instrument.yearsExperience !== undefined
-        && (!Number.isInteger(instrument.yearsExperience) || instrument.yearsExperience < 0))
+        && (!Number.isInteger(instrument.yearsExperience) || instrument.yearsExperience < 0 || instrument.yearsExperience > 120))
       || (instrument.skillLevel !== undefined && !skillLevels.includes(instrument.skillLevel)));
 
     return invalid
@@ -189,7 +222,7 @@ export class InputValidator {
   }
 
   static validateLinks(value) {
-    const arrayValidation = this.validateArray(value, 'Links');
+    const arrayValidation = this.validateArray(value, 'Links', 20);
     if (!arrayValidation.valid || value === null || value === undefined) {
       return arrayValidation;
     }
@@ -197,6 +230,7 @@ export class InputValidator {
     const linkTypes = ['spotify', 'youtube', 'soundcloud', 'bandcamp', 'website', 'other'];
     const invalid = value.some((link) => !link
       || !linkTypes.includes(link.linkType || 'other')
+      || typeof link.url !== 'string' || !link.url || link.url.length > 2048
       || !this.validateUrl(link.url).valid);
 
     return invalid
@@ -213,10 +247,11 @@ export class InputValidator {
   }
 
   static parsePagination(pageValue = 1, pageSizeValue = 20, maximumPageSize = 100) {
-    const page = Number.parseInt(pageValue, 10);
-    const pageSize = Number.parseInt(pageSizeValue, 10);
+    const parse = (value) => /^\d+$/.test(String(value)) ? Number(value) : NaN;
+    const page = parse(pageValue);
+    const pageSize = parse(pageSizeValue);
 
-    if (!Number.isInteger(page) || page < 1) {
+    if (!Number.isSafeInteger(page) || page < 1) {
       return { valid: false, message: 'Page must be a positive integer' };
     }
 
@@ -225,6 +260,10 @@ export class InputValidator {
         valid: false,
         message: `Page size must be between 1 and ${maximumPageSize}`,
       };
+    }
+
+    if (!Number.isSafeInteger((page - 1) * pageSize)) {
+      return { valid: false, message: 'Page offset is too large' };
     }
 
     return {

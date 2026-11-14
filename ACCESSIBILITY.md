@@ -23,8 +23,19 @@ must also work with each platform's WebView, keyboard, and assistive technology.
 ## Verification
 
 Run the [existing tests and build](docs/development.md#verification). They cover
-request/session behavior, not full accessibility compliance. No automated
-accessibility-audit tool is currently configured.
+request/session behavior. The [production browser suite](docs/development.md#community-api-migration-and-browser-tests)
+also runs axe WCAG-tagged checks on light/dark route states, tests a keyboard
+message submission, preserves composer focus through live updates, verifies
+the skip link, follows system theme changes, and checks 320px reflow and
+controls not obscured by sticky headers or bottom navigation. The mobile
+navigation dialog checks initial focus, Tab/Shift+Tab wraparound, Escape,
+return focus, route focus, resize cleanup, and an open-dialog axe scan.
+Route focus is applied when React commits so it cannot interrupt typing
+on the following frame. The suite waits for real loading and any finite
+animations before measuring stable contrast.
+
+These are automated Chromium checks, not full accessibility compliance or a
+cross-platform screen-reader certification. Manual checks below remain necessary.
 
 Manually exercise sign-in, registration, password recovery, profile editing,
 announcement creation, feed navigation, and saving/removing announcements:
@@ -36,6 +47,20 @@ announcement creation, feed navigation, and saving/removing announcements:
 3. Verify 200% zoom, 320 CSS-pixel reflow, visible focus, reduced motion, and
    contrast in success, failure, disabled, and selected states.
 4. Check touch targets and on-screen-keyboard behavior on physical mobile devices.
+
+Also exercise search/filter disclosure and pagination, instrument experience
+fields, project/collaborator roles, announcement comments and editing,
+conversation blocking/archiving, notification read controls/preferences,
+analytics tables, image previews, theme changes, and offline error/recovery.
+New announcements and messages should not steal focus or discard typed drafts.
+Unread/blocked/offline states have text, not color-only signals.
+
+Also check generated recovery-key fields, saved-key acknowledgement, unlock
+errors, key reset warnings, current/historical fingerprint comparison, and
+return focus when a verified message replaces its warning control. Reports must
+explain exactly what is disclosed before the required consent checkbox.
+Administrator overview/queue/audit/detail states and decision confirmations need
+the same keyboard, contrast, narrow-screen and screen-reader checks.
 
 ## Known limitations and reporting
 

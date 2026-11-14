@@ -15,7 +15,10 @@
     "bootstrap": "node scripts/bootstrap-realm.js",
     "migrate": "node scripts/migrate-realm.js",
     "populate": "node scripts/populate-realm.js",
+    "admin": "node scripts/admin-role.mjs",
     "smoke": "node scripts/smoke.js",
+    "test:integration": "node --test integration/community.js",
+    "test:migrations": "node --test integration/migrations.js",
     "test": "node --test",
     "verify": "node --check src/nexus.js && node --check src/app.js && node --check scripts/migrate-realm.js && npm test"
   },
@@ -30,14 +33,17 @@
     "@fastify/cors": "^11.4.1",
     "@fastify/rate-limit": "^11.2.2",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^18.0.10",
+    "dotenv": "^18.0.9",
     "fastify": "^5.12.8",
-    "google-auth-library": "^11.3.4",
+    "google-auth-library": "^11.3.3",
+    "jose": "^6.2.15",
     "nanoid": "^6.0.2",
-    "nodemailer": "^10.5.0",
+    "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
-    "pino-pretty": "^13.2.0"
+    "pino-pretty": "^13.2.0",
+    "sharp": "^0.35.5",
+    "web-push": "^4.0.0"
   },
   "overrides": {
     "node-domexception": "npm:@profoundlogic/node-domexception@1.0.2"

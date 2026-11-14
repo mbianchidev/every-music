@@ -1,41 +1,41 @@
 import { realmConnector } from './realm-connector.js';
 
 export class MusicianRepository {
-  async findByUserId(userId, executor = realmConnector) {
+  async findByUserId(userId, executor = realmConnector, viewerId = null) {
     const query = `
-      SELECT p.*, 
-             array_agg(DISTINCT jsonb_build_object(
+      SELECT p.*,
+             EXISTS(SELECT 1 FROM followers f WHERE f.follower_id = $2 AND f.following_id = p.user_id) AS is_following,
+             (SELECT jsonb_agg(jsonb_build_object(
                'instrument_id', ui.instrument_id,
                'name', i.name,
                'category', i.category,
                'years_experience', ui.years_experience,
                'skill_level', ui.skill_level
-             )) FILTER (WHERE ui.instrument_id IS NOT NULL) as instruments,
-             array_agg(DISTINCT jsonb_build_object(
+             ) ORDER BY i.name) FROM user_instruments ui JOIN instruments i ON i.id = ui.instrument_id
+               WHERE ui.profile_id = p.id) AS instruments,
+             (SELECT jsonb_agg(jsonb_build_object(
                'genre_id', ug.genre_id,
                'name', g.name
-             )) FILTER (WHERE ug.genre_id IS NOT NULL) as genres,
-             array_agg(DISTINCT jsonb_build_object(
-               'id', pr.id,
-               'name', pr.name,
-               'years_active', pr.years_active,
-               'role', pr.role,
-               'description', pr.description,
-               'spotify_link', pr.spotify_link,
-               'youtube_link', pr.youtube_link,
-               'bandcamp_link', pr.bandcamp_link
-             )) FILTER (WHERE pr.id IS NOT NULL) as projects
+             ) ORDER BY g.name) FROM user_genres ug JOIN genres g ON g.id = ug.genre_id
+               WHERE ug.profile_id = p.id) AS genres,
+             (SELECT jsonb_agg(to_jsonb(pr) || jsonb_build_object(
+               'collaborators', COALESCE((
+                 SELECT jsonb_agg(c.value || jsonb_build_object('artistName', COALESCE(cp.artist_name, 'Musician')))
+                 FROM jsonb_array_elements(pr.collaborators) c
+                 LEFT JOIN profiles cp ON cp.user_id = (c.value->>'userId')::uuid
+               ), '[]'::jsonb)
+             ) ORDER BY pr.created_at DESC, pr.id) FROM projects pr WHERE pr.profile_id = p.id) AS projects
       FROM profiles p
-      LEFT JOIN user_instruments ui ON p.id = ui.profile_id
-      LEFT JOIN instruments i ON ui.instrument_id = i.id
-      LEFT JOIN user_genres ug ON p.id = ug.profile_id
-      LEFT JOIN genres g ON ug.genre_id = g.id
-      LEFT JOIN projects pr ON p.id = pr.profile_id
-      WHERE p.user_id = $1
-      GROUP BY p.id
+      JOIN users u ON u.id = p.user_id
+      WHERE p.user_id = $1 AND u.is_active = TRUE AND u.is_deleted = FALSE
     `;
-    const result = await executor.execute(query, [userId]);
+    const result = await executor.execute(query, [userId, viewerId]);
     return result.rows[0] || null;
+  }
+
+  async findById(id, executor = realmConnector, viewerId = null) {
+    const { rows } = await executor.execute('SELECT user_id FROM profiles WHERE id = $1', [id]);
+    return rows[0] ? this.findByUserId(rows[0].user_id, executor, viewerId) : null;
   }
 
   async createProfile(userId, profileData, executor = realmConnector) {
@@ -118,7 +118,7 @@ export class MusicianRepository {
   }
 
   async searchProfiles(filters, pagination) {
-    let whereConditions = ['1=1'];
+    let whereConditions = ['u.is_active = TRUE', 'u.is_deleted = FALSE'];
     const params = [];
     let paramIndex = 1;
 
@@ -144,27 +144,38 @@ export class MusicianRepository {
     }
 
     if (filters.searchTerm) {
-      whereConditions.push(`(
-        p.artist_name ILIKE $${paramIndex} OR 
-        p.first_name ILIKE $${paramIndex} OR 
-        p.last_name ILIKE $${paramIndex} OR
-        p.bio ILIKE $${paramIndex}
-      )`);
+      whereConditions.push(`(COALESCE(p.artist_name, '') || ' ' || COALESCE(p.first_name, '') || ' ' ||
+        COALESCE(p.last_name, '') || ' ' || COALESCE(p.bio, '')) ILIKE $${paramIndex}`);
       params.push(`%${filters.searchTerm}%`);
       paramIndex++;
+    }
+    if (filters.createdWithin) {
+      whereConditions.push(`p.created_at >= NOW() - $${paramIndex++}::interval`);
+      params.push({ week: '7 days', month: '30 days' }[filters.createdWithin]);
     }
 
     const pageSize = pagination.pageSize || 20;
     const limit = pagination.limit || pageSize;
     const offset = ((pagination.page || 1) - 1) * pageSize;
 
+    const sorts = { newest: 'p.created_at DESC', oldest: 'p.created_at ASC', name: "COALESCE(p.artist_name, p.first_name, '') ASC", city: "COALESCE(p.city, '') ASC" };
     const query = `
       SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
              p.city, p.state, p.country, p.bio, p.profile_picture_url,
-             p.created_at
+             p.created_at,
+             (SELECT jsonb_agg(jsonb_build_object(
+               'instrument_id', ui.instrument_id, 'name', i.name,
+               'skill_level', ui.skill_level, 'years_experience', ui.years_experience
+             ) ORDER BY i.name) FROM user_instruments ui JOIN instruments i ON i.id = ui.instrument_id
+               WHERE ui.profile_id = p.id) AS instruments,
+             (SELECT jsonb_agg(jsonb_build_object(
+               'genre_id', ug.genre_id, 'name', g.name
+             ) ORDER BY g.name) FROM user_genres ug JOIN genres g ON g.id = ug.genre_id
+               WHERE ug.profile_id = p.id) AS genres
       FROM profiles p
+      JOIN users u ON u.id = p.user_id
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY p.created_at DESC
+      ORDER BY ${sorts[filters.sort] || sorts.newest}, p.id
       LIMIT $${paramIndex++} OFFSET $${paramIndex}
     `;
 
@@ -218,16 +229,16 @@ export class MusicianRepository {
     }
   }
 
-  async addProject(profileId, projectData) {
+  async addProject(profileId, projectData, executor = realmConnector) {
     const query = `
       INSERT INTO projects (
         profile_id, name, years_active, role, description,
-        spotify_link, youtube_link, bandcamp_link, soundcloud_link, website_link
+        spotify_link, youtube_link, bandcamp_link, soundcloud_link, website_link, collaborators
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
-    const result = await realmConnector.execute(query, [
+    const result = await executor.execute(query, [
       profileId,
       projectData.name,
       projectData.yearsActive || null,
@@ -238,17 +249,36 @@ export class MusicianRepository {
       projectData.bandcampLink || null,
       projectData.soundcloudLink || null,
       projectData.websiteLink || null,
+      JSON.stringify(projectData.collaborators || []),
     ]);
     return result.rows[0];
   }
 
-  async removeProject(projectId, profileId) {
+  async updateProject(projectId, profileId, data, executor = realmConnector) {
+    const fields = {
+      name: 'name', yearsActive: 'years_active', role: 'role', description: 'description',
+      spotifyLink: 'spotify_link', youtubeLink: 'youtube_link', bandcampLink: 'bandcamp_link',
+      soundcloudLink: 'soundcloud_link', websiteLink: 'website_link', collaborators: 'collaborators',
+    };
+    const entries = Object.entries(fields).filter(([key]) => data[key] !== undefined);
+    if (!entries.length) {
+      const { rows } = await executor.execute('SELECT * FROM projects WHERE id = $1 AND profile_id = $2', [projectId, profileId]);
+      return rows[0] || null;
+    }
+    const { rows } = await executor.execute(`
+      UPDATE projects SET ${entries.map(([, column], i) => `${column} = $${i + 3}`).join(', ')}
+      WHERE id = $1 AND profile_id = $2 RETURNING *`,
+    [projectId, profileId, ...entries.map(([key]) => key === 'collaborators' ? JSON.stringify(data[key]) : data[key])]);
+    return rows[0] || null;
+  }
+
+  async removeProject(projectId, profileId, executor = realmConnector) {
     const query = `
       DELETE FROM projects
       WHERE id = $1 AND profile_id = $2
       RETURNING id
     `;
-    const result = await realmConnector.execute(query, [projectId, profileId]);
+    const result = await executor.execute(query, [projectId, profileId]);
     return result.rows[0] || null;
   }
 }

@@ -86,6 +86,40 @@ class RealmConnector {
       this.logger.info('Realm disconnected');
     }
   }
+
+  async listen(channel, onEvent, onFailure) {
+    if (channel !== 'everymusic_events') throw new Error('Unknown event channel');
+    const client = new pg.Client({ connectionString: realmConfig.realm.connectionString });
+    let closed = false;
+    const fail = (error) => {
+      if (closed) return;
+      closed = true;
+      this.logger.error({ err: error }, 'Realtime database listener disconnected');
+      onFailure(error);
+      client.end().catch(err => this.logger.error({ err }, 'Realtime listener cleanup failed'));
+    };
+    client.on('error', fail);
+    client.on('end', () => { if (!closed) fail(new Error('Realtime database connection ended')); });
+    client.on('notification', ({ payload }) => {
+      try {
+        onEvent(JSON.parse(payload));
+      } catch (error) {
+        this.logger.error({ err: error }, 'Invalid realtime event');
+      }
+    });
+    try {
+      await client.connect();
+      await client.query('LISTEN everymusic_events');
+    } catch (error) {
+      closed = true;
+      await client.end();
+      throw error;
+    }
+    return async () => {
+      closed = true;
+      await client.end();
+    };
+  }
 }
 
 export const realmConnector = new RealmConnector();

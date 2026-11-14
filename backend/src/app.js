@@ -7,6 +7,13 @@ import { authOrchestrator } from './orchestrators/auth-orchestrator.js';
 import { profileOrchestrator } from './orchestrators/profile-orchestrator.js';
 import { announcementOrchestrator } from './orchestrators/announcement-orchestrator.js';
 import { catalogOrchestrator } from './orchestrators/catalog-orchestrator.js';
+import { communityOrchestrator } from './orchestrators/community-orchestrator.js';
+import { encryptionOrchestrator } from './orchestrators/encryption-orchestrator.js';
+import { administrationOrchestrator } from './orchestrators/administration-orchestrator.js';
+import { identityGuard } from './guards/identity-guard.js';
+import { RealtimeHub } from './engines/realtime-hub.js';
+import { PushDispatcher } from './engines/push-dispatcher.js';
+import { RequestError } from './engines/request-error.js';
 
 function applySecurityHeaders(reply) {
   reply
@@ -21,8 +28,10 @@ export async function buildNexus({
   config = realmConfig,
   connector = realmConnector,
   logger,
+  backgroundJobs = true,
 } = {}) {
   const nexus = Fastify({
+    ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
     logger: logger ?? {
       level: config.environment === 'production' ? 'info' : 'debug',
       transport: config.environment !== 'production'
@@ -57,6 +66,7 @@ export async function buildNexus({
 
   nexus.addHook('onSend', async (_request, reply, payload) => {
     applySecurityHeaders(reply);
+    if (!reply.hasHeader('Cache-Control')) reply.header('Cache-Control', 'no-store');
     return payload;
   });
 
@@ -74,7 +84,7 @@ export async function buildNexus({
       });
     }
 
-    if (error.statusCode === 429) {
+    if (error.statusCode === 429 && !(error instanceof RequestError)) {
       return reply.code(429).send({
         success: false,
         error: {
@@ -84,12 +94,13 @@ export async function buildNexus({
       });
     }
 
-    const statusCode = error.statusCode && error.statusCode < 500 ? error.statusCode : 500;
+    const statusCode = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode <= 599 ? error.statusCode : 500;
+    const internalError = statusCode >= 500 && !(error instanceof RequestError);
     return reply.code(statusCode).send({
       success: false,
       error: {
-        code: statusCode === 500 ? 'INTERNAL_ERROR' : error.code || 'REQUEST_FAILED',
-        message: statusCode === 500 && config.environment === 'production'
+        code: internalError ? 'INTERNAL_ERROR' : error.code || 'REQUEST_FAILED',
+        message: internalError && config.environment === 'production'
           ? 'An internal error occurred'
           : error.message,
       },
@@ -141,6 +152,22 @@ export async function buildNexus({
   await nexus.register(profileOrchestrator, { prefix: '/realm/profiles' });
   await nexus.register(announcementOrchestrator, { prefix: '/realm/announcements' });
   await nexus.register(catalogOrchestrator, { prefix: '/realm/catalog' });
+  await nexus.register(communityOrchestrator, { prefix: '/realm', config });
+  await nexus.register(encryptionOrchestrator, { prefix: '/realm/encryption' });
+  await nexus.register(administrationOrchestrator, { prefix: '/realm' });
+
+  const hub = new RealtimeHub(connector, nexus.log);
+  const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });
+  nexus.get('/realm/events', { preHandler: identityGuard }, async (request, reply) => {
+    const stream = await hub.subscribe(request.authenticatedUser);
+    reply.raw.on('close', () => stream.destroy());
+    return reply.type('text/event-stream')
+      .header('Cache-Control', 'no-store')
+      .header('X-Accel-Buffering', 'no')
+      .send(stream);
+  });
+  nexus.addHook('onListen', async () => { if (backgroundJobs) dispatcher.start(); });
+  nexus.addHook('preClose', async () => { await hub.close(); await dispatcher.stop(); });
 
   return nexus;
 }

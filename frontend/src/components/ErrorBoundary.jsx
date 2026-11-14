@@ -28,10 +28,10 @@ class ErrorBoundary extends Component {
       <main className="container-narrow center-content" id="main-content" tabIndex="-1">
         <div className="card" role="alert">
           <p className="eyebrow">Something went wrong</p>
-          <h1 className="heading-lg">THE AMP CUT OUT</h1>
+          <h1 className="heading-lg">The amp cut out</h1>
           <p className="body-muted">The interface hit an unexpected error. Your account data is still safe.</p>
           <button className="btn btn-primary" type="button" onClick={this.handleReset}>
-            RETURN TO THE FEED
+            Return to the feed
           </button>
         </div>
       </main>

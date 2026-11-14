@@ -25,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:8080 https:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:8080 https:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
     }
   },
   "bundle": {
