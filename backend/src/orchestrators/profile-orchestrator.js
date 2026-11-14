@@ -17,7 +17,9 @@ export async function profileOrchestrator(fastify, options) {
     return musicianConductor.updateMyProfile(request, reply);
   });
 
-  fastify.get('/search', async (request, reply) => {
+  fastify.get('/search', {
+    preHandler: optionalIdentityGuard,
+  }, async (request, reply) => {
     return musicianConductor.searchProfiles(request, reply);
   });
 

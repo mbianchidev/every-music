@@ -359,14 +359,24 @@ class CommunityRepository {
     if (userId === targetId) throw requestError(400, 'INVALID_FOLLOW', 'You cannot follow yourself');
     return realmConnector.transaction(async (executor) => {
       const { rows } = await executor.execute(`
-        SELECT u.id FROM users u JOIN profiles p ON p.user_id = u.id
-        WHERE (u.id = $1 OR p.id = $1) AND u.is_active = TRUE AND u.is_deleted = FALSE`, [targetId]);
-      if (!rows.length) throw requestError(404, 'PROFILE_NOT_FOUND', 'Musician not found');
+        SELECT u.id, EXISTS (SELECT 1 FROM blocked_users b WHERE (b.user_id = $2 AND b.blocked_user_id = u.id)
+          OR (b.user_id = u.id AND b.blocked_user_id = $2)) AS blocked
+        FROM users u JOIN profiles p ON p.user_id = u.id
+        WHERE (u.id = $1 OR p.id = $1) AND u.is_active = TRUE AND u.is_deleted = FALSE`, [targetId, userId]);
+      if (!rows.length || (following && rows[0].blocked)) throw requestError(404, 'PROFILE_NOT_FOUND', 'Musician not found');
       const target = rows[0].id;
       if (target === userId) throw requestError(400, 'INVALID_FOLLOW', 'You cannot follow yourself');
-      await executor.execute(following
+      const changed = await executor.execute(following
         ? 'INSERT INTO followers (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING'
         : 'DELETE FROM followers WHERE follower_id = $1 AND following_id = $2', [userId, target]);
+      if (following && changed.rowCount) {
+        const { rows: names } = await executor.execute('SELECT artist_name FROM profiles WHERE user_id = $1', [userId]);
+        await notificationRepository.create(executor, {
+          userId: target, kind: 'new_follower', title: 'You have a new follower', link: `#musician?id=${userId}`,
+          key: `follow:${userId}:${target}`, params: { followerId: userId, name: names[0]?.artist_name || null },
+        });
+      }
+      await publishEvent(executor, 'profiles.changed', { id: target });
       return { following };
     });
   }
@@ -375,6 +385,7 @@ class CommunityRepository {
     const { rows } = await executor.execute(`
       SELECT * FROM announcements WHERE id = $1 AND is_deleted = FALSE
         AND EXISTS(SELECT 1 FROM users u WHERE u.id = announcements.user_id AND u.is_active AND NOT u.is_deleted)
+        AND NOT EXISTS(SELECT 1 FROM blocked_users b WHERE b.user_id = announcements.user_id AND b.blocked_user_id = $2)
         AND (user_id = $2 OR (is_published = TRUE AND (expires_at IS NULL OR expires_at > NOW())))`, [id, userId ?? null]);
     if (!rows.length) throw requestError(404, 'ANNOUNCEMENT_NOT_FOUND', 'Announcement not found');
     return rows[0];

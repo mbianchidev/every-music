@@ -4,6 +4,7 @@ import { optimizeImage } from '../engines/media-engine.js';
 import { requestError } from '../engines/request-error.js';
 import { validatePushSubscription } from '../engines/push-dispatcher.js';
 import { ok, pagination, pageOf } from './response-helpers.js';
+import { entitlementRepository } from '../repositories/entitlement-repository.js';
 
 export class CommunityConductor {
   constructor(config) {
@@ -83,7 +84,10 @@ export class CommunityConductor {
       .send(image.content);
   };
 
-  getAnalytics = async (request, reply) => ok(reply, await communityRepository.analytics(request.authenticatedUser.userId));
+  getAnalytics = async (request, reply) => {
+    await entitlementRepository.requireLimit(request.authenticatedUser.userId, 'announcementStats', 0);
+    return ok(reply, await communityRepository.analytics(request.authenticatedUser.userId));
+  };
 
   recordView = async (request, reply) => ok(reply,
     await communityRepository.recordView(request.authenticatedUser.userId, request.body.kind, request.body.resourceId));

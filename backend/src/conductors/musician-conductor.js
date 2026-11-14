@@ -3,6 +3,24 @@ import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { communityRepository, publishEvent } from '../repositories/community-repository.js';
 import { requestError } from '../engines/request-error.js';
+import { entitlementRepository } from '../repositories/entitlement-repository.js';
+import { joinedPlace } from '../repositories/place-repository.js';
+import { socialRepository } from '../repositories/social-repository.js';
+import { placeFields, resolveLocation, validatePlaceId } from './discovery-conductor.js';
+import {
+  CONTACT_VISIBILITY, PROFILE_LINK_TYPES, canSeeContacts, limitShown, normalizeContact, validateContact,
+} from '../engines/profile-policy.js';
+
+const contactFields = ['phone', 'telegramId', 'whatsapp', 'signal'];
+
+function validateProfileLinks(value) {
+  if (value === undefined) return { valid: true };
+  if (!Array.isArray(value) || value.length > 20) return { valid: false, message: 'Add at most 20 profile links' };
+  const invalid = value.some(link => !link || typeof link !== 'object'
+    || !PROFILE_LINK_TYPES.includes(link.linkType || 'other')
+    || typeof link.url !== 'string' || !link.url.trim() || !InputValidator.validateUrl(link.url.trim()).valid);
+  return invalid ? { valid: false, message: 'Profile links need a supported type and an HTTP or HTTPS URL' } : { valid: true };
+}
 
 export class MusicianConductor {
   async getMyProfile(request, reply) {
@@ -23,7 +41,7 @@ export class MusicianConductor {
 
       return reply.code(200).send({
         success: true,
-        data: this.transformProfile(profile),
+        data: await this.viewProfile(profile, userId),
       });
     } catch (err) {
       request.log.error({ err }, 'Failed to fetch profile');
@@ -53,6 +71,12 @@ export class MusicianConductor {
       InputValidator.validateCoordinates(updateData.latitude, updateData.longitude),
       InputValidator.validateInstruments(updateData.instruments),
       InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
+      validatePlaceId(updateData.placeId),
+      InputValidator.validateEnum(updateData.contactVisibility, CONTACT_VISIBILITY, 'Contact visibility'),
+      [null, ''].includes(updateData.contactVisibility) ? { valid: false, message: 'Contact visibility is required' } : { valid: true },
+      InputValidator.validateBoolean(updateData.openToProjects, 'Open to new projects'),
+      ...contactFields.map(key => validateContact(key, updateData[key])),
+      validateProfileLinks(updateData.links),
     );
 
     if (validations) {
@@ -65,6 +89,8 @@ export class MusicianConductor {
         },
       });
     }
+
+    for (const key of [...contactFields, 'websiteUrl']) updateData[key] = normalizeContact(updateData[key]);
 
     try {
       const profile = await musicianRepository.findByUserId(userId);
@@ -81,7 +107,13 @@ export class MusicianConductor {
 
       await realmConnector.transaction(async (executor) => {
         const profilePictureUrl = await communityRepository.mediaReference(executor, updateData.profilePictureUrl, userId, 'profile');
-        await musicianRepository.updateProfile(profile.id, { ...updateData, profilePictureUrl }, executor);
+        await musicianRepository.updateProfile(profile.id, {
+          ...updateData, profilePictureUrl, ...await placeFields(updateData, executor),
+        }, executor);
+
+        if (updateData.links !== undefined) {
+          await musicianRepository.attachLinks(profile.id, updateData.links, executor);
+        }
 
         if (updateData.instruments !== undefined) {
           await musicianRepository.attachInstruments(profile.id, updateData.instruments, executor);
@@ -93,11 +125,11 @@ export class MusicianConductor {
         await publishEvent(executor, 'profiles.changed', { id: userId });
       });
 
-      const refreshedProfile = await musicianRepository.findByUserId(userId);
+      const refreshedProfile = await musicianRepository.findByUserId(userId, realmConnector, userId);
 
       return reply.code(200).send({
         success: true,
-        data: this.transformProfile(refreshedProfile),
+        data: await this.viewProfile(refreshedProfile, userId),
       });
     } catch (err) {
       if (err.statusCode) throw err;
@@ -116,11 +148,13 @@ export class MusicianConductor {
     const { city, instrumentId, genreId, searchTerm, createdWithin, sort = 'newest', page = 1, pageSize = 20 } = request.query;
 
     const paginationResult = InputValidator.parsePagination(page, pageSize);
+    const openResult = InputValidator.parseOptionalBoolean(request.query.openToProjects, 'Open to new projects');
     const queryValidation = InputValidator.gatherValidationErrors(
       paginationResult,
+      openResult,
       InputValidator.validateUuid(instrumentId, 'Instrument ID'),
       InputValidator.validateUuid(genreId, 'Genre ID'),
-      InputValidator.validateEnum(sort, ['newest', 'oldest', 'name', 'city'], 'Sort'),
+      InputValidator.validateEnum(sort, ['newest', 'oldest', 'name', 'city', 'distance'], 'Sort'),
       InputValidator.validateEnum(createdWithin, ['week', 'month'], 'Creation date'),
       InputValidator.validateLength(searchTerm, 0, 200, 'Search term'),
       InputValidator.validateLength(city, 0, 255, 'City'),
@@ -136,8 +170,16 @@ export class MusicianConductor {
       });
     }
 
+    const location = await resolveLocation(request.query);
+    if (sort === 'distance' && !location.center) {
+      throw requestError(400, 'VALIDATION_ERROR', 'Choose a place or use your location before sorting by distance');
+    }
+
     try {
-      const filters = { city, instrumentId, genreId, searchTerm, createdWithin, sort };
+      const filters = {
+        city, instrumentId, genreId, searchTerm, createdWithin, sort, location,
+        openToProjects: openResult.value, viewerId: request.authenticatedUser?.userId,
+      };
       const pagination = paginationResult.pagination;
 
       const profiles = await musicianRepository.searchProfiles(filters, {
@@ -177,7 +219,7 @@ export class MusicianConductor {
       const profile = await musicianRepository.findByUserId(profileId, realmConnector, currentUserId)
         || await musicianRepository.findById(profileId, realmConnector, currentUserId);
 
-      if (!profile) {
+      if (!profile || profile.blocks_viewer) {
         return reply.code(404).send({
           success: false,
           error: {
@@ -187,9 +229,17 @@ export class MusicianConductor {
         });
       }
 
+      if (currentUserId && currentUserId !== profile.user_id) {
+        try {
+          await socialRepository.recordVisit(profile.user_id, currentUserId);
+        } catch (err) {
+          request.log.error({ err }, 'Failed to record a consented profile visit');
+        }
+      }
+
       return reply.code(200).send({
         success: true,
-        data: this.transformProfile(profile),
+        data: await this.viewProfile(profile, currentUserId),
       });
     } catch (err) {
       request.log.error({ err }, 'Failed to fetch profile');
@@ -334,7 +384,45 @@ export class MusicianConductor {
     }
   }
 
-  transformProfile(profile) {
+  async viewProfile(profile, viewerId) {
+    const { limits } = await entitlementRepository.limitsFor(profile.user_id);
+    return this.transformProfile(profile, { viewerId, limits });
+  }
+
+  transformProfile(profile, { viewerId = null, limits = {} } = {}) {
+    const isOwner = Boolean(viewerId) && viewerId === profile.user_id;
+    const projects = limitShown(profile.projects, limits.maxProjectsShown);
+    const links = limitShown(profile.links, limits.maxContentShown);
+    const contactsVisible = canSeeContacts({
+      visibility: profile.contact_visibility, isOwner, viewerId, ownerFollowsViewer: profile.owner_follows_viewer,
+      blocked: profile.blocked_by_viewer || profile.blocks_viewer,
+    });
+    const base = this.transformLegacyProfile(profile);
+    return {
+      ...base,
+      place: joinedPlace(profile),
+      contacts: contactsVisible ? base.contacts : null,
+      openToProjects: Boolean(profile.open_to_projects_effective),
+      followersCount: profile.followers_count ?? 0,
+      followingCount: profile.following_count ?? 0,
+      isBlocked: Boolean(profile.blocked_by_viewer),
+      links: isOwner ? profile.links || [] : links.shown,
+      projects: isOwner ? base.projects : projects.shown,
+      ...(isOwner ? {
+        contactVisibility: profile.contact_visibility,
+        openToProjectsManual: Boolean(profile.open_to_projects),
+        hasActiveAnnouncement: Boolean(profile.has_active_announcement),
+        publicDisplay: {
+          maxProjectsShown: limits.maxProjectsShown ?? null,
+          maxContentShown: limits.maxContentShown ?? null,
+          hiddenProjects: projects.hidden,
+          hiddenLinks: links.hidden,
+        },
+      } : {}),
+    };
+  }
+
+  transformLegacyProfile(profile) {
     return {
       id: profile.id,
       userId: profile.user_id,
@@ -382,6 +470,10 @@ export class MusicianConductor {
       createdAt: profile.created_at,
       instruments: profile.instruments || [],
       genres: profile.genres || [],
+      place: joinedPlace(profile),
+      openToProjects: Boolean(profile.open_to_projects_effective),
+      distanceKm: profile.distance_km === null || profile.distance_km === undefined
+        ? null : Math.round(Number(profile.distance_km) * 10) / 10,
     };
   }
 }

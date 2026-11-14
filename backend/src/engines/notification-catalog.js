@@ -22,6 +22,7 @@ export const notificationKinds = {
   come_back: { inApp: 'off', push: 'optional', email: 'on' },
   app_update_minor: { inApp: 'on', push: 'off', email: 'off' },
   app_update_major: { inApp: 'on', push: 'on', email: 'on' },
+  saved_search_match: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {

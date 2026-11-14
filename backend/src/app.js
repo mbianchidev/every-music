@@ -11,6 +11,8 @@ import { communityOrchestrator } from './orchestrators/community-orchestrator.js
 import { encryptionOrchestrator } from './orchestrators/encryption-orchestrator.js';
 import { administrationOrchestrator } from './orchestrators/administration-orchestrator.js';
 import { entitlementOrchestrator } from './orchestrators/entitlement-orchestrator.js';
+import { placeOrchestrator } from './orchestrators/place-orchestrator.js';
+import { discoveryOrchestrator } from './orchestrators/discovery-orchestrator.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
@@ -157,6 +159,8 @@ export async function buildNexus({
   await nexus.register(encryptionOrchestrator, { prefix: '/realm/encryption' });
   await nexus.register(administrationOrchestrator, { prefix: '/realm' });
   await nexus.register(entitlementOrchestrator, { prefix: '/realm' });
+  await nexus.register(placeOrchestrator, { prefix: '/realm/catalog' });
+  await nexus.register(discoveryOrchestrator, { prefix: '/realm' });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });

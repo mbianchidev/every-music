@@ -2,6 +2,32 @@ import { opportunityRepository } from '../repositories/opportunity-repository.js
 import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { communityRepository, publishEvent } from '../repositories/community-repository.js';
+import { entitlementRepository } from '../repositories/entitlement-repository.js';
+import { joinedPlace } from '../repositories/place-repository.js';
+import { quotaRepository } from '../repositories/quota-repository.js';
+import { savedSearchRepository } from '../repositories/saved-search-repository.js';
+import { isActive, parseExpiry, resolveExpiry } from '../engines/listing-policy.js';
+import { requestError } from '../engines/request-error.js';
+import { placeFields, resolveLocation, validatePlaceId } from './discovery-conductor.js';
+
+async function assertActiveCapacity(executor, userId, excludeId) {
+  await quotaRepository.lockUser(executor, userId);
+  const used = await quotaRepository.activeAnnouncements(executor, userId, excludeId);
+  await quotaRepository.assertCapacity(executor, userId, 'maxActiveAnnouncements', used,
+    limit => `Your plan allows ${limit} active announcements at a time. Unpublish one or wait for one to expire before publishing another.`);
+}
+
+// Reactions and statistics belong to the announcement owner only. Views and
+// saves additionally need the owner's announcementStats plan feature.
+function ownerStats(announcement, viewerId, limits) {
+  if (!viewerId || announcement.user_id !== viewerId) return null;
+  const stats = { likes: announcement.likes_count ?? 0, dislikes: announcement.dislikes_count ?? 0 };
+  if (limits?.announcementStats) {
+    stats.views = announcement.views_count ?? 0;
+    if (announcement.saves_count !== undefined) stats.saves = announcement.saves_count;
+  }
+  return stats;
+}
 
 export class OpportunityConductor {
   async createAnnouncement(request, reply) {
@@ -21,6 +47,8 @@ export class OpportunityConductor {
       InputValidator.validateUuidArray(announcementData.instrumentIds, 'Instrument IDs'),
       InputValidator.validateUuidArray(announcementData.genreIds, 'Genre IDs'),
       InputValidator.validateLinks(announcementData.links),
+      validatePlaceId(announcementData.placeId),
+      parseExpiry(announcementData.expiresAt),
     );
 
     if (validations) {
@@ -35,11 +63,18 @@ export class OpportunityConductor {
     }
 
     try {
+      let limits;
       const fullAnnouncement = await realmConnector.transaction(async (executor) => {
+        ({ limits } = await entitlementRepository.limitsFor(userId, executor));
+        const publishing = announcementData.isPublished !== false;
+        const expiresAt = resolveExpiry({
+          requested: parseExpiry(announcementData.expiresAt).value, limitDays: limits.announcementExpiryDays, publishing,
+        });
+        if (isActive({ isPublished: publishing, expiresAt })) await assertActiveCapacity(executor, userId, null);
         const pictureUrl = await communityRepository.mediaReference(executor, announcementData.pictureUrl, userId, 'announcement');
         const announcement = await opportunityRepository.createAnnouncement(
           userId,
-          { ...announcementData, pictureUrl },
+          { ...announcementData, pictureUrl, ...await placeFields(announcementData, executor), expiresAt },
           executor,
         );
         await opportunityRepository.attachInstruments(
@@ -57,14 +92,17 @@ export class OpportunityConductor {
           announcementData.links || [],
           executor,
         );
-        const full = await opportunityRepository.findById(announcement.id, executor);
-        if (full.is_published) await communityRepository.announcementPublished(executor, full);
+        const full = await opportunityRepository.findById(announcement.id, executor, userId);
+        if (full.is_published) {
+          await communityRepository.announcementPublished(executor, full);
+          await savedSearchRepository.notifyMatches(executor, full);
+        }
         return full;
       });
 
       return reply.code(201).send({
         success: true,
-        data: this.transformAnnouncement(fullAnnouncement),
+        data: this.transformAnnouncement(fullAnnouncement, { viewerId: userId, limits }),
       });
     } catch (err) {
       if (err.statusCode) throw err;
@@ -87,11 +125,12 @@ export class OpportunityConductor {
 
     try {
       const announcements = await opportunityRepository.findByUserId(userId, { ...pagination, limit: pagination.pageSize + 1 });
+      const { limits } = await entitlementRepository.limitsFor(userId);
 
       return reply.code(200).send({
         success: true,
         data: {
-          announcements: announcements.slice(0, pagination.pageSize).map(a => this.transformBasicAnnouncement(a)),
+          announcements: announcements.slice(0, pagination.pageSize).map(a => this.transformBasicAnnouncement(a, { viewerId: userId, limits })),
           pagination: { ...pagination, hasMore: announcements.length > pagination.pageSize },
         },
       });
@@ -114,7 +153,7 @@ export class OpportunityConductor {
     try {
       const announcement = await opportunityRepository.findById(announcementId, realmConnector, currentUserId);
 
-      if (!announcement || (announcement.user_id !== currentUserId && (!announcement.is_published
+      if (!announcement || (announcement.user_id !== currentUserId && (!announcement.is_published || announcement.blocks_viewer
         || (announcement.expires_at && new Date(announcement.expires_at) <= new Date())))) {
         return reply.code(404).send({
           success: false,
@@ -125,9 +164,11 @@ export class OpportunityConductor {
         });
       }
 
+      const limits = announcement.user_id === currentUserId
+        ? (await entitlementRepository.limitsFor(currentUserId)).limits : null;
       return reply.code(200).send({
         success: true,
-        data: this.transformAnnouncement(announcement),
+        data: this.transformAnnouncement(announcement, { viewerId: currentUserId, limits }),
       });
     } catch (err) {
       request.log.error({ err }, 'Failed to fetch announcement');
@@ -164,7 +205,7 @@ export class OpportunityConductor {
       coverBandResult,
       InputValidator.validateUuid(instrumentId, 'Instrument ID'),
       InputValidator.validateUuid(genreId, 'Genre ID'),
-      InputValidator.validateEnum(sort, ['newest', 'oldest', 'title', 'city', 'popular'], 'Sort'),
+      InputValidator.validateEnum(sort, ['newest', 'oldest', 'title', 'city', 'popular', 'expiring', 'distance'], 'Sort'),
       InputValidator.validateEnum(createdWithin, ['week', 'month'], 'Creation date'),
       InputValidator.validateLength(searchTerm, 0, 200, 'Search term'),
       InputValidator.validateLength(city, 0, 255, 'City'),
@@ -181,6 +222,11 @@ export class OpportunityConductor {
       });
     }
 
+    const location = await resolveLocation(request.query);
+    if (sort === 'distance' && !location.center) {
+      throw requestError(400, 'VALIDATION_ERROR', 'Choose a place or use your location before sorting by distance');
+    }
+
     try {
       const filters = {
         instrumentId,
@@ -191,8 +237,11 @@ export class OpportunityConductor {
         searchTerm,
         createdWithin,
         sort,
+        location,
         userId: request.authenticatedUser?.userId,
       };
+      const viewerId = request.authenticatedUser?.userId;
+      const limits = viewerId ? (await entitlementRepository.limitsFor(viewerId)).limits : null;
 
       const pagination = paginationResult.pagination;
       const announcements = await opportunityRepository.searchAnnouncements(filters, {
@@ -206,7 +255,7 @@ export class OpportunityConductor {
         data: {
           announcements: announcements
             .slice(0, pagination.pageSize)
-            .map(a => this.transformBasicAnnouncement(a)),
+            .map(a => this.transformBasicAnnouncement(a, { viewerId, limits })),
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
@@ -244,6 +293,8 @@ export class OpportunityConductor {
       InputValidator.validateUuidArray(updateData.instrumentIds, 'Instrument IDs'),
       InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
       InputValidator.validateLinks(updateData.links),
+      validatePlaceId(updateData.placeId),
+      parseExpiry(updateData.expiresAt),
     );
 
     if (validations) {
@@ -258,14 +309,28 @@ export class OpportunityConductor {
     }
 
     try {
+      let limits;
       const fullAnnouncement = await realmConnector.transaction(async (executor) => {
+        await quotaRepository.lockUser(executor, userId);
         const previous = await opportunityRepository.findById(announcementId, executor);
         if (!previous || previous.user_id !== userId) return null;
+        ({ limits } = await entitlementRepository.limitsFor(userId, executor));
+        const publishing = updateData.isPublished === true && !previous.is_published;
+        const expiresAt = resolveExpiry({
+          requested: parseExpiry(updateData.expiresAt).value, existing: previous.expires_at ?? null,
+          limitDays: limits.announcementExpiryDays, publishing,
+        });
+        const wasActive = isActive({ isPublished: previous.is_published, expiresAt: previous.expires_at });
+        const willBeActive = isActive({
+          isPublished: updateData.isPublished ?? previous.is_published,
+          expiresAt: expiresAt === undefined ? previous.expires_at : expiresAt,
+        });
+        if (willBeActive && !wasActive) await assertActiveCapacity(executor, userId, announcementId);
         const pictureUrl = await communityRepository.mediaReference(executor, updateData.pictureUrl, userId, 'announcement');
         const updated = await opportunityRepository.updateAnnouncement(
           announcementId,
           userId,
-          { ...updateData, pictureUrl },
+          { ...updateData, pictureUrl, ...await placeFields(updateData, executor), expiresAt },
           executor,
         );
 
@@ -289,9 +354,10 @@ export class OpportunityConductor {
           await opportunityRepository.attachLinks(announcementId, updateData.links, executor);
         }
 
-        const full = await opportunityRepository.findById(announcementId, executor);
+        const full = await opportunityRepository.findById(announcementId, executor, userId);
         if (!previous.is_published && full.is_published) {
           await communityRepository.announcementPublished(executor, full);
+          await savedSearchRepository.notifyMatches(executor, full);
         } else {
           await publishEvent(executor, 'announcements.changed', {
             id: announcementId, userId: full.is_published || previous.is_published ? undefined : userId,
@@ -312,7 +378,7 @@ export class OpportunityConductor {
 
       return reply.code(200).send({
         success: true,
-        data: this.transformAnnouncement(fullAnnouncement),
+        data: this.transformAnnouncement(fullAnnouncement, { viewerId: userId, limits }),
       });
     } catch (err) {
       if (err.statusCode) throw err;
@@ -432,7 +498,16 @@ export class OpportunityConductor {
 
     try {
       await realmConnector.transaction(async (executor) => {
+        await quotaRepository.lockUser(executor, userId);
         const announcement = await communityRepository.visibleAnnouncement(executor, announcementId, userId);
+        const already = await executor.execute(
+          'SELECT 1 FROM saved_announcements WHERE announcement_id = $1 AND user_id = $2', [announcementId, userId],
+        );
+        if (!already.rowCount) {
+          await quotaRepository.assertCapacity(executor, userId, 'maxSavedAnnouncements',
+            await quotaRepository.savedAnnouncements(executor, userId),
+            limit => `Your plan can keep ${limit} saved announcements. Remove one from Saved or upgrade to keep more.`);
+        }
         const saved = await opportunityRepository.saveAnnouncement(announcementId, userId, executor);
         if (saved && announcement.user_id !== userId) {
           await communityRepository.recordMetric(executor, userId, announcement.user_id, 'save', announcementId);
@@ -526,7 +601,7 @@ export class OpportunityConductor {
         data: {
           announcements: announcements
             .slice(0, pagination.pageSize)
-            .map(a => this.transformBasicAnnouncement(a)),
+            .map(a => this.transformBasicAnnouncement(a, { viewerId: userId })),
           pagination: {
             page: pagination.page,
             pageSize: pagination.pageSize,
@@ -546,7 +621,8 @@ export class OpportunityConductor {
     }
   }
 
-  transformAnnouncement(announcement) {
+  transformAnnouncement(announcement, { viewerId = null, limits = null } = {}) {
+    const stats = ownerStats(announcement, viewerId, limits);
     return {
       id: announcement.id,
       userId: announcement.user_id,
@@ -569,11 +645,9 @@ export class OpportunityConductor {
       instruments: announcement.instruments || [],
       genres: announcement.genres || [],
       links: announcement.links || [],
-      stats: {
-        views: announcement.views_count,
-        likes: announcement.likes_count,
-        dislikes: announcement.dislikes_count,
-      },
+      place: joinedPlace(announcement),
+      stats,
+      ...(stats ? { statsLocked: !limits?.announcementStats } : {}),
       expiresAt: announcement.expires_at,
       isPublished: announcement.is_published,
       isSaved: Boolean(announcement.is_saved),
@@ -583,7 +657,8 @@ export class OpportunityConductor {
     };
   }
 
-  transformBasicAnnouncement(announcement) {
+  transformBasicAnnouncement(announcement, { viewerId = null, limits = null } = {}) {
+    const stats = ownerStats(announcement, viewerId, limits);
     return {
       id: announcement.id,
       userId: announcement.user_id,
@@ -603,12 +678,11 @@ export class OpportunityConductor {
       isCoverBand: announcement.is_cover_band,
       isPublished: announcement.is_published,
       isSaved: Boolean(announcement.is_saved),
-      stats: {
-        views: announcement.views_count,
-        likes: announcement.likes_count,
-        dislikes: announcement.dislikes_count,
-      },
+      place: joinedPlace(announcement),
+      stats,
       expiresAt: announcement.expires_at,
+      distanceKm: announcement.distance_km === null || announcement.distance_km === undefined
+        ? null : Math.round(Number(announcement.distance_km) * 10) / 10,
       createdAt: announcement.created_at,
     };
   }
