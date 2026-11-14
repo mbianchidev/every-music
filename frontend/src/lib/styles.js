@@ -648,6 +648,9 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .update-banner, .shell-notice { width: calc(100% - 32px); }
   .tour-card { padding: 16px; }
 }
+/* w0c-infra */
+.device-list { list-style: none; padding: 0; }
+.device-list .card { overflow-wrap: anywhere; }
 `;
 
 export default styles;

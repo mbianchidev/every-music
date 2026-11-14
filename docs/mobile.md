@@ -170,8 +170,57 @@ VITE_API_BASE_URL=https://api.example.com/realm npm run ios:build
 
 App Store and device builds require platform signing identities. Never commit keystores, provisioning profiles, signing passwords, or `key.properties`.
 
-Android/iOS packaging and physical-device accessibility are not covered by the
-desktop CI matrix. Validate them on the relevant SDKs/devices before distribution.
+The generated `src-tauri/gen/apple` project stays untracked. CI runs
+`tauri ios init --ci` on each build instead, so it always matches the installed
+Tauri CLI.
+
+## CI mobile packages
+
+The [Mobile packages workflow](../.github/workflows/mobile.yml) builds unsigned
+development packages on manual dispatch (choose `all`, `android`, or `ios`) and
+on `v*` tags. It never runs for ordinary pushes or pull requests, and desktop CI
+is unchanged. The API URL comes from the `api_base_url` input, then the
+`MOBILE_API_BASE_URL` repository variable, then `DESKTOP_API_BASE_URL`, and is
+validated like desktop packaging (HTTPS, ending in `/realm`).
+
+| Job | Runner | Output artifact |
+|---|---|---|
+| Android | Ubuntu, JDK 17, SDK platform 36, NDK r28 | `everymusic-android-<commit>`: universal unsigned release APK and AAB, `SHA256SUMS` |
+| iOS | macOS with Xcode | `everymusic-ios-<commit>`: zipped simulator `.app` (Apple silicon), unsigned device `.ipa`, `SHA256SUMS` |
+
+Artifacts are kept for 14 days. See [release artifacts](releases.md#mobile-development-packages)
+for signing and installation. Physical-device behavior and accessibility still
+need manual verification on each platform before distribution.
+
+## Native push notifications
+
+The API delivers native push through Firebase Cloud Messaging (Android) and
+Apple Push Notification service (iOS) to devices registered with
+`POST /realm/push/devices`; configure the providers as described in
+[native mobile push](configuration.md#native-mobile-push). Users can review and
+remove registered devices in **Settings > Mobile devices**.
+
+**Limitation:** the Tauri mobile shell does not register device tokens yet, so
+packaged mobile apps currently rely on in-app notifications over live events.
+The maintained community plugin
+[`tauri-plugin-notifications`](https://github.com/Choochmeque/tauri-plugin-notifications)
+(`push-notifications` feature) returns FCM and APNs tokens, but adopting it needs
+changes that cannot be verified without Android/iOS toolchains and provider
+projects:
+
+1. Add the plugin as an Android/iOS-only dependency
+   (`[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]`),
+   register it under `#[cfg(mobile)]`, and grant `notifications:default` in a
+   capability file limited to `"platforms": ["android", "iOS"]`.
+2. Android: move the tracked project to Kotlin Gradle plugin 2.x (the plugin's
+   AndroidX and Firebase dependencies target Kotlin 2), add the Google services Gradle plugin,
+   and provide the Firebase project's `google-services.json` at build time without
+   committing it.
+3. iOS: enable the Push Notifications capability (`aps-environment`
+   entitlement) and sign with a provisioning profile that includes it.
+4. Client: after sign-in in a native shell, call `registerForPushNotifications()`
+   and send `{ platform, token }` to `POST /realm/push/devices`; register again
+   when the token changes and call `DELETE /realm/push/devices` on sign-out.
 
 ## Verification
 
@@ -185,7 +234,7 @@ Before distributing a package:
 
 Native clients skip the PWA service worker and Web Push registration. They use
 the same authenticated live events for in-app messages/notifications and need
-a reachable API. Google web sign-in is deliberately disabled in embedded
+a reachable API; see [native push notifications](#native-push-notifications). Google web sign-in is deliberately disabled in embedded
 WebViews; a Google account can add password sign-in through verified password
 recovery and then use that password in the native client. Check both themes,
 keyboard/assistive technology, image previews (the CSP permits `blob:`), and

@@ -18,6 +18,8 @@ import { accountTrustOrchestrator } from './orchestrators/account-trust-orchestr
 import { placeOrchestrator } from './orchestrators/place-orchestrator.js';
 import { discoveryOrchestrator } from './orchestrators/discovery-orchestrator.js';
 import { helpOrchestrator } from './orchestrators/help-orchestrator.js';
+import { infrastructureOrchestrator } from './orchestrators/infrastructure-orchestrator.js';
+import { configureMediaStorage } from './engines/media-storage.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
@@ -39,6 +41,7 @@ export async function buildNexus({
   logger,
   backgroundJobs = true,
 } = {}) {
+  const storage = configureMediaStorage(config.mediaStorage);
   const nexus = Fastify({
     ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
     logger: logger ?? {
@@ -133,9 +136,15 @@ export async function buildNexus({
   const readinessHandler = async (request, reply) => {
     try {
       await connector.execute('SELECT 1 AS heartbeat');
+      const storageStatus = await storage.status();
+      const dependencies = { database: 'connected', ...(storageStatus ? { storage: storageStatus } : {}) };
+      if (storageStatus === 'unavailable') {
+        request.log.error('Readiness check failed: object storage is unreachable');
+        return reply.code(503).send({ status: 'not_ready', dependencies, timestamp: new Date().toISOString() });
+      }
       return {
         status: 'ready',
-        dependencies: { database: 'connected' },
+        dependencies,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -172,9 +181,12 @@ export async function buildNexus({
   await nexus.register(placeOrchestrator, { prefix: '/realm/catalog' });
   await nexus.register(discoveryOrchestrator, { prefix: '/realm' });
   await nexus.register(helpOrchestrator, { prefix: '/realm', config, backgroundJobs });
+  await nexus.register(infrastructureOrchestrator, { prefix: '/realm', config });
 
   const hub = new RealtimeHub(connector, nexus.log);
-  const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });
+  const dispatcher = new PushDispatcher({
+    config: config.push, connector, logger: nexus.log, nativePush: config.nativePush, storage,
+  });
   nexus.get('/realm/events', { preHandler: identityGuard }, async (request, reply) => {
     const stream = await hub.subscribe(request.authenticatedUser);
     reply.raw.on('close', () => stream.destroy());

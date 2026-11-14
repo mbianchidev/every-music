@@ -110,8 +110,8 @@ For desktop installers, use the [verified release command or CI artifacts](docs/
 These are unsigned development builds, not published store releases. Native
 clients need an absolute API URL ending in `/realm`, backend CORS, and the Tauri
 CSP aligned with that URL. See [desktop/mobile setup](docs/mobile.md) for Rust
-and platform SDKs. Android/iOS require separate initialization/signing and are
-not packaged by desktop CI.
+and platform SDKs. A separate mobile workflow builds unsigned Android and iOS
+development packages; store signing is still a manual step.
 
 ## Implemented features
 
@@ -131,6 +131,7 @@ not packaged by desktop CI.
 - **Account trust:** two-step sign-in (authenticator app, email, or optional SMS) with recovery codes, sign-out everywhere, GDPR data export and account deletion, opt-in find-by-email with hashed contacts, and administrator-reviewed profile verification with a blue tick.
 - **Places and plans:** GeoNames city picker, distance/region/cover-band/open-to discovery, opt-in "near me", saved searches with alerts, contacts with visibility, profile links, follow alerts, profile blocks, owner-only reactions, and free-plan limits with Premium statistics and profile visitors.
 - **Help and onboarding:** help center with bug/contact/job forms and an admin inbox, operator-configured legal templates with terms acceptance, a skippable welcome tour, Back controls, update notices, in-app ratings, and branded icons and splash screens.
+- **Hosting and storage:** deploy on Compose, any container host, or Kubernetes; keep media in PostgreSQL or any private S3-compatible bucket (optional bundled SeaweedFS), store encrypted attachment blobs, deliver native Android/iOS push, and build unsigned mobile packages in CI.
 
 ### Current limitations
 
@@ -141,7 +142,7 @@ not packaged by desktop CI.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
-- Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.
+- Desktop and mobile CI provide unsigned development artifacts, not signed/notarized or store releases. The mobile shell does not register for native push yet. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 
 ## Documentation
 

@@ -71,6 +71,22 @@ startup. Mail settings are mandatory in production.
 | `TWILIO_AUTH_TOKEN` | Unset | Twilio auth token, server-only |
 | `TWILIO_FROM_NUMBER` | Unset | E.164 sender number, or use the messaging service below |
 | `TWILIO_MESSAGING_SERVICE_SID` | Unset | Twilio messaging service used instead of a sender number |
+| `ATTACHMENT_BYTE_LIMIT` | `10485760` (1024-52428800) | Maximum raw body of an encrypted attachment upload (`POST /realm/media/blobs`) |
+| `MEDIA_STORAGE` | `postgres` | Where new uploads are written: `postgres` or `s3`; see [media storage](#media-storage) |
+| `S3_ENDPOINT` | AWS regional endpoint | Origin of an S3-compatible service, such as `https://<account>.r2.cloudflarestorage.com` or `http://object-store:8333` |
+| `S3_REGION` | `us-east-1` | Signing region; Cloudflare R2 uses `auto` |
+| `S3_BUCKET` | Required with `s3` | Private bucket for media objects |
+| `S3_ACCESS_KEY_ID` | Required with `s3` | Access key with get, put, delete, and head permissions on the bucket |
+| `S3_SECRET_ACCESS_KEY` | Required with `s3` | Matching secret, server-only |
+| `S3_FORCE_PATH_STYLE` | `false` | `true` for `endpoint/bucket/key` URLs (MinIO, SeaweedFS); `false` for `bucket.endpoint/key` |
+| `FCM_PROJECT_ID` | Unset | Optional Firebase project for Android push; see [native mobile push](#native-mobile-push) |
+| `FCM_CLIENT_EMAIL` | Unset | Firebase service-account email |
+| `FCM_PRIVATE_KEY` | Unset | Service-account RSA private key (PEM; `\n` escapes accepted) |
+| `APNS_KEY_ID` | Unset | Optional Apple Push Notification service key ID for iOS push |
+| `APNS_TEAM_ID` | Unset | Apple developer team ID |
+| `APNS_PRIVATE_KEY` | Unset | APNs authentication key (`.p8` PEM; `\n` escapes accepted) |
+| `APNS_TOPIC` | Unset | iOS bundle identifier, normally `music.every.app` |
+| `APNS_ENVIRONMENT` | `production` | `production`, or `sandbox` for development-signed apps |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -232,6 +248,53 @@ and non-`MAJOR.MINOR.PATCH` values notify nobody. Ratings are accepted for
 released versions between `CLIENT_MIN_VERSION` and the newer of
 `CLIENT_LATEST_VERSION` and `APP_VERSION`.
 
+### Media storage
+
+`MEDIA_STORAGE=postgres` keeps today's behavior: optimized images and encrypted
+attachment blobs are stored in PostgreSQL. `MEDIA_STORAGE=s3` writes new uploads
+to any S3-compatible service (AWS S3, Cloudflare R2, MinIO, SeaweedFS, and
+similar) using Signature V4 requests. Startup rejects an incomplete or invalid
+S3 configuration.
+
+To move media that is still in PostgreSQL into the bucket after switching, run
+`npm run media:move-to-object-storage` from `backend/` (or
+`node scripts/move-media-to-object-storage.js` in the API image) with the same
+settings. It uploads each item, then clears its bytes from PostgreSQL, and can
+be stopped and rerun safely. Back up the database first.
+
+Media is always served through `/realm/media/:id` with the same owner,
+public-reference, and authorized-reference checks; buckets must stay private and
+no public bucket URLs are issued. Existing PostgreSQL rows remain readable after
+switching to `s3`. Rows already stored as objects stay readable after switching
+back to `postgres` only while the S3 settings remain configured. Readiness reports
+`storage` and returns 503 when the bucket is unreachable while `s3` is selected.
+
+Unreferenced uploads are deleted after a day. Deleting a media row (cleanup,
+account deletion, or manual SQL) queues its object, and a background worker
+removes it with retries. Grant the access key only `s3:GetObject`,
+`s3:PutObject`, `s3:DeleteObject`, and `s3:ListBucket` (used by the readiness
+`HEAD` request) on that bucket. Enable the provider's encryption at rest and
+versioning or backups according to your retention policy.
+
+### Native mobile push
+
+Android push uses Firebase Cloud Messaging HTTP v1 and iOS push uses Apple Push
+Notification service with token authentication. Each provider is disabled until
+all of its settings are present; partial or malformed settings stop startup.
+
+- Android: create a Firebase project, then a service account with the Firebase
+  Cloud Messaging API Admin role. Copy `project_id`, `client_email`, and
+  `private_key` from its JSON key into the three `FCM_*` settings.
+- iOS: create an APNs authentication key in the Apple Developer portal and set
+  its key ID, your team ID, the `.p8` contents, and the app bundle identifier.
+  Use `APNS_ENVIRONMENT=sandbox` for development-signed builds.
+
+Devices register through `POST /realm/push/devices`. Payloads contain the same
+generic title and app link as Web Push, never message text. Unregistered tokens
+are removed automatically and failed deliveries are retried up to three times.
+The Tauri mobile shell does not register device tokens yet; see
+[mobile push](mobile.md#native-push-notifications).
+
 ## Plans and limits
 
 Freemium limits use the product plan names. Set `FREE_<NAME>` or
@@ -278,12 +341,17 @@ API, and web host bindings are local by default.
 | `POSTGRES_BIND_ADDRESS` / `POSTGRES_PORT` | `127.0.0.1` / `5432` |
 | `API_BIND_ADDRESS` / `API_PORT` | `127.0.0.1` / `8080` |
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
+| `OBJECT_STORE_BIND_ADDRESS` / `OBJECT_STORE_PORT` | `127.0.0.1` / `8333`, only with the `object-storage` profile |
+| `COMPOSE_PROFILES` | Unset; `object-storage` starts the bundled SeaweedFS S3 gateway |
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
 SMTP, pool, rate-limit, body-size, application-retention, two-step key,
-verification retention, and Twilio settings listed above, plus `APP_VERSION`,
-the [scheduled notification settings](#notification-email-and-scheduled-notifications),
-and the help center, legal, and client version settings. Its default
+verification retention, Twilio, media storage, and native push settings listed
+above, plus `APP_VERSION`, the
+[scheduled notification settings](#notification-email-and-scheduled-notifications),
+and the help center, legal, and client version settings. In Compose,
+`S3_ENDPOINT` defaults to the bundled `http://object-store:8333`, `S3_BUCKET` to
+`everymusic-media`, and `S3_FORCE_PATH_STYLE` to `true`. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.
@@ -291,6 +359,16 @@ and the help center, legal, and client version settings. Its default
 After changing host ports, update the client origin and email-link origin too.
 For example, `WEB_PORT=8088` needs `http://localhost:8088` first in
 `PORTAL_ORIGINS`. Recreate changed containers with `docker compose up -d`.
+
+To use the bundled object store, add these to the root `.env` and run
+`docker compose up -d` (see [deployment](deployment.md#optional-object-storage-in-compose)):
+
+```text
+COMPOSE_PROFILES=object-storage
+MEDIA_STORAGE=s3
+S3_ACCESS_KEY_ID=<random access key>
+S3_SECRET_ACCESS_KEY=<different random secret>
+```
 
 Do not expose PostgreSQL publicly or expose the trusted-proxy API directly to
 untrusted traffic. Use a TLS reverse proxy and private service networking for

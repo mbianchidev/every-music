@@ -14,12 +14,21 @@ export const publicMediaReferences = [
     WHERE ('/realm/media/' || ph.media_id::text) = $2 AND l.removed_at IS NULL AND l.expires_at > NOW())`,
 ];
 
-// SQL predicates (the media row is aliased `m`) that keep an upload from the
-// hourly orphan cleanup, which deletes media older than a day matching none of
-// them. Append one predicate per feature that stores managed media references.
+// SQL predicates granting one signed-in viewer (bound as $3) access to managed
+// media (URL bound as $2) that is not public, for example attachments shared
+// in a group conversation or verification evidence under admin review. Each
+// predicate must check the viewer's current right to the referencing content.
+// Matches are served with `Cache-Control: private, no-store`. Attachment blobs
+// are never served through publicMediaReferences, only through these.
+export const authorizedMediaReferences = [];
+
+// SQL predicates (URL bound as $2) that keep media from the hourly orphan
+// cleanup, which deletes unreferenced uploads older than one day together with
+// their stored objects. Media matching publicMediaReferences is kept too; add
+// a predicate here when drafts, private or member-only content reference media.
 export const retainedMediaReferences = [
-  `EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)`,
-  `EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)`,
-  'EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE ph.media_id = m.id)',
-  'EXISTS(SELECT 1 FROM verification_requests v WHERE m.id IN (v.selfie_media_id, v.document_media_id))',
+  'EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = $2)',
+  'EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_deleted = FALSE)',
+  "EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE '/realm/media/' || ph.media_id::text = $2)",
+  "EXISTS(SELECT 1 FROM verification_requests v WHERE $2 IN ('/realm/media/' || v.selfie_media_id::text, '/realm/media/' || v.document_media_id::text))",
 ];

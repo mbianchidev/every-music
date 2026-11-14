@@ -15,11 +15,15 @@ Fastify -> SMTP (opt-in notification email outbox, idle without SMTP)
 Fastify -> Google identity verification (optional web sign-in)
 Fastify -> Web Push services (optional, generic notification payloads)
 Fastify -> SMS provider, Twilio adapter (optional two-step codes)
+Fastify -> FCM / APNs (optional native mobile push, generic payloads)
+Fastify -> S3-compatible object storage (optional media bytes, private bucket)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
-Compose names the services `spectrum-web`, `realm-nexus`, and `realm-store`.
-The API container runs tracked migrations before accepting traffic. A fresh
+Compose names the services `spectrum-web`, `realm-nexus`, and `realm-store`,
+plus the optional SeaweedFS `object-store` in the `object-storage` profile.
+The API container runs tracked migrations before accepting traffic; an advisory
+lock makes replicas that start together apply each migration once. A fresh
 PostgreSQL volume is initialized with the schema and instrument/genre catalogs.
 The volume `everymusic-realm-volume` is persistent and is not removed by a
 normal `docker compose down`.
@@ -33,7 +37,9 @@ normal `docker compose down`.
 - `src/conductors/`: input validation, authorization decisions, workflows, and
   HTTP response transformations.
 - `src/repositories/`: PostgreSQL queries and transaction execution.
-- `src/engines/`: token signing/hashing, SMTP, and Google identity integration.
+- `src/engines/`: token signing/hashing, SMTP, Google identity integration,
+  media storage drivers (`media-storage.js`), media access registries
+  (`media-references.js`), and push providers (`push-dispatcher.js`, `native-push.js`).
 - `src/validators/`: shared input and pagination validation.
 
 Database work that must be atomic uses `realmConnector.transaction` and its
@@ -179,11 +185,20 @@ no safe downgrade to plaintext once encrypted messages exist: keep the key
 tables/backups and use a reviewed forward fix rather than dropping columns.
 
 Managed image uploads are decoded by Sharp, constrained by bytes/pixels/frame
-count, stripped of metadata, and encoded as bounded WebP. Bytes live in
-PostgreSQL, with owner/purpose checks when attached to a profile/announcement.
-Private or unattached images require uploader authentication. Published images
-can be cached by browsers; removing a reference does not recall copies already
-downloaded.
+count, stripped of metadata, and encoded as bounded WebP. Encrypted attachment
+blobs are stored as opaque bytes. Each `media` row records its purpose, MIME
+type, and size, and holds either the bytes (`MEDIA_STORAGE=postgres`) or the key
+of an object in a private S3-compatible bucket (`MEDIA_STORAGE=s3`). Every read
+goes through `/realm/media/:id`: owners always pass, other viewers need a
+`publicMediaReferences` match (never for attachments) or an
+`authorizedMediaReferences` match for that viewer. Owner/purpose checks apply when
+media is attached to content. Published images can be cached by browsers;
+removing a reference does not recall copies already downloaded.
+
+A database trigger queues the object key whenever an object-stored row is
+deleted, including account-deletion cascades. The background worker removes
+queued objects with leased, retried jobs, so PostgreSQL stays the source of truth
+and no transaction waits on object storage.
 
 Small PostgreSQL notifications are emitted through the transaction executor,
 so clients only see committed changes. Each API process holds one dedicated
@@ -194,10 +209,12 @@ Reconnect reloads authoritative HTTP state; there is no event-history promise.
 
 Notification records and user preferences are persisted with their triggering
 mutations. Workers atomically lease pending push rows using `SKIP LOCKED` and
-retry up to three times. Browser endpoints/keys are validated and restricted
-to supported push providers. Payloads are generic; gone subscriptions are
+retry up to three times. Each job is delivered to the user's browsers (Web Push)
+and registered mobile devices (FCM for Android, APNs for iOS). Browser
+endpoints/keys are validated and restricted to supported push providers. Payloads are generic; gone subscriptions are
 deleted. Notifications created while push is off are not replayed on opt-in.
-Hourly maintenance removes expired challenges, unreferenced media after a day,
+Hourly maintenance removes expired challenges, unreferenced media after a day
+(media matching `retainedMediaReferences` or `publicMediaReferences` is kept),
 notifications after 90 days, and aggregates outside the 30-day reporting window.
 A separate help job (`engines/help-jobs.js`) deletes answered/closed support
 requests 365 days after their last update. On listen it records `APP_VERSION`
@@ -276,8 +293,8 @@ with the visitor's consent and expire after 30 days.
 
 ## Operational boundaries and extension points
 
-`/health/live` reports process liveness; `/health/ready` checks PostgreSQL and
-returns 503 when unavailable. `/pulse` is the readiness compatibility alias.
+`/health/live` reports process liveness; `/health/ready` checks PostgreSQL (and
+the media bucket when `MEDIA_STORAGE=s3`) and returns 503 when unavailable. `/pulse` is the readiness compatibility alias.
 Readiness does not validate SMTP or complete user workflows.
 
 Production logs go to stdout/stderr as structured JSON. See

@@ -37,9 +37,13 @@ Failure:
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health/live` | Process liveness |
-| GET | `/health/ready` | PostgreSQL readiness |
+| GET | `/health/ready` | PostgreSQL readiness, plus object storage when `MEDIA_STORAGE=s3` |
 | GET | `/pulse` | Readiness compatibility alias |
 | GET | `/nexus-info` | Version and environment |
+
+Readiness returns `{ "status": "ready", "dependencies": { "database": "connected" } }`.
+With `MEDIA_STORAGE=s3` it adds `"storage": "connected"`; an unreachable bucket
+returns 503 with `"status": "not_ready"` and `"storage": "unavailable"`.
 
 ## Authentication
 
@@ -334,11 +338,41 @@ Use that relative URL in `profilePictureUrl` or `pictureUrl`. Managed media
 must belong to the editing user and match the purpose. Invalid input returns
 400 `INVALID_IMAGE` / `INVALID_MEDIA`; an oversized request body can return 413.
 
-GET `/realm/media/:mediaId` returns `image/webp`, not a JSON envelope. A media
-item is public only while attached to an active profile or visible announcement.
-The uploader can fetch private/unattached items with Bearer authentication;
-unauthorized or missing items return 404. Unreferenced uploads are cleaned up
-after a day. Uploaded bytes are stored in PostgreSQL and included in backups.
+GET `/realm/media/:mediaId` returns the stored bytes (`image/webp` for images),
+not a JSON envelope, with `Content-Length`. A media item is public only while
+attached to an active profile or visible announcement; public responses use
+`Cache-Control: public, max-age=3600`. The uploader can fetch private/unattached
+items with Bearer authentication; unauthorized or missing items return 404.
+Features can also grant one signed-in viewer access (see attachments below);
+owner and granted responses use `Cache-Control: private, no-store`.
+Unreferenced uploads are cleaned up after a day. Bytes are stored in PostgreSQL
+or, with `MEDIA_STORAGE=s3`, in a private S3-compatible bucket; either way they
+are only served through this endpoint. A storage outage returns 503
+`MEDIA_STORAGE_UNAVAILABLE`.
+
+### Encrypted attachments
+
+POST `/realm/media/blobs` with authentication, `Content-Type:
+application/octet-stream`, and the client-encrypted bytes as the raw body.
+The server stores the bytes as opaque data with purpose `attachment`; it does not
+decrypt, inspect, or transform them. 201 returns:
+
+```json
+{ "id": "<uuid>", "url": "/realm/media/<uuid>", "byteSize": 1024, "mimeType": "application/octet-stream" }
+```
+
+Bodies larger than `ATTACHMENT_BYTE_LIMIT` (10 MiB by default) return 413,
+empty or non-binary bodies return 400 `INVALID_BLOB`, and more than 100
+attachments per account per day return 429 `ATTACHMENT_LIMIT_REACHED`. The
+route is also rate limited per client. Authentication is checked before the
+body is read.
+
+GET the returned `url` with Bearer authentication. Attachments are never public:
+only the uploader, or a viewer granted by a feature's authorized media
+reference (for example, members of a conversation that references the
+attachment), receives the bytes, with `Content-Disposition: attachment` and
+`Cache-Control: private, no-store`. Everyone else receives 404. Unreferenced
+attachments are deleted after a day like other uploads.
 
 ## Announcement applications
 
@@ -604,6 +638,31 @@ inactive users at most once per inactivity period, and `invite_friends`
 (`params.days`) is one in-app nudge per account linking to `#invite`. See
 [configuration](configuration.md#notification-email-and-scheduled-notifications)
 for intervals and thresholds.
+
+## Mobile push devices
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/push/devices` | `{ "providers": { "android": bool, "ios": bool }, "devices": [{ id, platform, createdAt, updatedAt }] }` |
+| POST | `/realm/push/devices` | `{ "platform": "android" \| "ios", "token": "<FCM or APNs token>" }`, 201 returns the device |
+| DELETE | `/realm/push/devices` | Same body; removes the caller's matching device |
+| DELETE | `/realm/push/devices/:deviceId` | Removes one of the caller's devices; 404 otherwise |
+
+All require authentication. `providers` reports which native push services the
+server has configured. Android tokens are Firebase Cloud Messaging registration
+tokens; iOS tokens are hexadecimal APNs device tokens (stored lowercase).
+Invalid tokens return 400 `INVALID_PUSH_DEVICE`; an unconfigured platform returns
+503 `PUSH_NOT_CONFIGURED`. Each account can register 10 devices; more return
+400 `PUSH_DEVICE_LIMIT`, and registration is rate limited per client.
+Registering an existing token moves it to the caller,
+refreshes `updatedAt`, and enables the `push` preference. Tokens are never
+returned. Disabling `push` in preferences removes every device.
+
+Native and browser push share one delivery worker and payload: a generic
+`Every.music` title, the notification's English fallback title as body, the
+notification ID, and its app link. Message text is never sent. Tokens that the
+provider reports as unregistered are deleted; other failures are retried up to
+three times.
 
 ## Plans and limits
 

@@ -188,6 +188,7 @@ class AdministrationRepository {
         await executor.execute('UPDATE users SET is_active = FALSE WHERE id = $1', [report.reported_user_id]);
         await executor.execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1', [report.reported_user_id]);
         await executor.execute('DELETE FROM push_subscriptions WHERE user_id = $1', [report.reported_user_id]);
+        await executor.execute('DELETE FROM push_devices WHERE user_id = $1', [report.reported_user_id]);
         await executor.execute('UPDATE notifications SET push_sent = TRUE WHERE user_id = $1', [report.reported_user_id]);
         await publishEvent(executor, 'account.changed', { userId: report.reported_user_id });
         await publishEvent(executor, 'profiles.changed', { id: report.reported_user_id });

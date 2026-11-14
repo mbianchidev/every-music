@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createECDH } from 'node:crypto';
+import { createInfrastructureConfig, validateInfrastructureConfig } from './infrastructure.js';
 
 const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 
@@ -243,6 +244,7 @@ export function createRealmConfig(env = process.env) {
     },
     accountTrust: createAccountTrust(env),
     ...createHelpConfig(env),
+    ...createInfrastructureConfig(env),
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
@@ -299,6 +301,7 @@ export function validateRealmConfig(config = realmConfig) {
     throw new Error('MARKETPLACE_EXPIRY_REMINDER_DAYS must be lower than MARKETPLACE_LISTING_DAYS');
   }
   validateAccountTrust(config.accountTrust);
+  if (config.mediaStorage) validateInfrastructureConfig(config);
 
   if (config.environment === 'production') {
     const mailValues = [

@@ -1,0 +1,15 @@
+export default {
+  title: 'Mobiele apparaten',
+  description: 'Telefoons en tablets met de Every.music-app kunnen pushmeldingen ontvangen. Meldingen bevatten alleen een algemene samenvatting, nooit de tekst van berichten.',
+  loading: 'Mobiele apparaten laden',
+  loadError: 'Je mobiele apparaten konden niet worden geladen',
+  notConfigured: 'Mobiele pushmeldingen zijn niet ingesteld op deze server. Deze apparaten ontvangen pas meldingen als dat wel zo is.',
+  empty: 'Er zijn geen mobiele apparaten geregistreerd voor pushmeldingen.',
+  platform: { android: 'Android-apparaat', ios: 'iPhone of iPad' },
+  registered: 'Geregistreerd op {date}',
+  updated: 'Laatst bevestigd op {date}',
+  remove: 'Verwijderen',
+  removing: 'Bezig met verwijderen...',
+  removeLabel: '{device} verwijderen, geregistreerd op {date}',
+  removed: '{device} verwijderd. Het ontvangt geen pushmeldingen meer.',
+};

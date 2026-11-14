@@ -256,7 +256,7 @@ class AccountRepository {
             created_at AS "createdAt", reviewed_at AS "reviewedAt"
           FROM user_reports WHERE reporter_id = $1 ORDER BY created_at, id`),
         media: (await all(`
-          SELECT id, purpose, octet_length(content) AS bytes, created_at AS "createdAt" FROM media WHERE user_id = $1 ORDER BY created_at, id`))
+          SELECT id, purpose, byte_size AS bytes, created_at AS "createdAt" FROM media WHERE user_id = $1 ORDER BY created_at, id`))
           .map(row => ({ ...row, url: `/realm/media/${row.id}` })),
         analytics: await all(`
           SELECT to_char(day, 'YYYY-MM-DD') AS day, kind, resource_id AS "resourceId", count FROM analytics_daily

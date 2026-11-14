@@ -5,6 +5,7 @@ import { administrationRepository } from './administration-repository.js';
 import { accountRepository } from './account-repository.js';
 import { secretBox } from '../engines/secret-box.js';
 import { requestError } from '../engines/request-error.js';
+import { mediaStorage } from '../engines/media-storage.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -112,16 +113,20 @@ class VerificationRepository {
 
   // Dedicated administrator read path for private verification images. Every
   // read is audited; the general media route never serves these to others.
-  async media(actorId, requestId, mediaId) {
-    return administrationRepository.withAdmin(actorId, async executor => {
+  async media(actorId, requestId, mediaId, storage = mediaStorage()) {
+    const media = await administrationRepository.withAdmin(actorId, async executor => {
       const { rows } = await executor.execute(`
-        SELECT m.content, v.subject_id FROM verification_requests v
+        SELECT m.id, m.content, m.storage_key, v.subject_id FROM verification_requests v
         JOIN media m ON m.id = $2 AND m.id IN (v.selfie_media_id, v.document_media_id) AND m.purpose = 'verification'
         WHERE v.id = $1`, [requestId, mediaId]);
       if (!rows.length) throw requestError(404, 'IMAGE_NOT_FOUND', 'Image not found');
       await administrationRepository.audit(executor, actorId, 'verification_media_viewed', rows[0].subject_id);
-      return rows[0].content;
+      return rows[0];
     });
+    if (!media.storage_key) return media.content;
+    const body = await storage.get(media.storage_key);
+    if (!body) throw requestError(404, 'IMAGE_NOT_FOUND', 'Image not found');
+    return body;
   }
 
   async decide(actorId, requestId, { decision, note }, retentionDays) {
