@@ -79,6 +79,12 @@ Organization pages add member editors and permission checkboxes, invitation
 and request responses, the venue claim dialog, search-as-you-type pickers,
 and the admin claim and verification tools; check them the same way.
 
+Events add discovery filters with pickers, the lineup editor (ordering, roles,
+set times), date and time zone fields, the capacity text and bar (the text
+carries the value; the bar is decorative), going/interested toggle buttons
+with `aria-pressed`, reminder checkboxes, the calendar download, the status
+dialog, official updates, and the discussion; check them the same way.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

@@ -308,6 +308,31 @@ notifications atomically. The client loads organization screens on demand
 through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
 the shell. See the [organization model](organizations.md).
 
+## Events
+
+Migration `015_events.sql` adds `events` with organizers, an ordered lineup
+(band page, artist account, or free text), genres, images (managed `event`
+media), https ticket links, attendance, reminders, the attendee discussion
+(`event_posts`), and official communications, plus `event_id`/`event_post_id`
+on user reports and `organization` subjects (with a `request_note`) for
+verification requests. Routes live in `event-orchestrator.js` under
+`/realm/gigs` (the SSE stream already owns `/realm/events`), validation and
+calendar helpers in `engines/event-model.js`, and SQL in `event-repository.js`,
+`event-discussion-repository.js`, and `organization-verification-repository.js`.
+
+Times are stored as UTC instants with the event's IANA zone; the API accepts
+and returns local wall-clock values converted with `Intl`, so no time zone
+database is needed in PostgreSQL. Status `completed` is derived from the end
+time, never stored. Coordinates come from the event, then its venue, then its
+city, and distance search reuses `engines/geo.js`. Writes authorize editors
+through `organizationRepository.requireMember(..., 'manage_calendar')` inside
+the transaction; read paths use an equivalent SQL predicate that also guards
+draft images in `authorizedMediaReferences`. Publishing, lineup additions,
+communications, and reminders create notifications in the same transaction.
+Each API process runs `EventReminderJob`, which leases due reminders with
+`FOR UPDATE SKIP LOCKED`, so replicas never send one twice. Account deletion
+hands events co-organized by pages to those pages before cascading the rest.
+
 ## Operational boundaries and extension points
 
 `/health/live` reports process liveness; `/health/ready` checks PostgreSQL (and

@@ -842,6 +842,136 @@ listings that expired or were removed by moderation more than 365 days ago.
 Changes publish `marketplace.changed` events, and saving publishes
 `marketplace.saved.changed` to the saving user.
 
+## Events (concerts and festivals)
+
+Events live under `/realm/gigs` because `GET /realm/events` is the live-update
+stream. Reads accept optional authentication (it adds viewer fields); writes
+require it. Drafts are visible only to their editors.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/gigs` | Search published events (see filters below), paginated as `events` |
+| POST | `/realm/gigs` | Create, 201; at most 20 per hour |
+| GET | `/realm/gigs/mine` | `role` `organizing` (default: events you can edit, drafts included) or `attending` (going or interested), `when`, paging |
+| GET | `/realm/gigs/organizations/:organizationId` | Published events a page organizes, performs in, or hosts as venue; `when` (`upcoming` default, `past`); each event adds `relations` (`organizer`, `performer`, `venue`) |
+| GET | `/realm/gigs/profiles/:userId` | Events a person performs in or owns, plus events they go to and show on their profile; `relations` (`performer`, `attendee`); hidden between blocked accounts |
+| GET | `/realm/gigs/:eventId` | Detail with `communications` (latest 50) and `viewer` |
+| GET | `/realm/gigs/:eventId/calendar.ics` | `text/calendar` download (not a JSON envelope) |
+| PATCH | `/realm/gigs/:eventId` | Partial edit by an editor; also `status` and optional `statusNote`; at most 120 per hour |
+| DELETE | `/realm/gigs/:eventId` | Editors delete drafts, cancelled, or ended events (409 `EVENT_ACTIVE` otherwise) |
+| PUT / DELETE | `/realm/gigs/:eventId/attendance` | `{ "status": "going" \| "interested", "showOnProfile"?: boolean }` or remove |
+| PUT | `/realm/gigs/:eventId/reminders` | `{ "offsets": [minutes, ...] }` replaces your reminders; up to 5, each 5-20160 minutes before the start |
+| DELETE | `/realm/gigs/:eventId/lineup/:entryId` | A listed artist, or a band member with `manage_calendar`, leaves the lineup |
+| GET / POST | `/realm/gigs/:eventId/posts` | Attendee discussion, paginated as `posts`; posting `{ "body" }` (1-2,000 characters) |
+| DELETE | `/realm/gigs/:eventId/posts/:postId` | Author, editors, or administrators |
+| POST | `/realm/gigs/:eventId/posts/:postId/reports` | Report a discussion message, 201 |
+| POST | `/realm/gigs/:eventId/reports` | Report the event, 201 |
+| POST | `/realm/gigs/:eventId/communications` | Editors send `{ "kind", "body" }` (1-4,000 characters) to attendees, 201 |
+| GET / POST | `/realm/organizations/:organizationId/verification-request` | Page leader: status, or request verification (see below) |
+| DELETE | `/realm/organizations/:organizationId/verification-request/:requestId` | Page leader cancels a pending request |
+
+Event fields:
+
+| Field | Rules |
+|---|---|
+| `title`, `description` | 3-160 characters; description up to 10,000 |
+| `type` | `concert` (default), `festival`, or `other` |
+| `timezone` | IANA zone such as `Europe/Rome`; required |
+| `startsAt`, `endsAt`, `doorsOpenAt` | Local wall-clock times `YYYY-MM-DDTHH:mm` in `timezone`; `startsAt` is required, the end must follow the start and doors must open before it |
+| `venueId` | A venue page; its coordinates are used for maps and distance when the event has none |
+| `placeId`, `address` | GeoNames city and free-text address (300 characters) |
+| `latitude`, `longitude` | Optional exact position, both or neither |
+| `capacity`, `ticketsSold` | Integers; tickets sold needs a capacity and cannot exceed it |
+| `ticketLinks` | Up to 5 `{ label, url }`, `https://` only |
+| `images` | Up to 6 `/realm/media/<uuid>` URLs uploaded with purpose `event` (or already on this event); the first is the cover |
+| `genreIds` | Up to 10 catalog genres |
+| `organizerIds` | Up to 5 pages; adding or removing one needs `manage_calendar` on that page. Without organizers, the creator owns the event |
+| `lineup` | Up to 50 ordered `{ role, bandId?, artistId?, name?, setStartsAt?, setEndsAt? }` with exactly one of a band page, an artist profile, or a name; `role` is `headliner`, `opener`, `support`, or `other` |
+| `visibility` | `draft` (default) or `published` |
+
+Editors are the owning artist and active members of an organizer holding
+`manage_calendar` (leaders and admins always do), checked with
+`organizationRepository.requireMember`. Others receive 403
+`EVENT_PERMISSION_REQUIRED`; missing events and other people's drafts return 404
+`EVENT_NOT_FOUND`. Omitted fields stay unchanged and arrays replace the stored
+list. Cross-field problems return 400 `INVALID_EVENT`; foreign or wrong-purpose
+images 400 `INVALID_MEDIA`; unknown pages, people, or genres 400
+`INVALID_VENUE`, `INVALID_LINEUP`, `INVALID_ORGANIZER`, or `INVALID_GENRE`;
+removing the last organizer of a page-owned event 400 `ORGANIZER_REQUIRED`;
+unpublishing an event people replied to 409 `EVENT_HAS_ATTENDEES`.
+
+Responses contain `id`, the fields above in API shape, `status` (`scheduled`,
+`postponed`, `cancelled`, or `completed` once a non-cancelled event has ended;
+events without an end count as ended four hours after the start),
+`scheduledStatus`, `startsAt`/`endsAt`/`doorsOpenAt` as UTC instants plus
+`local` wall-clock values, `upcoming`, `venue`, `place`, `coordinates`
+(explicit, venue, or city), `map` (OpenStreetMap map and directions links),
+`ticketsSoldPercent` (rounded down; 100 means sold out), `soldOut`,
+`organizers`, `owner`, `lineup` entries with `name`, `band` or `artist`, and
+`local` set times, `attendance` (`going`, `interested`), `calendar`
+(`googleUrl` template link and `icsPath`), and `viewer` (`canEdit`,
+`attendance`, `showOnProfile`; detail adds `reminders`, `canDiscuss`,
+`canModerate`).
+
+Search accepts `q` (title, description, venue, and lineup names), `when`
+(`upcoming` default, `past`, `all`), `from`/`to` (`YYYY-MM-DD`, compared with
+the start date in the event's zone), `type`, `bandId`, `artistId`,
+`organizerId`, `venueId`, `genreId`, `placeId` or `latitude`/`longitude` with
+`radiusKm` (1-500, default 50, portable bounding box plus haversine),
+`location` (city, region, country, address, or venue text), `sort` (`date`,
+`band` for the first headliner, `organizer`, `location`), and paging. Upcoming
+events sort by soonest start, past events by most recent.
+
+Replies are closed for cancelled events (409 `EVENT_CANCELLED`). Reminders for
+times that already passed return 400 `REMINDER_IN_PAST`. A background job in
+every API process leases due reminders with `SKIP LOCKED` every
+`EVENT_REMINDER_INTERVAL_SECONDS` and creates one `event_reminder` per
+reminder; moving the start re-arms reminders, and cancelled or past events
+send none. The discussion is open to attendees (going or interested), editors,
+and administrators (403 `EVENT_ATTENDANCE_REQUIRED` otherwise), hides people
+blocked in either direction, and allows 20 posts per account every 10 minutes
+(429 `ACCOUNT_RATE_LIMIT`) besides the route limit. Reports use the shared
+report categories, consent, daily limit, and queue: the reported message (or
+the event title) is copied as unverified evidence, event reports target the
+owner, creator, or first organizer's leader, and removing a reported message
+marks its open reports `actioned`. Administrator removals are audited as
+`event_post_removed`.
+
+Communication kinds are `door_open`, `cancellation`, `refund`,
+`lineup_change`, `postponement`, and `general`. Changing a published event to
+`cancelled` or `postponed` adds an automatic communication with the optional
+`statusNote`. Every communication notifies everyone going or interested with
+kind `event_communication` (`params`: `eventId`, `title`,
+`communicationKind`). Publishing an event the first time notifies followers of
+its organizers, lineup bands, venue, owner, and lineup artists
+(`event_published`), and tells listed artists and band managers they are on
+the lineup (`event_lineup`, also for later additions). All four event kinds
+default to in-app, push, and email. Changes publish `gigs.changed`,
+`gigs.posts.changed` (event ID only), and `gigs.mine.changed` to the affected
+user.
+
+The calendar file is RFC 5545 text with escaped values, folded lines, a stable
+`UID`, a `SEQUENCE` that grows with each edit, `STATUS`
+(`CONFIRMED`/`TENTATIVE`/`CANCELLED`), and the event's `TZID` with a matching
+`VTIMEZONE` (UTC times when an event crosses a daylight saving change).
+
+### Page verification requests
+
+The page leader sends `{ "note": "<10-2,000 characters>", "documentMediaId"?: "<uuid>" }`
+(an unused `verification` image of their own); GET returns `verified`,
+`verifiedAt`, a daily `challengeCode` for the page, and the latest `request`
+(`status`, `note`, `documentUrl`, `reviewNote`). Other members receive 403
+`LEADER_REQUIRED`. Verified pages return 409 `ALREADY_VERIFIED`, a second
+pending request 409 `VERIFICATION_PENDING`, and more than three requests a day
+429 `ACCOUNT_RATE_LIMIT`; the route allows five per day. Requests appear in the
+administrator verification queue with `subjectType: "organization"`,
+`organizationName`, `organizationKind`, `organizationVerifiedAt`, and
+`requestNote`. Approval sets `organizations.verified_at`; decisions are audited
+as `organization_verification_approved`/`organization_verification_rejected`
+and notify the requester (`verification_decided` with `subjectType`,
+`organizationId`, and `organizationName`). Administrators who belong to the
+page, or who requested it, receive 403 `SELF_REVIEW`.
+
 ## Help center, legal terms, onboarding, versions, and ratings
 
 | Method | Path | Contract |
@@ -934,7 +1064,7 @@ out of URLs. Frames are `data: {"type":"messages.changed","id":"<uuid>",...}`
 separated by blank lines, with heartbeat comments every 15 seconds. The
 initial `connected` event tells clients to reload current data.
 
-Types include `profiles.changed`, `announcements.changed`, `comments.changed`, `organizations.changed`,
+Types include `profiles.changed`, `announcements.changed`, `comments.changed`, `organizations.changed`, `gigs.changed`, `gigs.posts.changed`, `gigs.mine.changed`,
 `messages.changed`, `conversations.changed`, `saved.changed`,
 `notifications.changed`, `preferences.changed`, `analytics.changed`,
 `keys.changed`, `reports.changed`, `admin.changed`, `blocks.changed`,
@@ -1047,7 +1177,10 @@ genres, projects), own `announcements`, `comments`, `reactions`,
 text only for legacy unencrypted messages you sent), public `messagingKeys`,
 `notifications`, `reportsFiled`, `media` (addresses), `analytics`,
 `entitlements`, `pushSubscriptions` (service origin only), and
-`verificationRequests`. It never contains password or token hashes, recovery
+`verificationRequests`, plus the feature sections of the export registry, such
+as `eventsCreated`, `eventLineupEntries`, `eventAttendance`, `eventReminders`,
+`eventPostsWritten`, `eventCommunicationsWritten`, and
+`organizationVerificationRequests`. It never contains password or token hashes, recovery
 code hashes, encrypted message ciphertext, encrypted key backups, received
 message contents, other people's email addresses, or reports filed about you.
 
@@ -1089,8 +1222,9 @@ least one is required. The challenge code (`EM-` plus six characters) changes
 every UTC day; today's and yesterday's codes are accepted (400
 `VERIFICATION_CODE_EXPIRED` otherwise). One pending request per subject (409
 `VERIFICATION_PENDING`), three submissions per day, and verified profiles return
-409 `ALREADY_VERIFIED`. Requests use `subject_type`/`subject_id`; only `user`
-subjects exist today.
+409 `ALREADY_VERIFIED`. Requests use `subject_type`/`subject_id`; `user`
+requests come from these routes and `organization` requests from
+[page verification requests](#page-verification-requests).
 
 Verification images are never public: `GET /realm/media/:id` serves them only
 to the uploader, and administrators use the audited route above. Decisions
