@@ -13,6 +13,7 @@ Tauri WebView ---------------------------------> absolute API URL -> PostgreSQL
 Fastify -> SMTP (verification/reset mail)
 Fastify -> Google identity verification (optional web sign-in)
 Fastify -> Web Push services (optional, generic notification payloads)
+Fastify -> https://www.youtube.com/feeds/videos.xml (optional band video import)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
@@ -170,6 +171,20 @@ Operational request logs remain separate from analytics.
 Platform totals use a separate collection requiring both parties' additional
 platform consent; existing personal totals are never retroactively exposed.
 Reported content expires 90 days after review, audit metadata after 365 days.
+
+## Organizations
+
+Bands, venues, organizers, booking agencies, and labels share the
+`organizations` table with membership periods, follows, relations, releases,
+update posts, and venue claims (migration `012_organizations.sql`). Routes live
+in `organization-orchestrator.js`, validation in `organization-conductor.js`,
+and SQL in `organization-repository.js` and `organization-content-repository.js`.
+Every organization-scoped write authorizes through
+`organizationRepository.requireMember` inside its transaction. Each API
+process runs `OrganizationFeedImporter`, which leases due bands with
+`SKIP LOCKED`, fetches their public YouTube feeds outside transactions with a
+fixed host, timeout, and size cap, and stores new videos and follower
+notifications atomically. See the [organization model](organizations.md).
 
 ## Operational boundaries and extension points
 

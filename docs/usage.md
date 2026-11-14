@@ -94,6 +94,41 @@ images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
 uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
 stripped of metadata. Published images are public.
 
+### Bands, venues, and other pages
+
+Open **Bands and venues** to search bands, venues, organizers, booking
+agencies, and labels by name, type, genre, and location. **Your pages** lists
+the pages you belong to, invitations, requests for your bands, and updates
+from pages you follow. Choose **Create a page**, pick the kind, and fill in
+what applies: bands add formation year, what they are open to (tours, live
+shows, support acts, endorsements), and an optional YouTube channel ID;
+venues add type, capacity, parking, directions, and coordinates for an
+OpenStreetMap link. You become the page leader. Venue, organizer, agency, and
+label pages may need a partner plan when the operator enables
+`PARTNER_PLAN_REQUIRED`; bands are always free.
+
+On a page, **Members** invites musicians, sets titles (such as "Lead guitar"),
+join/leave dates, and permissions, and transfers leadership. Invitees accept
+or decline in **Your pages**. Former members stay in the page history.
+Members allowed to post can publish updates, and **Post an announcement**
+publishes an open call on behalf of the page. Bands list releases and similar
+bands ("For fans of", with explained suggestions); agencies and labels ask
+bands to join their roster or label, and the band must accept. **Follow** a
+page to be notified about its updates, releases, new YouTube videos, and
+announcements. Spotify and other services are not imported automatically.
+
+If a venue has no page, add it as community-maintained: only you can edit it
+until the venue's operator uses **Claim this venue** and an administrator
+approves the claim. Administrators review claims and verify pages from the
+Administration overview; verified pages show a badge. Use **Report this page**
+for abusive pages. See the [organization model](organizations.md) for the full
+permission rules.
+
+In **Edit profile**, choose **Music lover** if you do not play: instruments
+and projects are hidden and your profile shows your bio, contacts, and the
+bands and artists you follow. **Settings > Profile visibility** hides those
+follow lists from other people.
+
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives

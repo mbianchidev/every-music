@@ -124,6 +124,7 @@ not packaged by desktop CI.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
 
 ### Current limitations
 

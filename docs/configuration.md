@@ -64,6 +64,7 @@ startup. Mail settings are mandatory in production.
 | `RATE_WINDOW_MS` | `900000` (at least 1000) | Rate-limit window in milliseconds |
 | `RATE_THRESHOLD` | `150` (at least 1) | Requests allowed per client/window |
 | `UPLOAD_BYTE_LIMIT` | `5242880` (at least 1024) | Maximum JSON body size, including base64 image uploads; images themselves are capped at 2 MiB |
+| `YOUTUBE_FEED_INTERVAL_MINUTES` | `60` (0-10080) | How often each band's public YouTube channel feed is checked for new videos; `0` disables the import and its outbound requests to `www.youtube.com` |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -155,7 +156,8 @@ premium limits and can always manage business pages.
 | `SEE_PROFILE_VISITS` | `false` | `true` | Seeing consenting visitors of your profile |
 
 `PARTNER_PLAN_REQUIRED` (default `false`) restricts venue, organizer, booking
-agency, and label pages to the partner plan.
+agency, and label pages to the partner plan. Bands and community-maintained
+venues stay free; see the [organization model](organizations.md).
 
 ## Compose settings
 
@@ -173,7 +175,7 @@ API, and web host bindings are local by default.
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
-SMTP, pool, rate-limit, and body-size settings listed above. Its default
+SMTP, pool, rate-limit, body-size, and YouTube feed settings listed above. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.
