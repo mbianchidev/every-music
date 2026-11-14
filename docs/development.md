@@ -158,6 +158,9 @@ On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
 to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+`e2e/marketplace.spec.js` mints browser sessions with the synthetic browser
+API signing key instead of using the sign-in form, so it does not consume the
+per-IP login limit that the community suite exercises in the same API process.
 Do not run `npm run check` / `npm run compile` in the same frontend checkout
 while browser tests run: both builds replace `dist`, and the browser build
 embeds its isolated API origin. Backend checks can run independently.
@@ -255,6 +258,10 @@ window for large installations. It is additive, preserves existing records and
 sessions, and defaults analytics/push off. Application rollback can leave these
 extra tables/columns in place; do not drop messages or media as an automatic
 rollback. Use a reviewed forward fix or deliberately restore a verified backup.
+
+Migration `013_marketplace.sql` adds marketplace listings, photos, tags,
+saved listings, and the optional report `listing_id`. It is additive and
+idempotent; rolling back the application leaves these tables unused.
 
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.

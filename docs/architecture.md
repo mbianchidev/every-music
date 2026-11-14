@@ -171,6 +171,21 @@ Platform totals use a separate collection requiring both parties' additional
 platform consent; existing personal totals are never retroactively exposed.
 Reported content expires 90 days after review, audit metadata after 365 days.
 
+## Marketplace persistence and jobs
+
+Migration `013_marketplace.sql` adds marketplace listings, ordered listing
+photos (references to managed `listing` media), instrument/genre tags, saved
+listings, and an optional `listing_id` on user reports. The category catalog
+is defined in `backend/src/engines/marketplace-catalog.js` and served to
+clients, which localize its keys. Prices are integer minor units plus an ISO
+4217 code; locations are plain text and coordinate columns. Listing reports
+reuse the user report queue, while moderation removal is a soft delete that
+keeps the row for the owner and administrators. Each API process runs an hourly
+job that leases expiring listings with `SKIP LOCKED`, creates one
+`listing_expiring` notification per expiry date, and purges listings expired
+or removed more than a year ago. Media maintenance keeps attached listing
+photos. Payments are not processed; contact uses encrypted messaging.
+
 ## Operational boundaries and extension points
 
 `/health/live` reports process liveness; `/health/ready` checks PostgreSQL and

@@ -124,6 +124,7 @@ not packaged by desktop CI.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Marketplace:** buy, sell, and request gear, offer lessons and services, hire crew, and post endorsements, with filters, photos, saved listings, encrypted contact, reports, moderation, and expiry reminders; payments happen off-platform.
 
 ### Current limitations
 

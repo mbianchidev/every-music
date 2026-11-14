@@ -362,6 +362,92 @@ the values; see [configuration](configuration.md#plans-and-limits). Features
 that exceed a limit return 403 `PLAN_LIMIT_REACHED`. Admin grants and revocations
 are recorded in the audit log.
 
+## Marketplace
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/marketplace/catalog` | Public listing types, tabs with category/subcategory keys, conditions, price modes, rate units, statuses, sorts, currencies, `maxPhotos`, `maxTags`, `listingDays` |
+| GET | `/realm/marketplace/listings` | Optional authentication; visible active/reserved listings, filtered, sorted and paginated |
+| POST | `/realm/marketplace/listings` | Authenticated create, 201; at most 30 per hour |
+| GET | `/realm/marketplace/listings/mine` | Own listings in every state, newest first, paginated |
+| GET | `/realm/marketplace/listings/saved` | Own saved listings that are still visible, most recently saved first |
+| GET | `/realm/marketplace/listings/:listingId` | Optional authentication; visible listing, or any own listing |
+| PATCH | `/realm/marketplace/listings/:listingId` | Owner-only partial edit and `status` change |
+| POST | `/realm/marketplace/listings/:listingId/renew` | Owner-only; expiry becomes now plus `listingDays` |
+| DELETE | `/realm/marketplace/listings/:listingId` | Owner-only permanent deletion |
+| POST/DELETE | `/realm/marketplace/listings/:listingId/save` | Save or unsave a visible listing |
+| POST | `/realm/marketplace/listings/:listingId/reports` | Report someone else's visible listing, 201; at most 20 per hour |
+| GET | `/realm/admin/marketplace/reports` | Admin-only listing report queue; optional `status` |
+| DELETE | `/realm/admin/marketplace/listings/:listingId` | Admin-only moderation removal with `{ "note": "<5-2000 characters>" }` |
+
+Listing fields:
+
+| Field | Rules |
+|---|---|
+| `type` | `sell`, `wanted`, `lesson`, `service_offer`, `service_wanted`, or `endorsement` |
+| `category`, `subcategory` | Keys from the catalog for the type's tab (`gear`, `lessons`, `services`, `endorsements`); `subcategory` is optional and must belong to the category |
+| `title`, `description` | 3-120 and 10-5,000 characters after trimming |
+| `condition` | `new`, `used`, or `refurbished`; required for `sell`, optional for `wanted`, otherwise `null` |
+| `priceMode` | `fixed`, `negotiable`, `free`, or `contact` |
+| `priceMinor`, `currency` | Integer minor units (for example cents) from 0 to 100,000,000,000 and an ISO 4217 code, both or neither; required for `fixed`, optional for `negotiable`, forbidden for `free` and `contact` |
+| `rateUnit` | `hour`, `session`, `day`, or `project`; lessons and services only, required when they have an amount |
+| `locationText`, `latitude`, `longitude` | Optional free text (160 characters) and an optional coordinate pair |
+| `remote`, `shipping` | Booleans; shipping applies to gear only |
+| `photos` | Up to 8 unique `/realm/media/<uuid>` URLs uploaded by the lister with purpose `listing`; the first is the cover |
+| `instrumentIds`, `genreIds` | Up to 10 catalog UUIDs each |
+
+Create requires `type`, `category`, `title`, `description`, and `priceMode`.
+PATCH accepts the same fields plus `status` (`active`, `reserved`, `sold`,
+`closed`). Omitted fields stay unchanged; `null` clears an optional field and
+an empty array clears photos or tags. Cross-field rules are checked on the
+merged listing and return 400 `INVALID_LISTING`, `INVALID_MEDIA`, or
+`INVALID_TAG`. An account can have at most 50 open (active or reserved,
+unexpired) listings; creating, reopening, or renewing beyond that returns 403
+`LISTING_LIMIT_REACHED`. Renewing a sold or closed listing returns 409
+`LISTING_CLOSED`; editing a moderated listing returns 409 `LISTING_REMOVED`.
+Up to 500 listings can be saved (403 `SAVED_LISTING_LIMIT`).
+
+Responses contain `id`, the fields above, `photos` (URLs), `instruments` and
+`genres` (`{ id, name }`), `status`, `expiresAt`, `expired`, `createdAt`,
+`updatedAt`, `seller` (`userId`, `artistName`, `pictureUrl`), `isSaved`,
+`isOwner`, and `removedByModeration` (true only for the owner or an
+administrator). Administrators also receive `removedAt` and `moderationNote`.
+New listings expire after `MARKETPLACE_LISTING_DAYS` (default 60). Expired,
+removed, and suspended-account listings, and their photos, are hidden from
+everyone except the owner (and, for listings, administrators).
+
+Search accepts `q` (title/description keywords, wildcards are literal), `tab`,
+`type` (must belong to `tab`), `category`, `subcategory`, `condition`,
+`currency`, `priceMin`/`priceMax` (minor units; a price range requires
+`currency`), `location` (case-insensitive text), `remote=true`,
+`shipping=true`, `instrumentId`, `genreId`, `sort` (`newest`, `price_asc`,
+`price_desc`, `title`), `page`, and `pageSize`. Free listings sort as zero and
+listings without an amount sort last. Results are `{ listings, pagination }`.
+
+Reports take `{ category, details, consent: true }` with the same categories,
+length limits, consent rule, and daily limit as user reports. They are stored
+as user reports about the lister with a `listingId`, so they appear in
+**Your reports**, the general admin queue and its audited detail view.
+Duplicate open reports for the same listing return 409, and reporting your own
+listing returns 400. The marketplace queue returns `id`, `category`, `status`,
+`createdAt`, `listingId`, `listingTitle`, `listingRemoved`, `sellerId`, and
+`sellerName`, without report details. Moderation removal hides the listing,
+marks its open reports `actioned`, notifies reporters (`report_reviewed`) and
+the lister (`listing_removed`), and writes a `listing_removed` audit entry.
+Removing an already removed listing returns 409.
+
+Every.music does not process marketplace payments, hold funds, or settle
+disputes. Contact goes through the existing encrypted
+`POST /realm/conversations` flow with `seller.userId`.
+
+An hourly job sends one `listing_expiring` notification (in-app on, push and
+email optional) when an open listing is within
+`MARKETPLACE_EXPIRY_REMINDER_DAYS` (default 3) of expiry; renewal re-arms it.
+Its `params` are `listingId`, `title`, and `expiresAt`. The job also deletes
+listings that expired or were removed by moderation more than 365 days ago.
+Changes publish `marketplace.changed` events, and saving publishes
+`marketplace.saved.changed` to the saving user.
+
 ## Analytics
 
 POST `/realm/analytics/events` with `{ "kind": "profile_view" |

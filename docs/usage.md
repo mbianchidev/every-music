@@ -131,6 +131,43 @@ browser push; permission is requested only when you choose to enable it.
 Push is generic and excludes message text. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
 
+### Marketplace, lessons, and hiring
+
+Open **Marketplace** in the navigation (on mobile, under **More**). Its tabs
+separate **Gear** (instruments and equipment for sale or wanted), **Lessons**
+(lessons and coaching), **Services and hire** (sound engineers, drivers,
+security, tour managers, light technicians, booking agencies, designers, video
+makers, social media managers, coaches, or what you want to hire), and
+**Endorsements** (sponsorship and endorsement offers from instrument
+companies). Search by keyword and open **Filters and sorting** for type,
+category, condition, price range and currency, location, remote/online,
+shipping, instrument, genre, and sort order. The URL keeps filters and page.
+
+Choose **New listing**, pick what you are listing, its category, title,
+description, and price: a fixed amount, a negotiable amount, free, or contact
+for price, in any ISO 4217 currency. Lessons and services also state whether
+the amount is per hour, session, day, or project. Add an optional location and
+map coordinates, remote/online or shipping availability, up to eight photos
+(the first is the cover; reorder or remove them before saving), and instrument
+or genre tags. Listings stay up for 60 days by default.
+
+On a listing, **Contact** opens an end-to-end encrypted conversation with the
+lister and pre-fills a draft that links to the listing. **Save** adds it to
+**Saved listings**, and **Report listing** sends a concern to administrators;
+its status appears in **Your reports**. **My listings** shows all your
+listings, including expired and moderated ones. From a listing you own you can
+edit it, mark it reserved, sold (gear for sale) or closed, reopen it, renew it
+for another listing period, or delete it. Sold, closed, and expired listings
+leave search results; you get a notification a few days before a listing
+expires.
+
+Every.music does not process marketplace payments, hold money, offer buyer
+protection, or resolve disputes. Agree on payment, delivery, and terms directly,
+follow the safety tips shown on every listing, and report suspicious listings.
+Administrators can remove a listing from the marketplace report queue (in
+**Administration > Reports**) or from the listing itself; removals are
+recorded in the audit log and notify the lister and reporters.
+
 ### Themes, analytics, and installation
 
 The **Color theme** control offers System, Light, and Dark. An explicit choice
