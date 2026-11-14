@@ -156,7 +156,7 @@ export class OpportunityRepository {
 
     const sorts = {
       newest: 'a.created_at DESC', oldest: 'a.created_at ASC', title: 'a.title ASC', city: "COALESCE(a.city, '') ASC",
-      popular: 'a.likes_count DESC', expiring: 'a.expires_at ASC NULLS LAST, a.created_at DESC',
+      popular: '(a.likes_count - a.dislikes_count) DESC, a.likes_count DESC', expiring: 'a.expires_at ASC NULLS LAST, a.created_at DESC',
     };
     if (distance) sorts.distance = `${distance} ASC NULLS LAST, a.created_at DESC`;
     const query = `

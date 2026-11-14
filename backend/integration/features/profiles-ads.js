@@ -227,6 +227,10 @@ test('profiles, announcements and discovery: places, distance, plans, saved sear
     const owner = await call(`/announcements/${post.id}`);
     assert.deepEqual([owner.stats.likes, owner.stats.dislikes, owner.statsLocked], [1, 1, false]);
     assert.equal(typeof owner.stats.views, 'number');
+    const liked = await announcement(0, { title: `${marker} reactions liked` });
+    await call(`/announcements/${liked.id}/react`, { actor: 1, method: 'POST', body: { reactionType: 'like' } });
+    const ranked = (await call(`/announcements/search?searchTerm=${encodeURIComponent(`${marker} reactions`)}&sort=popular`, { actor: 3 })).announcements;
+    assert.deepEqual(ranked.map(item => item.id), [liked.id, post.id]);
     const freeOwner = await call('/announcements/me', { actor: 2 });
     assert.deepEqual(Object.keys(freeOwner.announcements[0].stats).sort(), ['dislikes', 'likes']);
     const freeDetail = await call(`/announcements/${freeOwner.announcements[0].id}`, { actor: 2 });

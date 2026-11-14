@@ -209,7 +209,8 @@ data, not inferred tags. Detail retrieval itself does not record analytics.
 Announcement search accepts profile search's keyword/location/catalog filters,
 `isRemote` / `isCoverBand` (`true` or `false`), and `sort`
 (`newest`, `oldest`, `title`, `city`, `popular`, `expiring`, `distance`). The shared `createdWithin`
-filter uses the announcement's creation date. `popular` sorts by likes;
+filter uses the announcement's creation date. `popular` ranks by likes minus
+dislikes, then likes;
 `expiring` puts the soonest expiration first.
 Optional `pictureUrl` uses a managed media URL or a legacy HTTP/S URL.
 `isPublished: false` saves a private draft. Create and update also accept
@@ -232,7 +233,7 @@ Like and dislike counts are private to the owner. Every response for other
 viewers, including search, saved and detail, has `stats: null`; they only see
 their own `myReaction`. The owner receives `stats.likes` and `stats.dislikes`
 and, when their plan has `announcementStats`, `stats.views` and `stats.saves`;
-detail adds `statsLocked`. The `popular` sort still ranks by likes. Detail and
+detail adds `statsLocked`. The `popular` sort still uses reactions. Detail and
 summaries include `place`, `expiresAt` and (for distance searches)
 `distanceKm`. A call whose owner blocked the viewer returns 404 for detail,
 save, reaction and comment routes.
