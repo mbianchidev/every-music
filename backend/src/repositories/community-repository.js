@@ -4,7 +4,6 @@ import { validateMessageEnvelope } from '../engines/message-security.js';
 import { messagingKeyRepository, publicMessagingKey } from './messaging-key-repository.js';
 import { publishEvent, publishAdminEvent } from './event-publisher.js';
 import { notificationRepository } from './notification-repository.js';
-import { publicMediaReferences } from '../engines/media-references.js';
 export { publishEvent } from './event-publisher.js';
 
 export const preferenceColumns = {
@@ -67,6 +66,7 @@ class CommunityRepository {
       }
       if (changes.push === false) {
         await executor.execute('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
+        await executor.execute('DELETE FROM push_devices WHERE user_id = $1', [userId]);
       }
       await publishEvent(executor, 'preferences.changed', { userId });
       return current;
@@ -428,23 +428,6 @@ class CommunityRepository {
     );
     if (!rows.length) throw requestError(400, 'INVALID_MEDIA', 'Upload an image for this account and content type');
     return `/realm/media/${rows[0].id}`;
-  }
-
-  async addImage(userId, purpose, content) {
-    const { rows } = await realmConnector.execute(
-      'INSERT INTO media (user_id, purpose, content) VALUES ($1, $2, $3) RETURNING id', [userId, purpose, content],
-    );
-    return { id: rows[0].id, url: `/realm/media/${rows[0].id}` };
-  }
-
-  async image(id, userId) {
-    id = id.toLowerCase();
-    const { rows } = await realmConnector.execute(`
-      SELECT m.content, m.user_id = $3 AS owned FROM media m WHERE m.id = $1 AND (
-        m.user_id = $3 OR ${publicMediaReferences.join(' OR ')}
-      )`, [id, `/realm/media/${id}`, userId ?? null]);
-    if (!rows.length) throw requestError(404, 'IMAGE_NOT_FOUND', 'Image not found');
-    return rows[0];
   }
 
   async subscribePush(userId, subscription) {

@@ -4,6 +4,8 @@ import { optimizeImage } from '../engines/media-engine.js';
 import { requestError } from '../engines/request-error.js';
 import { validatePushSubscription } from '../engines/push-dispatcher.js';
 import { ok, pagination, pageOf } from './response-helpers.js';
+import { mediaRepository } from '../repositories/media-repository.js';
+import { sendMedia } from './infrastructure-conductor.js';
 
 export class CommunityConductor {
   constructor(config) {
@@ -74,14 +76,12 @@ export class CommunityConductor {
 
   uploadImage = async (request, reply) => {
     const content = await optimizeImage(request.body.data, request.body.mimeType);
-    return ok(reply, await communityRepository.addImage(request.authenticatedUser.userId, request.body.purpose, content), 201);
+    const { id, url } = await mediaRepository.store(request.authenticatedUser.userId, request.body.purpose, content, 'image/webp');
+    return ok(reply, { id, url }, 201);
   };
 
-  getImage = async (request, reply) => {
-    const image = await communityRepository.image(request.params.mediaId, request.authenticatedUser?.userId);
-    return reply.type('image/webp').header('Cache-Control', image.owned ? 'private, no-store' : 'public, max-age=3600')
-      .send(image.content);
-  };
+  getImage = async (request, reply) => sendMedia(reply,
+    await mediaRepository.open(request.params.mediaId, request.authenticatedUser?.userId, { logger: request.log }));
 
   getAnalytics = async (request, reply) => ok(reply, await communityRepository.analytics(request.authenticatedUser.userId));
 

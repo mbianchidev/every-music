@@ -10,3 +10,20 @@ export const publicMediaReferences = [
     WHERE a.picture_url = $2 AND a.is_published = TRUE
     AND a.is_deleted = FALSE AND (a.expires_at IS NULL OR a.expires_at > NOW()))`,
 ];
+
+// SQL predicates granting one signed-in viewer (bound as $3) access to managed
+// media (URL bound as $2) that is not public, for example attachments shared
+// in a group conversation or verification evidence under admin review. Each
+// predicate must check the viewer's current right to the referencing content.
+// Matches are served with `Cache-Control: private, no-store`. Attachment blobs
+// are never served through publicMediaReferences, only through these.
+export const authorizedMediaReferences = [];
+
+// SQL predicates (URL bound as $2) that keep media from the hourly orphan
+// cleanup, which deletes unreferenced uploads older than one day together with
+// their stored objects. Media matching publicMediaReferences is kept too; add
+// a predicate here when drafts, private or member-only content reference media.
+export const retainedMediaReferences = [
+  'EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = $2)',
+  'EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_deleted = FALSE)',
+];

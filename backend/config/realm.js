@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createECDH } from 'node:crypto';
+import { createInfrastructureConfig, validateInfrastructureConfig } from './infrastructure.js';
 
 const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 
@@ -157,6 +158,7 @@ export function createRealmConfig(env = process.env) {
       senderAlias: env.MAIL_SENDER_ALIAS,
     },
     entitlements: createEntitlements(env),
+    ...createInfrastructureConfig(env),
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
@@ -208,6 +210,8 @@ export function validateRealmConfig(config = realmConfig) {
       throw new Error('VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT must be a matching key pair and HTTPS/mailto contact');
     }
   }
+
+  if (config.mediaStorage) validateInfrastructureConfig(config);
 
   if (config.environment === 'production') {
     const mailValues = [
