@@ -242,7 +242,8 @@ test('organizers send official updates and cancel; attendees see them on the pag
     await expect(organizer.page.getByText('This event was cancelled. Check the official updates for refunds.')).toBeVisible();
 
     await fan.page.goto('/#notifications');
-    await expect(fan.page.getByRole('link', { name: `Official update about ${title}`, exact: true })).toHaveCount(2);
+    await expect(fan.page.getByRole('link', { name: `Official update about ${title}`, exact: true })).toHaveCount(1);
+    await expect(fan.page.getByRole('link', { name: `${title} was cancelled`, exact: true })).toHaveCount(1);
     await fan.page.goto(`/#event?id=${event.id}`);
     const updates = fan.page.getByRole('region', { name: 'Official updates' });
     await expect(updates.getByText('The organizers cancelled this event.')).toBeVisible();

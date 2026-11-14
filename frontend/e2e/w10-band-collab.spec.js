@@ -155,7 +155,7 @@ test('bands schedule rehearsals with invitees, RSVPs, map and calendar links, an
     await assertAccessible(bassist, 'calendar entry for a band member');
 
     await guest.goto('/#notifications');
-    await expect(guest.getByRole('link', { name: 'Calendar update: Synthetic rehearsal, full set', exact: true })).toBeVisible();
+    await expect(guest.getByRole('link', { name: 'You are invited: Synthetic rehearsal, full set', exact: true })).toBeVisible();
     await guest.goto('/#calendar');
     await expect(guest.getByText('Your answer: No answer yet')).toBeVisible();
     await assertAccessible(guest, 'My calendar');

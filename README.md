@@ -136,6 +136,7 @@ development packages; store signing is still a manual step.
 - **Premium and points:** Stripe Checkout subscriptions and points packs (disabled without keys), a points wallet earned from invites, ratings, rewarded sponsored videos and events, paid boosts and area pins labelled as promoted, first-party sponsored cards, offer broadcasts, and an admin monetization console.
 - **Events:** concerts and festivals with linked lineups, organizers, venues with map links, time zones, capacity and tickets sold, external ticket links, search and filters, going/interested replies, calendar files, reminders, an attendee discussion, official organizer updates, past and next events on pages and profiles, and page verification requests.
 - **Band collaboration:** band and personal calendars with invitees, RSVPs, reminders, map links, ICS files and private Google/Apple Calendar feeds; an end-to-end encrypted band chat with encrypted audio and pictures; artist reviews approved by the artist; and anonymous star ratings.
+- **Finishing touches:** instruments played in each musical project, unread band chat counts next to Your pages, and every notification type localized in English, Dutch, and Italian in the app, email, and push.
 
 ### Current limitations
 

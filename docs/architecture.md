@@ -214,7 +214,8 @@ Notification records and user preferences are persisted with their triggering
 mutations. Workers atomically lease pending push rows using `SKIP LOCKED` and
 retry up to three times. Each job is delivered to the user's browsers (Web Push)
 and registered mobile devices (FCM for Android, APNs for iOS). Browser
-endpoints/keys are validated and restricted to supported push providers. Payloads are generic; gone subscriptions are
+endpoints/keys are validated and restricted to supported push providers. Payloads are generic text in the recipient's language, built
+from the same templates as notification email (`engines/notification-email.js`); gone subscriptions are
 deleted. Notifications created while push is off are not replayed on opt-in.
 Hourly maintenance removes expired challenges, unreferenced media after a day
 (media matching `retainedMediaReferences` or `publicMediaReferences` is kept),
