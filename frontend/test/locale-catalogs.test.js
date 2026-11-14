@@ -78,8 +78,9 @@ test('plural messages define at least the one and other forms in every locale', 
 });
 
 test('every literal key used in the source exists in the English catalog', () => {
-  const literal = /\b(?:t\(|translate\([^,()]+,)\s*['"]([a-z][\w-]*(?:\.[\w-]+)+)['"]/g;
-  const prefix = /\b(?:t\(|translate\([^,()]+,)\s*`([a-z][\w-]*(?:\.[\w-]+)*)\.\$\{/g;
+  // t('ns.key'), i18n.t('ns.key'), translate('ns.key') and translate(locale, 'ns.key').
+  const literal = /\b(?:t\(|translate\((?:[^,()'"`]+,)?)\s*['"]([a-z][\w-]*(?:\.[\w-]+)+)['"]/g;
+  const prefix = /\b(?:t\(|translate\((?:[^,()'"`]+,)?)\s*`([a-z][\w-]*(?:\.[\w-]+)*)\.\$\{/g;
   const missing = [];
   for (const file of sourceFiles()) {
     const text = readFileSync(file, 'utf8');
