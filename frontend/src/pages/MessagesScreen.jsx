@@ -25,7 +25,7 @@ export default function MessagesScreen({ route }) {
   const [neededKeyId, setNeededKeyId] = useState('');
   const [peerReady, setPeerReady] = useState(false);
   const [peerChecked, setPeerChecked] = useState(false);
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState(() => route.query.get('draft')?.slice(0, 4000) || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pending = useRef(null);

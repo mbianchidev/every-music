@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Brand from './Brand.jsx';
 import Icon from './Icon.jsx';
+import { t } from '../lib/i18n.js';
 
 const sections = [
   { label: 'Discover', items: [
     { id: 'feed', icon: 'feed', label: 'Feed' },
     { id: 'musicians', icon: 'people', label: 'Musicians' },
+    { id: 'marketplace', icon: 'tag', get label() { return t('marketplace.nav.marketplace'); } },
     { id: 'messages', icon: 'message', label: 'Messages' },
     { id: 'notifications', icon: 'bell', label: 'Notifications' },
   ] },
@@ -35,7 +37,7 @@ export default function Navigation({ routeName, unreadCount = 0, isAdmin = false
     wide.addEventListener('change', resize);
     return () => wide.removeEventListener('change', resize);
   }, []);
-  const current = ({ musician: 'musicians', announcement: 'feed', 'edit-profile': 'profile', 'edit-announcement': 'my-posts' })[routeName] || routeName;
+  const current = ({ musician: 'musicians', announcement: 'feed', 'edit-profile': 'profile', 'edit-announcement': 'my-posts', listing: 'marketplace', 'new-listing': 'marketplace', 'edit-listing': 'marketplace', 'my-listings': 'marketplace', 'saved-listings': 'marketplace' })[routeName] || routeName;
   const close = () => dialog.current.close();
   const navigate = event => {
     navigating.current = event.currentTarget.hash !== window.location.hash;
