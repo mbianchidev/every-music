@@ -14,7 +14,25 @@ const GROUPS = [
   ['wallet', ['points_earned', 'subscription_started', 'subscription_ended', 'payment_failed']],
   ['bands', ['band_message', 'calendar_invite', 'calendar_reminder']],
   ['reviews', ['review_received', 'review_approved']],
+  ['applications', ['application_received', 'application_status', 'saved_search_match']],
+  ['marketplace', ['listing_expiring', 'listing_removed']],
+  ['pages', ['organization_invitation', 'organization_membership', 'organization_update', 'organization_relation', 'organization_claim']],
+  ['trust', ['security_alert', 'verification_requested', 'verification_decided', 'support_reply']],
 ];
+
+// Params whose value picks a localized `cases` title, mirroring the server's
+// NOTIFICATION_SELECTORS. Other values keep the kind's generic title.
+const SELECTORS = {
+  application_status: ['status'],
+  security_alert: ['event'],
+  verification_requested: ['subjectType'],
+  verification_decided: ['decision'],
+  organization_membership: ['response', 'change'],
+  organization_relation: ['status'],
+  organization_claim: ['outcome'],
+  event_communication: ['communicationKind'],
+  calendar_invite: ['change'],
+};
 
 export const knownNotificationKind = kind => typeof kind === 'string' && Object.hasOwn(english.kinds, kind);
 
@@ -32,13 +50,23 @@ function localParams(params, formatNumber) {
 // Localized title and optional detail for a notification. Kinds this client
 // does not know, or params missing for a placeholder, fall back to the
 // server's English title.
+function titleKey(kind, params) {
+  const cases = english.kinds[kind].cases;
+  for (const name of SELECTORS[kind] ?? []) {
+    if (typeof params[name] === 'string' && cases && Object.hasOwn(cases, params[name])) return `cases.${params[name]}`;
+  }
+  return 'title';
+}
+
 export function notificationText({ t, formatNumber }, item) {
   if (!knownNotificationKind(item.kind)) return { title: item.title, detail: '' };
   const params = localParams(item.params, formatNumber);
-  const complete = key => placeholders(english.kinds[item.kind][key])
+  const template = path => path.split('.').reduce((value, part) => value?.[part], english.kinds[item.kind]);
+  const complete = path => placeholders(template(path))
     .every(name => Object.hasOwn(params, name) && params[name] !== null && params[name] !== '');
+  const title = [titleKey(item.kind, params), 'title'].find(complete);
   return {
-    title: complete('title') ? t(`notifications.kinds.${item.kind}.title`, params) : item.title,
+    title: title ? t(`notifications.kinds.${item.kind}.${title}`, params) : item.title,
     detail: english.kinds[item.kind].detail && complete('detail') ? t(`notifications.kinds.${item.kind}.detail`, params) : '',
   };
 }

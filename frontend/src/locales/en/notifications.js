@@ -26,12 +26,66 @@ export default {
     event_published: { label: 'New events from pages and artists you follow', title: 'New event: {title}', detail: '' },
     event_lineup: { label: 'You were added to an event lineup', title: 'You are on the lineup of {title}', detail: '' },
     event_reminder: { label: 'Event reminders you set', title: 'Reminder: {title} starts soon', detail: '' },
-    event_communication: { label: 'Official updates for events you go to', title: 'Official update about {title}', detail: '' },
-    calendar_invite: { label: 'Calendar invitations and changes', title: 'Calendar update: {title}', detail: '' },
+    event_communication: {
+      label: 'Official updates for events you go to', title: 'Official update about {title}', detail: '',
+      cases: { cancellation: '{title} was cancelled', postponement: '{title} was postponed' },
+    },
+    calendar_invite: {
+      label: 'Calendar invitations and changes', title: 'Calendar update: {title}', detail: '',
+      cases: {
+        invited: 'You are invited: {title}', created: 'New in your band calendar: {title}', updated: 'Updated: {title}',
+        cancelled: 'Cancelled: {title}', removed: 'Removed from your calendar: {title}',
+      },
+    },
     calendar_reminder: { label: 'Calendar reminders', title: 'Reminder: {title}', detail: '' },
     band_message: { label: 'Band chat messages', title: 'New messages in the {name} band chat', detail: '' },
     review_received: { label: 'Reviews to approve', title: 'You received a review to approve', detail: '{name} reviewed your profile.' },
     review_approved: { label: 'Your review was approved', title: 'Your review was approved', detail: '' },
+    application_received: { label: 'Applications to your announcements', title: 'New application for your announcement', detail: '{applicantName} applied to "{title}".' },
+    application_status: {
+      label: 'Updates to your applications', title: 'Your application was updated', detail: '{title}',
+      cases: { shortlisted: 'Your application was shortlisted', accepted: 'Your application was accepted', declined: 'Your application was declined' },
+    },
+    listing_expiring: { label: 'Marketplace listings about to expire', title: 'Your marketplace listing "{title}" expires soon', detail: '' },
+    listing_removed: { label: 'Marketplace listings removed by a moderator', title: 'A moderator removed your listing "{title}"', detail: '' },
+    security_alert: {
+      label: 'Security alerts', title: 'Security alert for your account', detail: 'If this was not you, change your password and sign out of all devices.',
+      cases: {
+        two_factor_enabled: 'Two-step verification was turned on', two_factor_disabled: 'Two-step verification was turned off',
+        recovery_code_used: 'A recovery code was used', recovery_codes_regenerated: 'New recovery codes were created',
+        sessions_revoked: 'You were signed out of all devices',
+      },
+    },
+    verification_requested: {
+      label: 'Verification requests to review (administrators)', title: 'A musician requested profile verification', detail: '',
+      cases: { organization: 'The page "{organizationName}" requested verification' },
+    },
+    verification_decided: {
+      label: 'Verification decisions', title: 'Your verification request was reviewed', detail: '{organizationName}',
+      cases: { approved: 'Your verification request was approved', rejected: 'Your verification request was not approved' },
+    },
+    saved_search_match: { label: 'New matches for your saved searches', title: 'A new announcement matches your saved search', detail: '{title}' },
+    support_reply: { label: 'Replies to your support requests', title: 'The team replied to your support request', detail: '{subject}' },
+    organization_invitation: { label: 'Invitations to join a page', title: 'You were invited to join {organizationName}', detail: '' },
+    organization_membership: {
+      label: 'Changes to your page memberships', title: 'Your membership of {organizationName} changed', detail: '',
+      cases: {
+        accepted: '{name} accepted your invitation to {organizationName}', declined: '{name} declined your invitation to {organizationName}',
+        removed: 'You are no longer a member of {organizationName}', leader: 'You are now the leader of {organizationName}',
+      },
+    },
+    organization_update: { label: 'News from pages you follow', title: '{organizationName} published an update', detail: '{title}' },
+    organization_relation: {
+      label: 'Roster and label requests', title: 'Update about a request between {organizationName} and {bandName}', detail: '',
+      cases: {
+        pending: '{organizationName} wants to work with {bandName}', accepted: '{bandName} accepted your request',
+        declined: '{bandName} declined your request',
+      },
+    },
+    organization_claim: {
+      label: 'Decisions on your page claims', title: 'Your claim for {organizationName} was reviewed', detail: '',
+      cases: { approved: 'Your claim for {organizationName} was approved', rejected: 'Your claim for {organizationName} was not approved' },
+    },
   },
   groups: {
     messages: 'Messages',
@@ -43,6 +97,10 @@ export default {
     wallet: 'Points and billing',
     bands: 'Bands and calendar',
     reviews: 'Reviews',
+    applications: 'Applications and saved searches',
+    marketplace: 'Marketplace',
+    pages: 'Band and organization pages',
+    trust: 'Security and verification',
     other: 'Other notifications',
   },
   channels: { inApp: 'In app', push: 'Push', email: 'Email' },

@@ -26,12 +26,66 @@ export default {
     event_published: { label: "Nieuwe evenementen van pagina's en artiesten die je volgt", title: 'Nieuw evenement: {title}', detail: '' },
     event_lineup: { label: 'Je bent toegevoegd aan een line-up', title: 'Je staat in de line-up van {title}', detail: '' },
     event_reminder: { label: 'Herinneringen voor evenementen', title: 'Herinnering: {title} begint binnenkort', detail: '' },
-    event_communication: { label: 'Officiële updates van evenementen waar je naartoe gaat', title: 'Officiële update over {title}', detail: '' },
-    calendar_invite: { label: 'Agenda-uitnodigingen en wijzigingen', title: 'Agenda-update: {title}', detail: '' },
+    event_communication: {
+      label: 'Officiële updates van evenementen waar je naartoe gaat', title: 'Officiële update over {title}', detail: '',
+      cases: { cancellation: '{title} is geannuleerd', postponement: '{title} is uitgesteld' },
+    },
+    calendar_invite: {
+      label: 'Agenda-uitnodigingen en wijzigingen', title: 'Agenda-update: {title}', detail: '',
+      cases: {
+        invited: 'Je bent uitgenodigd: {title}', created: 'Nieuw in je bandagenda: {title}', updated: 'Bijgewerkt: {title}',
+        cancelled: 'Geannuleerd: {title}', removed: 'Verwijderd uit je agenda: {title}',
+      },
+    },
     calendar_reminder: { label: 'Agendaherinneringen', title: 'Herinnering: {title}', detail: '' },
     band_message: { label: 'Berichten in de bandchat', title: 'Nieuwe berichten in de bandchat van {name}', detail: '' },
     review_received: { label: 'Recensies om goed te keuren', title: 'Je hebt een recensie ontvangen om goed te keuren', detail: '{name} heeft een recensie over je profiel geschreven.' },
     review_approved: { label: 'Je recensie is goedgekeurd', title: 'Je recensie is goedgekeurd', detail: '' },
+    application_received: { label: 'Sollicitaties op je aankondigingen', title: 'Nieuwe sollicitatie op je aankondiging', detail: '{applicantName} heeft gesolliciteerd op "{title}".' },
+    application_status: {
+      label: 'Updates over je sollicitaties', title: 'Je sollicitatie is bijgewerkt', detail: '{title}',
+      cases: { shortlisted: 'Je sollicitatie staat op de shortlist', accepted: 'Je sollicitatie is geaccepteerd', declined: 'Je sollicitatie is afgewezen' },
+    },
+    listing_expiring: { label: 'Marktplaatsadvertenties die bijna verlopen', title: 'Je marktplaatsadvertentie "{title}" verloopt binnenkort', detail: '' },
+    listing_removed: { label: 'Marktplaatsadvertenties verwijderd door een moderator', title: 'Een moderator heeft je advertentie "{title}" verwijderd', detail: '' },
+    security_alert: {
+      label: 'Beveiligingsmeldingen', title: 'Beveiligingsmelding voor je account', detail: 'Was jij dit niet? Wijzig dan je wachtwoord en meld je af op alle apparaten.',
+      cases: {
+        two_factor_enabled: 'Verificatie in twee stappen is ingeschakeld', two_factor_disabled: 'Verificatie in twee stappen is uitgeschakeld',
+        recovery_code_used: 'Er is een herstelcode gebruikt', recovery_codes_regenerated: 'Er zijn nieuwe herstelcodes gemaakt',
+        sessions_revoked: 'Je bent afgemeld op alle apparaten',
+      },
+    },
+    verification_requested: {
+      label: 'Verificatieverzoeken om te beoordelen (beheerders)', title: 'Een muzikant heeft profielverificatie aangevraagd', detail: '',
+      cases: { organization: 'De pagina "{organizationName}" heeft verificatie aangevraagd' },
+    },
+    verification_decided: {
+      label: 'Besluiten over verificatie', title: 'Je verificatieverzoek is beoordeeld', detail: '{organizationName}',
+      cases: { approved: 'Je verificatieverzoek is goedgekeurd', rejected: 'Je verificatieverzoek is niet goedgekeurd' },
+    },
+    saved_search_match: { label: 'Nieuwe resultaten voor je opgeslagen zoekopdrachten', title: 'Een nieuwe aankondiging past bij je opgeslagen zoekopdracht', detail: '{title}' },
+    support_reply: { label: 'Antwoorden op je supportverzoeken', title: 'Het team heeft je supportverzoek beantwoord', detail: '{subject}' },
+    organization_invitation: { label: 'Uitnodigingen voor een pagina', title: 'Je bent uitgenodigd voor {organizationName}', detail: '' },
+    organization_membership: {
+      label: 'Wijzigingen in je paginalidmaatschappen', title: 'Je lidmaatschap van {organizationName} is gewijzigd', detail: '',
+      cases: {
+        accepted: '{name} heeft je uitnodiging voor {organizationName} geaccepteerd', declined: '{name} heeft je uitnodiging voor {organizationName} afgewezen',
+        removed: 'Je bent geen lid meer van {organizationName}', leader: 'Je bent nu de leider van {organizationName}',
+      },
+    },
+    organization_update: { label: "Nieuws van pagina's die je volgt", title: '{organizationName} heeft een update geplaatst', detail: '{title}' },
+    organization_relation: {
+      label: 'Roster- en labelverzoeken', title: 'Update over een verzoek tussen {organizationName} en {bandName}', detail: '',
+      cases: {
+        pending: '{organizationName} wil samenwerken met {bandName}', accepted: '{bandName} heeft je verzoek geaccepteerd',
+        declined: '{bandName} heeft je verzoek afgewezen',
+      },
+    },
+    organization_claim: {
+      label: "Besluiten over je claims op pagina's", title: 'Je claim op {organizationName} is beoordeeld', detail: '',
+      cases: { approved: 'Je claim op {organizationName} is goedgekeurd', rejected: 'Je claim op {organizationName} is niet goedgekeurd' },
+    },
   },
   groups: {
     messages: 'Berichten',
@@ -43,6 +97,10 @@ export default {
     wallet: 'Punten en facturering',
     bands: 'Bands en agenda',
     reviews: 'Recensies',
+    applications: 'Sollicitaties en opgeslagen zoekopdrachten',
+    marketplace: 'Marktplaats',
+    pages: "Pagina's van bands en organisaties",
+    trust: 'Beveiliging en verificatie',
     other: 'Overige meldingen',
   },
   channels: { inApp: 'In de app', push: 'Push', email: 'E-mail' },

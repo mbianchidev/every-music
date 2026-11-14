@@ -6,6 +6,7 @@ import { maintainAccountTrust } from './account-maintenance.js';
 import { NativePush } from './native-push.js';
 import { mediaRepository } from '../repositories/media-repository.js';
 import { mediaStorage } from './media-storage.js';
+import { composeNotificationPush } from './notification-email.js';
 
 export function isAllowedPushEndpoint(value) {
   try {
@@ -35,6 +36,16 @@ export function validatePushSubscription(subscription) {
   }
 }
 
+// Push text is rebuilt from the kind and safe params in the recipient's
+// language; the stored English title can name people or content, so it is
+// never sent through a push provider.
+export function pushPayload(notification) {
+  const { title, body } = composeNotificationPush({
+    kind: notification.kind, params: notification.params, locale: notification.locale,
+  });
+  return { title, body, tag: notification.id, url: notification.link };
+}
+
 export class PushDispatcher {
   constructor({
     config, connector = realmConnector, send = webpush.sendNotification.bind(webpush), logger = console,
@@ -55,14 +66,15 @@ export class PushDispatcher {
     if (!webPush && !this.nativePush.enabled) return;
     const { rows } = await this.connector.execute(`
       WITH jobs AS (
-        SELECT n.id FROM notifications n JOIN user_preferences p ON p.user_id = n.user_id AND p.push = TRUE
+        SELECT n.id, p.locale FROM notifications n JOIN user_preferences p ON p.user_id = n.user_id AND p.push = TRUE
         WHERE n.push_sent = FALSE AND n.read_at IS NULL AND n.push_attempts < 3
           AND n.next_push_at <= NOW() AND n.created_at > NOW() - INTERVAL '1 day'
         ORDER BY n.next_push_at LIMIT 5 FOR UPDATE OF n SKIP LOCKED
       )
       UPDATE notifications n SET push_attempts = push_attempts + 1, next_push_at = NOW() + INTERVAL '1 minute'
-      FROM jobs WHERE n.id = jobs.id RETURNING n.*`);
+      FROM jobs WHERE n.id = jobs.id RETURNING n.*, jobs.locale`);
     await Promise.all(rows.map(async (notification) => {
+      const payload = pushPayload(notification);
       const { rows: subscriptions } = webPush ? await this.connector.execute(
         'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5',
         [notification.user_id],
@@ -72,9 +84,7 @@ export class PushDispatcher {
           validatePushSubscription({ endpoint: subscription.endpoint, keys: subscription });
           await this.send({
             endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-          }, JSON.stringify({
-            title: 'Every.music', body: notification.title, tag: notification.id, url: notification.link,
-          }), {
+          }, JSON.stringify(payload), {
             vapidDetails: { subject: this.config.subject, publicKey: this.config.publicKey, privateKey: this.config.privateKey },
             TTL: 300, timeout: 10000,
           });
@@ -92,9 +102,7 @@ export class PushDispatcher {
           return false;
         }
       }));
-      outcomes.push(...await this.nativePush.deliver(notification, {
-        title: 'Every.music', body: notification.title, tag: notification.id, url: notification.link,
-      }));
+      outcomes.push(...await this.nativePush.deliver(notification, payload));
       if (outcomes.every(Boolean)) {
         await this.connector.execute('UPDATE notifications SET push_sent = TRUE WHERE id = $1', [notification.id]);
       }

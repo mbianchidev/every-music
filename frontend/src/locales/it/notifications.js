@@ -26,12 +26,66 @@ export default {
     event_published: { label: 'Nuovi eventi di pagine e artisti che segui', title: 'Nuovo evento: {title}', detail: '' },
     event_lineup: { label: 'Sei stato aggiunto alla line-up di un evento', title: 'Sei nella line-up di {title}', detail: '' },
     event_reminder: { label: 'Promemoria degli eventi', title: 'Promemoria: {title} sta per iniziare', detail: '' },
-    event_communication: { label: 'Aggiornamenti ufficiali degli eventi a cui partecipi', title: 'Aggiornamento ufficiale su {title}', detail: '' },
-    calendar_invite: { label: 'Inviti e modifiche del calendario', title: 'Aggiornamento del calendario: {title}', detail: '' },
+    event_communication: {
+      label: 'Aggiornamenti ufficiali degli eventi a cui partecipi', title: 'Aggiornamento ufficiale su {title}', detail: '',
+      cases: { cancellation: '{title} è stato annullato', postponement: '{title} è stato rinviato' },
+    },
+    calendar_invite: {
+      label: 'Inviti e modifiche del calendario', title: 'Aggiornamento del calendario: {title}', detail: '',
+      cases: {
+        invited: 'Sei invitato: {title}', created: 'Novità nel calendario della band: {title}', updated: 'Aggiornato: {title}',
+        cancelled: 'Annullato: {title}', removed: 'Rimosso dal tuo calendario: {title}',
+      },
+    },
     calendar_reminder: { label: 'Promemoria del calendario', title: 'Promemoria: {title}', detail: '' },
     band_message: { label: 'Messaggi della chat della band', title: 'Nuovi messaggi nella chat della band {name}', detail: '' },
     review_received: { label: 'Recensioni da approvare', title: 'Hai ricevuto una recensione da approvare', detail: '{name} ha recensito il tuo profilo.' },
     review_approved: { label: 'La tua recensione è stata approvata', title: 'La tua recensione è stata approvata', detail: '' },
+    application_received: { label: 'Candidature ai tuoi annunci', title: 'Nuova candidatura al tuo annuncio', detail: '{applicantName} si è candidato a "{title}".' },
+    application_status: {
+      label: 'Aggiornamenti sulle tue candidature', title: 'La tua candidatura è stata aggiornata', detail: '{title}',
+      cases: { shortlisted: 'La tua candidatura è in selezione', accepted: 'La tua candidatura è stata accettata', declined: 'La tua candidatura è stata rifiutata' },
+    },
+    listing_expiring: { label: 'Annunci del mercatino in scadenza', title: 'Il tuo annuncio "{title}" nel mercatino scade presto', detail: '' },
+    listing_removed: { label: 'Annunci del mercatino rimossi da un moderatore', title: 'Un moderatore ha rimosso il tuo annuncio "{title}"', detail: '' },
+    security_alert: {
+      label: 'Avvisi di sicurezza', title: 'Avviso di sicurezza per il tuo account', detail: 'Se non sei stato tu, cambia la password ed esci da tutti i dispositivi.',
+      cases: {
+        two_factor_enabled: 'La verifica in due passaggi è stata attivata', two_factor_disabled: 'La verifica in due passaggi è stata disattivata',
+        recovery_code_used: 'È stato usato un codice di recupero', recovery_codes_regenerated: 'Sono stati creati nuovi codici di recupero',
+        sessions_revoked: 'Sei uscito da tutti i dispositivi',
+      },
+    },
+    verification_requested: {
+      label: 'Richieste di verifica da esaminare (amministratori)', title: 'Un musicista ha richiesto la verifica del profilo', detail: '',
+      cases: { organization: 'La pagina "{organizationName}" ha richiesto la verifica' },
+    },
+    verification_decided: {
+      label: 'Decisioni sulla verifica', title: 'La tua richiesta di verifica è stata esaminata', detail: '{organizationName}',
+      cases: { approved: 'La tua richiesta di verifica è stata approvata', rejected: 'La tua richiesta di verifica non è stata approvata' },
+    },
+    saved_search_match: { label: 'Nuovi risultati per le tue ricerche salvate', title: 'Un nuovo annuncio corrisponde alla tua ricerca salvata', detail: '{title}' },
+    support_reply: { label: 'Risposte alle tue richieste di assistenza', title: 'Il team ha risposto alla tua richiesta di assistenza', detail: '{subject}' },
+    organization_invitation: { label: 'Inviti a unirti a una pagina', title: 'Sei stato invitato a unirti a {organizationName}', detail: '' },
+    organization_membership: {
+      label: 'Modifiche alle pagine di cui fai parte', title: 'La tua partecipazione a {organizationName} è cambiata', detail: '',
+      cases: {
+        accepted: '{name} ha accettato il tuo invito a {organizationName}', declined: '{name} ha rifiutato il tuo invito a {organizationName}',
+        removed: 'Non fai più parte di {organizationName}', leader: 'Ora sei il leader di {organizationName}',
+      },
+    },
+    organization_update: { label: 'Novità dalle pagine che segui', title: '{organizationName} ha pubblicato un aggiornamento', detail: '{title}' },
+    organization_relation: {
+      label: 'Richieste di roster ed etichetta', title: 'Aggiornamento su una richiesta tra {organizationName} e {bandName}', detail: '',
+      cases: {
+        pending: '{organizationName} vuole lavorare con {bandName}', accepted: '{bandName} ha accettato la tua richiesta',
+        declined: '{bandName} ha rifiutato la tua richiesta',
+      },
+    },
+    organization_claim: {
+      label: 'Decisioni sulle tue rivendicazioni di pagine', title: 'La tua rivendicazione di {organizationName} è stata esaminata', detail: '',
+      cases: { approved: 'La tua rivendicazione di {organizationName} è stata approvata', rejected: 'La tua rivendicazione di {organizationName} non è stata approvata' },
+    },
   },
   groups: {
     messages: 'Messaggi',
@@ -43,6 +97,10 @@ export default {
     wallet: 'Punti e fatturazione',
     bands: 'Band e calendario',
     reviews: 'Recensioni',
+    applications: 'Candidature e ricerche salvate',
+    marketplace: 'Mercatino',
+    pages: 'Pagine di band e organizzazioni',
+    trust: 'Sicurezza e verifica',
     other: 'Altre notifiche',
   },
   channels: { inApp: "Nell'app", push: 'Push', email: 'Email' },
