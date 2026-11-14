@@ -25,6 +25,8 @@ export default {
     selected: 'Strumenti suonati in questo progetto',
     none: 'Nessuno strumento scelto per questo progetto.',
     remove: 'Rimuovi {name} da questo progetto',
+    added: '{name} aggiunto a questo progetto.',
+    removed: '{name} rimosso da questo progetto.',
     full: 'Hai scelto il massimo di {max} strumenti. Rimuovine uno per aggiungerne un altro.',
     loading: 'Caricamento degli strumenti',
     loadError: 'Impossibile caricare l\'elenco degli strumenti',

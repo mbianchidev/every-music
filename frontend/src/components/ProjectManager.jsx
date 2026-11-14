@@ -23,8 +23,9 @@ export default function ProjectManager() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [notice, setNotice] = useState('');
   const field = (key, value) => setDraft(previous => ({ ...previous, [key]: value }));
-  const reset = () => { setEditing(null); setDraft({ ...blank }); setSearch(''); };
+  const reset = () => { setEditing(null); setDraft({ ...blank }); setSearch(''); setNotice(''); };
   const musician = person => person.artistName || t('musicianProjects.musician');
   const save = async event => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
@@ -97,7 +98,9 @@ export default function ProjectManager() {
             hint={full ? t('musicianProjects.instruments.full', { max: MAX_PROJECT_INSTRUMENTS }) : t('musicianProjects.instruments.hint', { max: MAX_PROJECT_INSTRUMENTS })}>
             <select className="input" value="" disabled={full} onChange={event => {
               const instrument = available.find(item => item.id === event.target.value);
-              if (instrument) field('instruments', [...draft.instruments, { id: instrument.id, name: instrument.name }]);
+              if (!instrument) return;
+              field('instruments', [...draft.instruments, { id: instrument.id, name: instrument.name }]);
+              setNotice(t('musicianProjects.instruments.added', { name: instrument.name }));
             }}>
               <option value="">{t('musicianProjects.instruments.choose')}</option>
               {available.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -107,10 +110,12 @@ export default function ProjectManager() {
             {draft.instruments.map(item => <li key={item.id}><span>{item.name}</span>
               <button className="text-link" type="button" onClick={() => {
                 field('instruments', draft.instruments.filter(chosen => chosen.id !== item.id));
-                document.getElementById('project-instrument')?.focus();
+                setNotice(t('musicianProjects.instruments.removed', { name: item.name }));
+                requestAnimationFrame(() => document.getElementById('project-instrument')?.focus());
               }}>{t('musicianProjects.instruments.remove', { name: item.name })}</button>
             </li>)}
           </ul> : <p className="body-muted">{t('musicianProjects.instruments.none')}</p>}
+          <p className="sr-only" role="status">{notice}</p>
         </fieldset>
         <details className="selection-panel"><summary>{t('musicianProjects.links')}</summary><div className="form-stack" style={{ padding: '1rem' }}>
           {linkFields.map(key => <FormField key={key} id={`project-${key}`} label={t(`musicianProjects.linkLabels.${key}`)}>

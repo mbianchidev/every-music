@@ -25,6 +25,8 @@ export default {
     selected: 'Instruments played in this project',
     none: 'No instruments chosen for this project yet.',
     remove: 'Remove {name} from this project',
+    added: '{name} added to this project.',
+    removed: '{name} removed from this project.',
     full: 'You chose the maximum of {max} instruments. Remove one to add another.',
     loading: 'Loading instruments',
     loadError: 'Could not load the instrument list',

@@ -22,12 +22,13 @@ const GROUPS = [
 
 // Params whose value picks a localized `cases` title, mirroring the server's
 // NOTIFICATION_SELECTORS. Other values keep the kind's generic title.
-const SELECTORS = {
+export const NOTIFICATION_SELECTORS = {
   application_status: ['status'],
   security_alert: ['event'],
   verification_requested: ['subjectType'],
   verification_decided: ['decision'],
   organization_membership: ['response', 'change'],
+  organization_update: ['source'],
   organization_relation: ['status'],
   organization_claim: ['outcome'],
   event_communication: ['communicationKind'],
@@ -52,7 +53,7 @@ function localParams(params, formatNumber) {
 // server's English title.
 function titleKey(kind, params) {
   const cases = english.kinds[kind].cases;
-  for (const name of SELECTORS[kind] ?? []) {
+  for (const name of NOTIFICATION_SELECTORS[kind] ?? []) {
     if (typeof params[name] === 'string' && cases && Object.hasOwn(cases, params[name])) return `cases.${params[name]}`;
   }
   return 'title';

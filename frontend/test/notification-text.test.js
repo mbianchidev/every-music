@@ -4,8 +4,11 @@ import { registerCatalog, translate } from '../src/lib/i18n.js';
 import english from '../src/locales/en/notifications.js';
 import dutch from '../src/locales/nl/notifications.js';
 import italian from '../src/locales/it/notifications.js';
-import { groupNotificationKinds, notificationKindLabel, notificationText } from '../src/lib/notification-text.js';
+import {
+  NOTIFICATION_SELECTORS, groupNotificationKinds, notificationKindLabel, notificationText,
+} from '../src/lib/notification-text.js';
 import { notificationKinds } from '../../backend/src/engines/notification-catalog.js';
+import { NOTIFICATION_SELECTORS as SERVER_SELECTORS, notificationTemplates } from '../../backend/src/engines/notification-email.js';
 
 registerCatalog('en', 'notifications', english);
 registerCatalog('nl', 'notifications', dutch);
@@ -66,6 +69,10 @@ test('every server notification kind has client text, a preference label, and a 
       assert.equal(typeof messages.detail, 'string', `${locale} ${kind} detail`);
     }
     assert.notEqual(groupNotificationKinds([{ kind }])[0].group, 'other', `${kind} belongs to a preference group`);
+  }
+  assert.deepEqual(NOTIFICATION_SELECTORS, SERVER_SELECTORS, 'the client picks titles from the same params as email and push');
+  for (const kind of Object.keys(NOTIFICATION_SELECTORS)) {
+    assert.deepEqual(Object.keys(english.kinds[kind].cases).sort(), Object.keys(notificationTemplates.en.kinds[kind].cases).sort(), `${kind} cases`);
   }
 });
 

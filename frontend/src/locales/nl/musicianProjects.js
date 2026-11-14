@@ -25,6 +25,8 @@ export default {
     selected: 'Instrumenten die je in dit project speelt',
     none: 'Nog geen instrumenten gekozen voor dit project.',
     remove: '{name} uit dit project verwijderen',
+    added: '{name} toegevoegd aan dit project.',
+    removed: '{name} verwijderd uit dit project.',
     full: 'Je hebt het maximum van {max} instrumenten gekozen. Verwijder er een om een ander toe te voegen.',
     loading: 'Instrumenten worden geladen',
     loadError: 'De lijst met instrumenten kon niet worden geladen',

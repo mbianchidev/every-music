@@ -336,7 +336,8 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     } });
     await dispatcher.dispatch();
     assert.equal(payloads.length, 1);
-    assert.equal(payloads[0].body, 'You have a new message');
+    assert.equal(payloads[0].title, 'You have a new message');
+    assert.equal(payloads[0].body, 'A musician sent you a new message. Open Every.music to read it.');
     assert.equal(JSON.stringify(payloads).includes('Never include'), false);
     assert.equal((await realmConnector.execute(
       'SELECT push_sent FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1', [users[1]],

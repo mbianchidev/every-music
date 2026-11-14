@@ -12,6 +12,7 @@ export const NOTIFICATION_SELECTORS = {
   verification_requested: ['subjectType'],
   verification_decided: ['decision'],
   organization_membership: ['response', 'change'],
+  organization_update: ['source'],
   organization_relation: ['status'],
   organization_claim: ['outcome'],
   event_communication: ['communicationKind'],
@@ -109,7 +110,15 @@ const messages = {
           leader: { subject: 'You are now the leader of a page', body: 'You are now the leader of a band or organization page.' },
         },
       },
-      organization_update: { subject: 'A page you follow has news', body: 'A band or organization page you follow published an update.' },
+      organization_update: {
+        subject: 'A page you follow has news',
+        body: 'A band or organization page you follow published an update.',
+        cases: {
+          announcement: { subject: 'A page you follow published an announcement', body: 'A band or organization page you follow published a new announcement.' },
+          release: { subject: 'A page you follow has a new release', body: 'A band or organization page you follow shared a new release.' },
+          youtube: { subject: 'A page you follow has a new video', body: 'A band or organization page you follow shared a new video.' },
+        },
+      },
       organization_relation: {
         subject: 'A roster or label request was updated',
         body: 'There is an update about a roster or label request.',
@@ -253,7 +262,15 @@ const messages = {
           leader: { subject: 'Je bent nu de leider van een pagina', body: 'Je bent nu de leider van de pagina van een band of organisatie.' },
         },
       },
-      organization_update: { subject: 'Een pagina die je volgt heeft nieuws', body: 'De pagina van een band of organisatie die je volgt heeft een update geplaatst.' },
+      organization_update: {
+        subject: 'Een pagina die je volgt heeft nieuws',
+        body: 'De pagina van een band of organisatie die je volgt heeft een update geplaatst.',
+        cases: {
+          announcement: { subject: 'Een pagina die je volgt heeft een aankondiging geplaatst', body: 'De pagina van een band of organisatie die je volgt heeft een nieuwe aankondiging geplaatst.' },
+          release: { subject: 'Een pagina die je volgt heeft een nieuwe release', body: 'De pagina van een band of organisatie die je volgt heeft een nieuwe release gedeeld.' },
+          youtube: { subject: 'Een pagina die je volgt heeft een nieuwe video', body: 'De pagina van een band of organisatie die je volgt heeft een nieuwe video gedeeld.' },
+        },
+      },
       organization_relation: {
         subject: 'Een roster- of labelverzoek is bijgewerkt',
         body: 'Er is een update over een roster- of labelverzoek.',
@@ -397,7 +414,15 @@ const messages = {
           leader: { subject: 'Ora sei il leader di una pagina', body: "Ora sei il leader della pagina di una band o di un'organizzazione." },
         },
       },
-      organization_update: { subject: 'Una pagina che segui ha delle novità', body: "La pagina di una band o di un'organizzazione che segui ha pubblicato un aggiornamento." },
+      organization_update: {
+        subject: 'Una pagina che segui ha delle novità',
+        body: "La pagina di una band o di un'organizzazione che segui ha pubblicato un aggiornamento.",
+        cases: {
+          announcement: { subject: 'Una pagina che segui ha pubblicato un annuncio', body: "La pagina di una band o di un'organizzazione che segui ha pubblicato un nuovo annuncio." },
+          release: { subject: 'Una pagina che segui ha una nuova uscita', body: "La pagina di una band o di un'organizzazione che segui ha condiviso una nuova uscita." },
+          youtube: { subject: 'Una pagina che segui ha un nuovo video', body: "La pagina di una band o di un'organizzazione che segui ha condiviso un nuovo video." },
+        },
+      },
       organization_relation: {
         subject: 'Una richiesta di roster o etichetta è stata aggiornata',
         body: "C'è un aggiornamento su una richiesta di roster o etichetta.",

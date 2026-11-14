@@ -74,7 +74,13 @@ export default {
         removed: 'Non fai più parte di {organizationName}', leader: 'Ora sei il leader di {organizationName}',
       },
     },
-    organization_update: { label: 'Novità dalle pagine che segui', title: '{organizationName} ha pubblicato un aggiornamento', detail: '{title}' },
+    organization_update: {
+      label: 'Novità dalle pagine che segui', title: '{organizationName} ha pubblicato un aggiornamento', detail: '{title}',
+      cases: {
+        announcement: '{organizationName} ha pubblicato un annuncio', release: '{organizationName} ha condiviso una nuova uscita',
+        youtube: '{organizationName} ha condiviso un nuovo video',
+      },
+    },
     organization_relation: {
       label: 'Richieste di roster ed etichetta', title: 'Aggiornamento su una richiesta tra {organizationName} e {bandName}', detail: '',
       cases: {

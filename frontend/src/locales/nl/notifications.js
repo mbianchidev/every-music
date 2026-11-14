@@ -74,7 +74,13 @@ export default {
         removed: 'Je bent geen lid meer van {organizationName}', leader: 'Je bent nu de leider van {organizationName}',
       },
     },
-    organization_update: { label: "Nieuws van pagina's die je volgt", title: '{organizationName} heeft een update geplaatst', detail: '{title}' },
+    organization_update: {
+      label: "Nieuws van pagina's die je volgt", title: '{organizationName} heeft een update geplaatst', detail: '{title}',
+      cases: {
+        announcement: '{organizationName} heeft een aankondiging geplaatst', release: '{organizationName} heeft een nieuwe release gedeeld',
+        youtube: '{organizationName} heeft een nieuwe video gedeeld',
+      },
+    },
     organization_relation: {
       label: 'Roster- en labelverzoeken', title: 'Update over een verzoek tussen {organizationName} en {bandName}', detail: '',
       cases: {

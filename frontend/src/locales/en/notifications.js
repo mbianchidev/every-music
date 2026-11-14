@@ -74,7 +74,13 @@ export default {
         removed: 'You are no longer a member of {organizationName}', leader: 'You are now the leader of {organizationName}',
       },
     },
-    organization_update: { label: 'News from pages you follow', title: '{organizationName} published an update', detail: '{title}' },
+    organization_update: {
+      label: 'News from pages you follow', title: '{organizationName} published an update', detail: '{title}',
+      cases: {
+        announcement: '{organizationName} published an announcement', release: '{organizationName} shared a new release',
+        youtube: '{organizationName} shared a new video',
+      },
+    },
     organization_relation: {
       label: 'Roster and label requests', title: 'Update about a request between {organizationName} and {bandName}', detail: '',
       cases: {
