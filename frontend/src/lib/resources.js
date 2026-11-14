@@ -6,7 +6,7 @@ import { offlineFeed, rememberFeed } from './offline-feed.js';
 export function useResource(path, { auth = true, events = '', cacheFeed = false, reconnect = true } = {}) {
   const account = auth ? nucleus.payload.persona?.userId : null;
   const [revision, setRevision] = useState(0);
-  const [state, setState] = useState({ path: null, account: null, data: null, loading: Boolean(path), error: '' });
+  const [state, setState] = useState({ path: null, account: null, data: null, loading: Boolean(path), error: '', errorCode: '' });
   const reload = useCallback(() => setRevision(value => value + 1), []);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
     const controller = new AbortController();
     const userId = nucleus.payload.persona?.userId;
     setState(previous => ({
-      path, account, data: previous.path === path && previous.account === account ? previous.data : null, loading: true, error: '',
+      path, account, data: previous.path === path && previous.account === account ? previous.data : null, loading: true, error: '', errorCode: '',
     }));
     const load = async () => {
       if (cacheFeed && !navigator.onLine) {
@@ -29,10 +29,10 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
       return data;
     };
     load().then(data => {
-      if (!controller.signal.aborted) setState({ path, account, data, loading: false, error: '' });
+      if (!controller.signal.aborted) setState({ path, account, data, loading: false, error: '', errorCode: '' });
     }).catch(error => {
       if (!controller.signal.aborted) setState(previous => ({
-        ...previous, data: [403, 404].includes(error.status) ? null : previous.data, loading: false, error: error.message,
+        ...previous, data: [403, 404].includes(error.status) ? null : previous.data, loading: false, error: error.message, errorCode: error.code || '',
       }));
     });
     return () => controller.abort();
@@ -55,7 +55,10 @@ export function useResource(path, { auth = true, events = '', cacheFeed = false,
   }, [events, reconnect, reload]);
 
   const current = state.path === path && state.account === account;
-  return { ...state, data: current ? state.data : null, loading: current ? state.loading : Boolean(path), error: current ? state.error : '', reload };
+  return {
+    ...state, data: current ? state.data : null, loading: current ? state.loading : Boolean(path),
+    error: current ? state.error : '', errorCode: current ? state.errorCode : '', reload,
+  };
 }
 
 export function useDebounced(value, milliseconds = 300) {

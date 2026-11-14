@@ -81,7 +81,9 @@ function TermsPrompt({ state, onAccepted }) {
 export default function ShellGate({ route, session, children }) {
   const { t } = useI18n();
   const version = useResource('/app/version', { auth: false });
-  const terms = useResource(session.authorized ? '/legal/acceptance' : null, { reconnect: false });
+  const terms = useResource(session.authorized ? '/legal/acceptance' : null);
+  // Offline is already shown by the shell; the check retries on reconnect.
+  const termsFailed = terms.error && terms.errorCode !== 'NETWORK_ERROR';
   const [dismissed, setDismissed] = useState(readDismissed);
   const [notice, setNotice] = useState('');
   const open = OPEN_ROUTES.has(route.name);
@@ -115,7 +117,7 @@ export default function ShellGate({ route, session, children }) {
         <a href="#help?view=updates">{t('onboarding.version.howTo')}</a>
         <button className="icon-button" type="button" aria-label={t('onboarding.version.dismiss')} onClick={dismiss}><Icon name="close" size={18} /></button>
       </div>}
-      {session.authorized && terms.error && <p className="field-error shell-notice" role="alert">
+      {session.authorized && termsFailed && <p className="field-error shell-notice" role="alert">
         {t('onboarding.terms.loadFailed')} {terms.error} <button className="text-link" type="button" onClick={reload}>{t('common.actions.retry')}</button>
       </p>}
       {notice && <p className="field-error shell-notice" role="alert">{notice} <button className="text-link" type="button" onClick={() => setNotice('')}>{t('common.actions.close')}</button></p>}
