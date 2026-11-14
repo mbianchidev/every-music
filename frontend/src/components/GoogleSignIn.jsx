@@ -29,6 +29,9 @@ function loadGoogleIdentity() {
 export default function GoogleSignIn({ onTwoFactor }) {
   const { t: translate, locale } = useI18n();
   const container = useRef(null);
+  const button = useRef(null);
+  const language = useRef(locale);
+  language.current = locale;
   const twoFactorHandler = useRef(onTwoFactor);
   twoFactorHandler.current = onTwoFactor;
   const [challenge, setChallenge] = useState(null);
@@ -36,6 +39,14 @@ export default function GoogleSignIn({ onTwoFactor }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
+  // Google draws its own button text, so redraw it when the language changes.
+  const renderButton = () => {
+    if (!button.current || !container.current) return;
+    container.current.replaceChildren();
+    button.current.renderButton(container.current, {
+      type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', locale: language.current, width: Math.min(320, container.current.clientWidth || 280),
+    });
+  };
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -67,14 +78,14 @@ export default function GoogleSignIn({ onTwoFactor }) {
           finally { signingIn = false; if (active) setBusy(false); }
         },
       });
-      container.current.replaceChildren();
-      // Google renders its own button text in the language active at this point.
-      identity.renderButton(container.current, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', locale, width: Math.min(320, container.current.clientWidth || 280) });
+      button.current = identity;
+      renderButton();
     };
     setError('');
     initialize().catch(failure => { if (active) setError(errorText(failure)); });
-    return () => { active = false; controller.abort(); };
+    return () => { active = false; button.current = null; controller.abort(); };
   }, [revision]);
+  useEffect(renderButton, [locale]);
   return (
     <div className="google-signin" aria-busy={busy}>
       <div ref={container} />

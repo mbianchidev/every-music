@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import playwrightConfig from '../playwright.config.js';
 import { CipherEngine } from '../../backend/src/engines/cipher-engine.js';
 import { webOrigin } from './origins.js';
+import itApp from '../src/locales/it/app.js';
+import itFeed from '../src/locales/it/feed.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
@@ -39,7 +41,7 @@ test.afterAll(async () => {
   await pool.end();
 });
 
-async function login(page, person) {
+async function login(page, person, text = { calls: 'Open calls', live: 'Live updates connected' }) {
   const refresh = cipher.createRefreshToken(person.id);
   await pool.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [person.id, refresh.tokenHash, refresh.expiresAt]);
   const session = {
@@ -52,8 +54,8 @@ async function login(page, person) {
     }
   }, { value: session, origin: webOrigin });
   await page.goto('/#feed');
-  await expect(page.getByRole('heading', { name: 'Open calls', exact: true })).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: 'Live updates connected' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: text.calls, exact: true })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: text.live })).toBeVisible();
 }
 
 async function assertAccessible(page, label) {
@@ -140,7 +142,7 @@ test('Italian users see localized notification text and channel labels', async (
   try {
     await pool.query(`INSERT INTO notifications (user_id, kind, title, link, params) VALUES
       ($1, 'profile_stats', 'Your weekly profile statistics', '#analytics', '{"views": 12000}')`, [person.id]);
-    await login(page, person);
+    await login(page, person, { calls: itFeed.search.calls.title, live: itApp.header.liveConnected });
     await page.goto('/#notifications');
     await expect(page.getByRole('link', { name: 'Le statistiche settimanali del tuo profilo', exact: true })).toBeVisible();
     await expect(page.getByText('Ultimi 7 giorni: 12.000 visite al profilo.', { exact: true })).toBeVisible();
