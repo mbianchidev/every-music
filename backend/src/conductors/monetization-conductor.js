@@ -131,6 +131,7 @@ export class MonetizationConductor {
       offers: offers.map(row => ({ id: row.id, headline: row.headline, audience: row.audience, recipients: row.recipients, createdAt: row.created_at })),
       grants: await pointsRepository.recentGrants(executor),
       rules: pointsRules(this.points),
+      limits: { videoBytes: this.config.monetization.sponsoredVideoBytes },
     };
   });
 

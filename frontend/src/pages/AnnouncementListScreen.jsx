@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.jsx';
 import ApplicantsLink from '../components/ApplicantsLink.jsx';
 import QuotaNotice from '../components/QuotaNotice.jsx';
 import { useI18n } from '../lib/i18n.js';
+import { PromoteButton } from '../components/monetization/SpendDialog.jsx';
 
 export default function AnnouncementListScreen({ mode }) {
   const { t } = useI18n();
@@ -30,7 +31,7 @@ export default function AnnouncementListScreen({ mode }) {
       {!resource.data && !resource.error ? <Spinner label="Loading announcements" /> : rows.length ? (
         <>
           <div className="grid" aria-busy={resource.loading}>
-            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<><AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />{!saved && <ApplicantsLink post={post} />}</>} />)}
+            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<><AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />{!saved && <ApplicantsLink post={post} />}{!saved && post.isPublished && <PromoteButton mode="announcement" announcement={post} />}</>} />)}
           </div>
           <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={resource.loading} />
         </>

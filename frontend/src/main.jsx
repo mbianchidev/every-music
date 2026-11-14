@@ -42,6 +42,9 @@ const OrganizationScreen = lazyScreen(() => import('./pages/OrganizationScreen.j
 const OrganizationEditorScreen = lazyScreen(() => import('./pages/OrganizationEditorScreen.jsx'));
 const OrganizationMembersScreen = lazyScreen(() => import('./pages/OrganizationMembersScreen.jsx'));
 const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
+const StoreScreen = lazyScreen(() => import('./pages/StoreScreen.jsx'));
+const WalletScreen = lazyScreen(() => import('./pages/WalletScreen.jsx'));
+const InviteScreen = lazyScreen(() => import('./pages/InviteScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -82,6 +85,9 @@ const ROUTES = {
   'edit-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.edit'); }, protected: true },
   'organization-members': { screen: OrganizationMembersScreen, get title() { return t('organizations.routes.members'); }, protected: true },
   'your-pages': { screen: YourPagesScreen, get title() { return t('organizations.routes.yours'); }, protected: true },
+  store: { screen: StoreScreen, get title() { return t('monetization.routes.store'); }, protected: true },
+  wallet: { screen: WalletScreen, get title() { return t('monetization.routes.wallet'); }, protected: true },
+  invite: { screen: InviteScreen, get title() { return t('monetization.routes.invite'); }, protected: true },
 };
 
 function readRoute() {

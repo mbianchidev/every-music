@@ -11,6 +11,7 @@ const GROUPS = [
   ['statistics', ['announcement_stats', 'profile_stats']],
   ['community', ['events', 'offers']],
   ['account', ['report_reviewed', 'invite_friends', 'come_back', 'app_update_minor', 'app_update_major']],
+  ['wallet', ['points_earned', 'subscription_started', 'subscription_ended', 'payment_failed']],
 ];
 
 export const knownNotificationKind = kind => typeof kind === 'string' && Object.hasOwn(english.kinds, kind);

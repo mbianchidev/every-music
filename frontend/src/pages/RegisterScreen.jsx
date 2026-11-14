@@ -36,6 +36,11 @@ class RegisterScreen extends Component {
     }
   };
 
+  inviteCode() {
+    const code = this.props.route?.query.get('invite')?.trim().toUpperCase();
+    return code && /^[A-Z2-9]{8,16}$/.test(code) ? code : '';
+  }
+
   validate() {
     const { email, password, confirmPassword } = this.state;
 
@@ -67,6 +72,7 @@ class RegisterScreen extends Component {
           email: this.state.email,
           password: this.state.password,
           acceptedTermsVersion: this.state.termsVersion,
+          ...(this.inviteCode() ? { inviteCode: this.inviteCode() } : {}),
         },
       });
       this.setState({
@@ -113,6 +119,7 @@ class RegisterScreen extends Component {
             subtitle="Create your account, verify your email, then build your profile."
           />
 
+          {this.inviteCode() && <p className="status-message">{t('monetization.register.invited')}</p>}
           {error && <div className="error" role="alert">{error}</div>}
 
           <form className="form-stack" onSubmit={this.handleRegister}>

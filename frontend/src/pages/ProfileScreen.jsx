@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
 import VerificationRequest from '../components/VerificationRequest.jsx';
 import ProfileVisits from '../components/ProfileVisits.jsx';
+import { PromoteButton } from '../components/monetization/SpendDialog.jsx';
 
 export default function ProfileScreen() {
   const resource = useResource('/profiles/me', { events: 'profiles.changed' });
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
           <div className="button-row">
             <a className="btn btn-secondary" href="#edit-profile">{resource.data.artistName ? 'Edit profile' : 'Complete profile'}</a>
             <button className="btn btn-ghost" type="button" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Signing out...' : 'Sign out'}</button>
+            {resource.data.artistName && <PromoteButton mode="profile" />}
           </div>
           <div className="compact-actions"><a href="#settings">Preferences</a><a href="#analytics">My analytics</a></div>
         </article>
