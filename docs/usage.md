@@ -167,6 +167,78 @@ Signing out clears saved feed results and unsubscribes this browser from push.
 An **Update app** control appears when a newer shell is ready; finish editing
 before choosing it, because accepting an update reloads the app.
 
+### Security, privacy, and verification
+
+Open **Settings** and scroll to **Security**:
+
+- **Two-step verification** adds a second sign-in step for email/password and
+  Google sign-in. Choose **Set up two-step verification**, pick a method, and
+  confirm with your current password (accounts without a password receive an
+  emailed confirmation code). For an **Authenticator app**, scan the QR code or
+  type the setup key, then enter the 6-digit code. **Email code** appears when
+  the server can send mail and **Text message (SMS)** when an SMS provider is
+  configured; your phone number is stored only while SMS is on. Save the ten
+  recovery codes you are shown: each signs you in once if you lose your second
+  step, and they are never shown again. Creating new recovery codes or turning
+  two-step verification off asks for your password and a current code.
+- At sign-in, enter the code from your app, email, or text message, or choose
+  **Use a recovery code instead**. **Send a new code** resends email/SMS codes.
+  A sign-in attempt expires after 10 minutes or five wrong codes; ten wrong
+  codes in 15 minutes pause two-step sign-in for that account for 15 minutes.
+  Password recovery does not bypass the second step.
+- **Sign out of all devices** ends every session, including this browser, and
+  turns off push notifications everywhere.
+- **Download my data** saves a JSON file with your account, profile,
+  announcements, comments, reactions, follows, notifications, reports you filed,
+  and activity. It leaves out other people's private data and encrypted message
+  contents, which only your devices can read. You can download it three times
+  per hour.
+
+Under **Privacy**, **Let people who have my email address find me** is off by
+default. **Find people you know** accepts pasted email addresses, or contacts
+chosen with your browser's contact picker where available. Your browser sends
+only SHA-256 hashes of the addresses; matches are limited to people who opted
+in, and nothing you search for is stored. Phone numbers are not used. Camera and
+file access is used only when you pick an image to upload; image metadata is
+removed and nothing else on your device is read.
+
+To get the blue tick, open **Profile** and find **Verification**. Write the
+code shown for today on paper, take a selfie holding it, add an optional
+document scan, and choose **Request verification**. The photos are visible
+only to you and administrators. An administrator compares them with your
+profile, then approves or rejects the request with a note you can read. Photos
+are deleted a few days after the decision (seven by default) or right away if
+you cancel. Verified profiles show a blue tick on profile pages, musician cards,
+and announcements. There is no automated face recognition or third-party
+identity check, so the tick means an administrator reviewed the photos, not
+that a legal identity was proven. Administrators review requests under
+**Administration > Overview > Verification requests**; opening photos is
+recorded in the audit log.
+
+### Delete your account
+
+**Settings > Security > Delete account** permanently deletes your account after
+you confirm with your password (or an emailed code if you sign in only with
+Google) and a two-step code when that is on. It cannot be undone, and all your
+sessions end immediately. A confirmation email is sent when mail is configured.
+
+- Deleted: your account, profile, projects, announcements, comments, reactions,
+  saved items, follows, blocks, notifications, preferences, analytics totals,
+  uploaded images, messaging keys and backups, two-step settings, and
+  verification requests.
+- Conversations: each conversation belongs to exactly two people, so your
+  conversations and all their messages are removed for both participants.
+  Copies already decrypted or exported on the other person's device cannot be
+  recalled.
+- Other people's content: you are removed from their project collaborator
+  lists, and their like counters are recalculated.
+- Reports filed by you or about you are removed. Administrator audit entries
+  keep only the action and time; their actor or target IDs no longer lead to an
+  account. They expire after 365 days.
+- Anonymous aggregate counts you contributed to other people's analytics stay,
+  because they cannot be traced back to you. Operator backups expire on their
+  normal schedule.
+
 ## Sessions and password recovery
 
 The client stores its session in browser `sessionStorage`. A page reload can
@@ -197,6 +269,8 @@ reset revokes the account's refresh sessions. Never share reset links or tokens.
 | Uploaded image is rejected | Use a real JPEG/PNG under 2 MiB/16 megapixels; animated and renamed non-image files are rejected |
 | No offline feed copy is available | Reopen the last matching feed in the same signed-in tab, or reconnect; private APIs and other search pages are not cached |
 | Changes to `.env` do not apply | Run `docker compose up -d` to recreate changed services; `restart` alone does not reload container environment |
+| Two-step code is rejected | Check the device clock for authenticator apps, request a new email/SMS code, or use a recovery code; codes cannot be reused |
+| Lost two-step device and recovery codes | Contact the operator, who can reset two-step verification after confirming your identity |
 
 API readiness only checks PostgreSQL. It does not prove SMTP, external identity
 providers, or a client connection works. See [operations](deployment.md) for
@@ -218,5 +292,5 @@ start. Do not remove it or use volume-removal flags unless you deliberately
 intend to erase the database and have a verified backup.
 
 Uninstalling a native client does not remove server-side profiles or
-announcements. The current UI has no account-deletion workflow. Hosts are
-responsible for database retention, backups, and any data-removal process.
+announcements. Members can delete their accounts in Settings; hosts remain
+responsible for database retention and backups.

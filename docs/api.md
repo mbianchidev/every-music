@@ -68,6 +68,8 @@ Refresh:
 ```
 
 Logout accepts the same body. Password reset revokes all active refresh sessions.
+When the account has two-step verification on, login and Google login return a
+challenge instead of tokens; see [two-step sign-in](#two-step-sign-in).
 
 For Google sign-in, request a challenge with `{}` and pass its `nonce` to
 Google Identity Services. POST `{ "idToken": "<Google credential>",
@@ -434,3 +436,136 @@ request rate and stricter existing auth-route limits still apply.
 |---|---|---|
 | GET | `/realm/catalog/instruments` | Instruments grouped by category |
 | GET | `/realm/catalog/genres` | Genres and parent genres |
+
+## Account security, privacy, and verification
+
+All routes below require authentication except the two sign-in step routes.
+
+### Two-step sign-in
+
+| Method | Path | Contract |
+|---|---|---|
+| POST | `/realm/auth/two-factor/verify` | `{ "challengeToken", "code" }`; returns the normal session envelope plus `isNewUser: false` |
+| POST | `/realm/auth/two-factor/resend` | `{ "challengeToken" }`; email/SMS only, at most three sends per challenge |
+
+With two-step verification on, `POST /realm/auth/login` and `/realm/auth/login/google`
+return 200 with `{ "twoFactorRequired": true, "challengeToken", "method":
+"totp" | "email" | "sms", "destinationHint", "codeSent", "expiresAt" }` and no
+access or refresh token. Google responses also keep `isNewUser`. `codeSent` is
+`null` for authenticator apps and `false` when email/SMS delivery failed (send
+again or use a recovery code). Challenges are hashed, expire after 10 minutes,
+and accept five attempts. `code` is a 6-digit code or a recovery code such as
+`ABCDE-FGHJK` (case, spaces, and hyphens are ignored). A used TOTP step cannot
+be replayed. Wrong codes return 401 `INVALID_TWO_FACTOR_CODE`; an expired,
+used, or exhausted challenge returns 401 `INVALID_TWO_FACTOR_CHALLENGE`.
+Ten failures within 15 minutes lock the account's second step with 429
+`TWO_FACTOR_LOCKED`. Routes are also limited per IP.
+
+### Security settings
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/account/security` | `email`, `hasPassword`, `googleLinked`, `twoFactor` status, `availableMethods` |
+| POST | `/realm/account/reauthentication-code` | Accounts without a password: email a 6-digit confirmation code |
+| POST | `/realm/account/two-factor/setup` | `{ "method", "phoneNumber"?, ...re-authentication }` |
+| POST | `/realm/account/two-factor/enable` | `{ "code" }`; returns `{ "method", "recoveryCodes" }` once |
+| POST | `/realm/account/two-factor/code` | Email/SMS methods: send a code for confirming changes |
+| POST | `/realm/account/two-factor/recovery-codes` | Re-authentication; returns ten new codes and invalidates the old ones |
+| POST | `/realm/account/two-factor/disable` | Re-authentication; removes the method, phone number, and recovery codes |
+| POST | `/realm/account/sessions/revoke` | Sign out of all devices |
+| GET | `/realm/account/export` | JSON export of the caller's data |
+| DELETE | `/realm/account` | `{ ...re-authentication, "confirm": true }`; permanent deletion |
+
+Re-authentication fields are `password` (required for accounts with a
+password), `emailCode` (required instead for accounts without one, from
+`/account/reauthentication-code`), and `code` (a two-step or recovery code,
+required when two-step verification is on). Failures return 400
+`PASSWORD_REQUIRED` / `EMAIL_CODE_REQUIRED` / `TWO_FACTOR_CODE_REQUIRED`, or
+403 `REAUTHENTICATION_FAILED` / `INVALID_TWO_FACTOR_CODE`. Five failures in 15
+minutes return 429 `REAUTHENTICATION_LOCKED`. Setup also requires
+re-authentication and returns 409 `TWO_FACTOR_ENABLED` while a method is on.
+
+`availableMethods` always contains `totp`; `email` appears when SMTP is
+configured and `sms` when an SMS provider is configured. Unavailable methods
+return 503 `TWO_FACTOR_METHOD_UNAVAILABLE`. TOTP setup returns `secret` (base32)
+and an `otpauthUri` (SHA-1, 6 digits, 30 seconds) for a client-rendered QR
+code. Email/SMS setup sends a code and returns `destinationHint`; delivery
+failures return 502 `CODE_DELIVERY_FAILED`. `phoneNumber` must be E.164
+(`+` and country code; spaces, dots, dashes, and brackets are removed) and is
+only accepted for SMS. Wrong enrollment codes return 400; five wrong codes end
+the setup. `twoFactor` contains `enabled`, `method`, `enabledAt`, `phoneHint`,
+`recoveryCodesRemaining`, and `keyChanged` (the sealed secret can no longer be
+read; see [configuration](configuration.md#two-step-verification-and-sms)).
+
+Revoking sessions revokes every refresh token, rejects access tokens issued up
+to that second, removes push subscriptions, and closes live streams.
+
+The export is limited to three per account per hour (429 `ACCOUNT_RATE_LIMIT`).
+It contains `account`, `preferences`, `security`, `profile` (with instruments,
+genres, projects), own `announcements`, `comments`, `reactions`,
+`savedAnnouncements`, `following`, `followerCount`, `blockedUserIds`,
+`conversations` (counterpart and message counts), `sentMessages` (metadata, and
+text only for legacy unencrypted messages you sent), public `messagingKeys`,
+`notifications`, `reportsFiled`, `media` (addresses), `analytics`,
+`entitlements`, `pushSubscriptions` (service origin only), and
+`verificationRequests`. It never contains password or token hashes, recovery
+code hashes, encrypted message ciphertext, encrypted key backups, received
+message contents, other people's email addresses, or reports filed about you.
+
+Deletion returns `{ "deleted": true, "confirmationEmailSent": boolean }` and
+removes the account row; rows owned by it cascade. Collaborator entries naming
+the account are removed from other people's projects and reaction counters on
+other people's announcements are recomputed. See the
+[usage guide](usage.md#delete-your-account) for shared records.
+
+### Privacy and finding people
+
+| Method | Path | Contract |
+|---|---|---|
+| GET / PUT | `/realm/account/privacy` | `{ "discoverableByEmail": boolean }`, default false |
+| POST | `/realm/contacts/match` | `{ "hashes": ["<64 hex characters>", ...] }`, 1-500 items |
+
+Clients hash `email.normalize('NFC').trim().toLowerCase()` with SHA-256 and send
+only the hex digests. Matches include only active, discoverable accounts other
+than the caller, excluding accounts blocked in either direction. The response
+is `{ "musicians": [...] }` using the profile search summary shape plus
+`verifiedAt`, without email addresses. Submitted hashes are not stored. Matching
+is limited to 20 requests per account per hour and 30 per IP per 15 minutes.
+
+### Verification
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/verification/me` | `verifiedAt`, today's `challengeCode`, latest `request`, `retentionDays` |
+| POST | `/realm/verification/requests` | `{ "challengeCode", "selfieMediaId"?, "documentMediaId"? }`, 201 |
+| DELETE | `/realm/verification/requests/:requestId` | Cancel your pending request and delete its images |
+| GET | `/realm/admin/verification-requests` | Admin queue; `status` (`pending` default, `approved`, `rejected`, `cancelled`, empty for all) and pagination |
+| GET | `/realm/admin/verification-requests/:requestId/media/:mediaId` | Admin-only `image/webp`, `Cache-Control: private, no-store`; every read is audited |
+| PATCH | `/realm/admin/verification-requests/:requestId` | `{ "decision": "approve" \| "reject", "note": "<5-2,000 characters>" }` |
+| DELETE | `/realm/admin/users/:userId/verification` | Admin-only removal of the blue tick |
+
+Upload evidence first with `POST /realm/media` and `purpose: "verification"`.
+Images must belong to the caller and not be attached to another request; at
+least one is required. The challenge code (`EM-` plus six characters) changes
+every UTC day; today's and yesterday's codes are accepted (400
+`VERIFICATION_CODE_EXPIRED` otherwise). One pending request per subject (409
+`VERIFICATION_PENDING`), three submissions per day, and verified profiles return
+409 `ALREADY_VERIFIED`. Requests use `subject_type`/`subject_id`; only `user`
+subjects exist today.
+
+Verification images are never public: `GET /realm/media/:id` serves them only
+to the uploader, and administrators use the audited route above. Decisions
+recheck the live admin role, return 409 `VERIFICATION_RESOLVED` when already
+decided and 403 `SELF_REVIEW` for an administrator's own request, set
+`profiles.verified_at` on approval, audit `verification_approved` /
+`verification_rejected`, and notify the member (the note is shared with them).
+Images are deleted `VERIFICATION_MEDIA_RETENTION_DAYS` after a decision, or
+immediately on cancellation. Profile detail/search responses include
+`verifiedAt`; announcement responses include `creatorVerifiedAt`.
+
+Notification kinds `security_alert` (`params.event`: `two_factor_enabled`,
+`two_factor_disabled`, `recovery_code_used`, `recovery_codes_regenerated`,
+`sessions_revoked`), `verification_requested` (administrators), and
+`verification_decided` (`params.decision`) are added. Live event types
+`security.changed`, `privacy.changed`, and `verification.changed` target the
+affected account.

@@ -62,6 +62,12 @@ explain exactly what is disclosed before the required consent checkbox.
 Administrator overview/queue/audit/detail states and decision confirmations need
 the same keyboard, contrast, narrow-screen and screen-reader checks.
 
+Two-step sign-in moves focus to its heading, returns focus to the code field
+after an error, and offers a recovery-code alternative; check both with a
+screen reader. The QR code has a text alternative and a typed setup key.
+Recovery codes, account deletion, contact search results, and the verification
+request/review queue need the same keyboard, zoom, and announcement checks.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

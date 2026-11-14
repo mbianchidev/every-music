@@ -13,6 +13,7 @@ Tauri WebView ---------------------------------> absolute API URL -> PostgreSQL
 Fastify -> SMTP (verification/reset mail)
 Fastify -> Google identity verification (optional web sign-in)
 Fastify -> Web Push services (optional, generic notification payloads)
+Fastify -> SMS provider, Twilio adapter (optional two-step codes)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
@@ -112,6 +113,29 @@ creating the application session. Google credentials are not persisted.
 Matching email alone never links a password account. Google users may use
 verified password recovery to add password sign-in without losing Google login,
 including for native clients where embedded Google sign-in is disabled.
+
+## Account trust
+
+Two-step verification sits between the first factor and session issuance:
+password and Google sign-in call `two-factor-delivery.js` before creating
+tokens, and only `/auth/two-factor/verify` issues the session, inside the same
+transaction that consumes the hashed challenge. Re-authentication for
+sensitive changes commits failed attempts before returning the error so
+attempt limits hold. `users.sessions_revoked_at` lets the identity guard reject
+access tokens issued before "sign out of all devices"; refresh tokens are
+revoked in the same transaction. TOTP secrets and SMS numbers are sealed by
+`secret-box.js`; SMS goes through the provider interface in `sms-gateway.js`.
+Per-account throttles use `account_rate_events`, so they hold across processes.
+
+Account deletion deletes the `users` row and relies on cascades for owned
+records, after removing the account from other projects' collaborator lists
+and before recomputing reaction counters. The export runs in one repeatable-read
+transaction. Contact discovery stores an email hash only for opted-in accounts
+and never stores submitted hashes. Verification requests are keyed by
+`subject_type`/`subject_id`; their images use the private `verification` media
+purpose, are served to administrators only through an audited route, survive
+the unreferenced-media cleanup while referenced, and are purged by the hourly
+maintenance after the retention period. See `docs/api.md` for contracts.
 
 ## Community persistence and delivery
 

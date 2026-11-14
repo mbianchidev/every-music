@@ -124,6 +124,7 @@ not packaged by desktop CI.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Account trust:** two-step sign-in (authenticator app, email, or optional SMS) with recovery codes, sign-out everywhere, GDPR data export and account deletion, opt-in find-by-email with hashed contacts, and administrator-reviewed profile verification with a blue tick.
 
 ### Current limitations
 
@@ -132,6 +133,7 @@ not packaged by desktop CI.
 - Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
+- Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
 - Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 
 ## Documentation

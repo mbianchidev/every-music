@@ -64,6 +64,12 @@ startup. Mail settings are mandatory in production.
 | `RATE_WINDOW_MS` | `900000` (at least 1000) | Rate-limit window in milliseconds |
 | `RATE_THRESHOLD` | `150` (at least 1) | Requests allowed per client/window |
 | `UPLOAD_BYTE_LIMIT` | `5242880` (at least 1024) | Maximum JSON body size, including base64 image uploads; images themselves are capped at 2 MiB |
+| `TWO_FACTOR_ENCRYPTION_KEY` | Unset; at least 32 characters when set | Optional dedicated key sealing TOTP secrets and SMS numbers; derived from `CIPHER_PRIMARY_KEY` when unset |
+| `VERIFICATION_MEDIA_RETENTION_DAYS` | `7` (1-90) | Days verification photos are kept after a decision |
+| `TWILIO_ACCOUNT_SID` | Unset | Twilio account for SMS codes; SMS is hidden unless SID, token, and a sender are set |
+| `TWILIO_AUTH_TOKEN` | Unset | Twilio auth token, server-only |
+| `TWILIO_FROM_NUMBER` | Unset | E.164 sender number, or use the messaging service below |
+| `TWILIO_MESSAGING_SERVICE_SID` | Unset | Twilio messaging service used instead of a sender number |
 
 If `REALM_CONNECTION` is provided, it takes precedence over discrete database
 values. Percent-encode credentials in a manually constructed URL. With discrete
@@ -99,6 +105,34 @@ email, without losing Google login, and use the password in native clients.
 The supplied nginx policy permits only the Google GIS script, frame, style,
 and connection paths in addition to the application's existing sources.
 Keep equivalent CSP rules if replacing nginx.
+
+### Two-step verification and SMS
+
+Authenticator apps (TOTP) always work. Email codes appear when SMTP is
+configured; SMS appears only when `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and
+`TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID` are all set. Startup
+rejects partial Twilio settings. SMS goes through a small provider interface
+(`backend/src/engines/sms-gateway.js`, `send(to, body)`) so another provider can
+replace the bundled Twilio adapter. Phone numbers are collected only when a
+member enrolls SMS and are deleted when they turn it off or abandon setup.
+
+TOTP secrets and SMS numbers are sealed with AES-256-GCM. The key comes from
+`TWO_FACTOR_ENCRYPTION_KEY` when set, otherwise it is derived with HKDF from
+`CIPHER_PRIMARY_KEY`, so no new secret is required to start using two-step
+verification. Email/SMS codes and confirmation codes are stored as keyed
+hashes; recovery codes and challenge tokens as SHA-256 hashes. Set a dedicated
+key in production so the access-token signing key can rotate independently.
+
+Rotation impact: changing the key in use (the dedicated key, or
+`CIPHER_PRIMARY_KEY` when no dedicated key is set) makes every stored TOTP
+secret and SMS number unreadable and invalidates outstanding email/SMS codes.
+Affected members see a warning in Security settings, sign in with a recovery
+code, turn two-step verification off, and enroll again. Email-code enrollments
+keep working. Switching from the derived key to a dedicated key has the same
+effect. A member who lost both their second factor and recovery codes must be
+reset by an operator after verifying their identity out of band, for example
+with `DELETE FROM user_two_factor WHERE user_id = '<id>'` and
+`DELETE FROM two_factor_recovery_codes WHERE user_id = '<id>'`.
 
 ### Browser push and live updates
 
@@ -173,7 +207,8 @@ API, and web host bindings are local by default.
 | `WEB_BIND_ADDRESS` / `WEB_PORT` | `127.0.0.1` / `80` |
 
 Compose also forwards signing, token issuer/audience/lifetime/grace, Google, VAPID,
-SMTP, pool, rate-limit, and body-size settings listed above. Its default
+SMTP, pool, rate-limit, body-size, two-step key, verification retention, and
+Twilio settings listed above. Its default
 `PORTAL_ORIGINS` is
 `http://localhost,http://localhost:3000,http://tauri.localhost,tauri://localhost`.
 `MAIL_PORT` defaults to 587; sender/host/username/password are required.
