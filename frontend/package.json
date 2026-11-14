@@ -16,6 +16,7 @@
     "preview": "npm run serve",
     "test": "node --test",
     "test:e2e": "playwright test",
+    "docs:screenshots": "playwright test -c playwright.docs.config.js",
     "check": "npm test && npm run compile",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",

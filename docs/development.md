@@ -496,3 +496,42 @@ next account on the same device. Other browser suites keep running in English.
 Keep [usage](usage.md), [configuration](configuration.md), and [API contracts](api.md)
 aligned with changes. Follow [releases](releases.md) for packaging and
 [AGENTS.md](../AGENTS.md) for repository-specific agent constraints.
+
+### Documentation screenshots
+
+The PNG files in `docs/images/` are generated, not edited by hand. Regenerate
+them after a visible UI change:
+
+```bash
+cd frontend
+REALM_ENV=test \
+REALM_CONNECTION=postgresql://USER:PASSWORD@127.0.0.1:5432/everymusic_docs \
+npm run docs:screenshots
+```
+
+The requirements match the browser tests: an isolated, bootstrapped and
+migrated database that holds only synthetic fixtures (never a shared or
+production database), installed backend and frontend dependencies, and
+Playwright's Chromium. `playwright.docs.config.js` reuses the browser test
+servers from `playwright.config.js`: the test API in
+`backend/integration/browser-server.js` with the synthetic Stripe settings (so
+the store shows plans) on `E2E_API_PORT` (default 55474) and a production
+preview on `E2E_WEB_PORT` (default 4179). Both ports must be free. The run rebuilds
+`dist` for that API, so do not run `npm run check` or `npm run compile` in the
+same checkout at the same time. `npm run test:e2e` does not include these
+captures.
+
+`docs-screenshots/capture.spec.js` seeds a synthetic cast through the real API,
+using sessions minted with the test signing keys instead of the sign-in form:
+`docs-screenshots-*@example.test` accounts with fictional names, band, venue,
+organizer, and label pages, open calls, applications, events, calendar entries,
+marketplace listings, reviews, points, and verification and help desk requests.
+Pictures are abstract artwork drawn with `sharp` in `docs-screenshots/artwork.js`
+(gradients and shapes, never photos, faces, or logos). A few timestamps are
+backdated in the database so lists look lived-in, and dates are relative to the
+day of the run. The run deletes everything it created when it finishes, and
+removes leftovers of an interrupted run before seeding again. Captures use a
+1280 pixel wide desktop viewport (the README feed stays 1280x1200; the phone
+capture is 390x844 at twice the pixel density), wait for data, images, and
+animations, never show the welcome tour, and are saved as palette PNGs to keep
+each file small. Review every image before committing it.

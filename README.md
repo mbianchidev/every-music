@@ -4,7 +4,9 @@
 
 [Quickstart](#quick-start-with-docker-compose) | [Documentation](docs/README.md) | [Build/download](docs/releases.md) | [Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) | [Roadmap](docs/main.md)
 
-[![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+[![Every.music feed in the Dark theme with a keyword search, one active filter, a promoted call, synthetic open calls, and the full navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+
+Screenshots of the main features, all with synthetic demo data, are in the [usage guide](docs/usage.md).
 
 Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, build a musician or band profile, join a community of bands, venues, and fans, find events and gear, and keep your band organized, using a React web client backed by a Fastify API and PostgreSQL.
 

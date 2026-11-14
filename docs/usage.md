@@ -2,6 +2,10 @@
 
 [Documentation index](README.md) | [Configuration](configuration.md) | [Operations](deployment.md)
 
+Screenshots in this guide show synthetic demo accounts and content, not real
+members. See [documentation screenshots](development.md#documentation-screenshots)
+to regenerate them.
+
 ## Choose a setup
 
 - **Web/self-hosted:** use the [README quickstart](../README.md#quick-start-with-docker-compose).
@@ -101,11 +105,15 @@ version, the app shows an **Update required** screen with the same instructions
 until you update. Signed-in members can rate each app version once from
 **Help > Rate Every.music** (1-5 stars and an optional comment).
 
+[![Help center with Report a bug, Contact us, and Work with us, account shortcuts such as Replay the welcome tour, policy links, and the app version](images/help-center.png)](images/help-center.png)
+
 ### Discover and collaborate
 
 Desktop navigation lives in the left sidebar. On mobile, Feed, Musicians,
 Post, and Messages stay in the bottom bar; **More** opens the remaining sections.
 Close that menu with its close button, Escape, or the backdrop.
+
+<a href="images/mobile-feed.png"><img src="images/mobile-feed.png" width="390" alt="Feed on a 390 pixel wide phone screen with the search box, filters, a promoted call from a synthetic musician, and the bottom bar with Feed, Musicians, Post, Messages, and More"></a>
 
 Feed and Musicians have keyword, city, instrument, genre, date, and sorting controls.
 Open **Filters and sorting** to show the advanced controls on any screen size.
@@ -134,6 +142,8 @@ images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
 uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
 stripped of metadata. Published images are public.
 
+[![Synthetic musician profile with a Verified profile badge, Open to new projects, Telegram and Signal contacts, music and social links, instruments with skill levels, genres, and a musical project listing the instruments played and its collaborators](images/musician-profile.png)](images/musician-profile.png)
+
 ### Reply to calls and review applicants
 
 On someone else's open call, **Apply to this call** opens a reply form. Write a
@@ -155,6 +165,10 @@ Change the status, keep a private note only you can see, or choose
 for one call from **Applicants** in **My calls** or **Review applications** on
 your announcement page. Applicants are notified when you shortlist, accept, or
 decline them, and you are notified about each new reply.
+
+[![An open call published on behalf of a verified band page, with the Reply to this call form filled in: a message, Bass Guitar ticked as an instrument the applicant can cover, and a SoundCloud link](images/announcement-apply.png)](images/announcement-apply.png)
+
+[![Received applications dashboard with call, status, instrument and order filters, status counts, and applicants showing their instruments, message, links, status, private note, and Message applicant](images/applications-dashboard.png)](images/applications-dashboard.png)
 
 When a call closes, its applications stay readable to you for 90 days by
 default (`APPLICATION_RETENTION_DAYS`); the dashboard shows the exact date.
@@ -192,6 +206,8 @@ To search near your current position, first turn on **Use my location for
 nearby searches** in Settings, then choose **Use my location**. Your browser
 asks for permission; the position is rounded to about 1 km, used only for
 those results and never saved.
+
+[![Find musicians with Filters and sorting open: Near city set to Milan, Within 50 km, and Nearest first, with six synthetic musicians showing their distance in km, instruments, genres, and a promoted profile first](images/musicians-distance-search.png)](images/musicians-distance-search.png)
 
 **Save this search** keeps the current feed filters in **Saved searches** and
 notifies you when a newly published call matches. A saved "near me" search
@@ -235,6 +251,8 @@ bands to join their roster or label, and the band must accept. **Follow** a
 page to be notified about its updates, releases, new YouTube videos, and
 announcements. Spotify and other services are not imported automatically.
 
+[![Synthetic band page with a Verified badge, followers, formation year, Open to, contacts, line-up with titles and join dates, releases, updates, an open announcement for the page, its label, For fans of and suggested similar bands, a photo, and its next event](images/band-page.png)](images/band-page.png)
+
 If a venue has no page, add it as community-maintained: only you can edit it
 until the venue's operator uses **Claim this venue** and an administrator
 approves the claim. Administrators review claims and verify pages from the
@@ -256,6 +274,8 @@ date range, type, genre, band playing, organizer, venue, or a city and
 distance. Each card shows the date in the event's own time zone, the
 headliners, the place, the organizers, and how many people are going.
 
+[![Events discovery with search, When and Sort by controls, More filters, and six synthetic concerts and festivals with poster images, dates, venues, organizers, attendance, Sold out and You are going labels](images/events-discovery.png)](images/events-discovery.png)
+
 An event page lists the date and time in the event's time zone (and in yours
 when it differs), doors-open time, the venue and address with OpenStreetMap
 **Open map** and **Directions** links, who organizes it, and the lineup
@@ -266,6 +286,8 @@ ticket sellers; Every.music does not sell tickets. Official updates from the
 organizers (doors open, lineup changes, refunds, postponements, and
 cancellations) appear at the top.
 
+[![Synthetic event page with an official doors open update, the poster, start, doors and end times in the event time zone, venue with map and directions links, verified organizer, 612 of 800 tickets sold with links to two ticket sellers, the lineup by role with set times, and Going selected under Are you going?](images/event-page.png)](images/event-page.png)
+
 Choose **Going** or **Interested** to reply. Going events appear on your
 profile under **Next events** and **Past events** unless you clear **Show this
 event on my profile**. **Download calendar file (.ics)** and **Add to Google
@@ -274,6 +296,8 @@ notification from 15 minutes to a week before the start. People going or
 interested can read and post in the **Discussion**; report messages with
 **Report message from ...** and the event itself with **Report event**.
 **My events** lists the events you reply to and the ones you organize.
+
+[![The same event page in the Dark theme: lineup, Going and Interested replies, Show this event on my profile, calendar download, Google Calendar link, reminders, and the attendee discussion](images/event-page-dark.png)](images/event-page-dark.png)
 
 To organize, choose **New event**. Artists can organize on their own; pages
 you manage (as leader, admin, or member with the calendar permission) appear
@@ -308,6 +332,8 @@ start" to "1 week before"). Organizers can edit, invite more people, cancel or
 restore, and delete entries; members and invitees are notified about changes.
 Invitees can leave an entry.
 
+[![Band recording session entry with time and time zone, place, address, band, organizer, OpenStreetMap and Google Maps links, notes, .ics download, Google Calendar link, Going selected, personal reminders, and band members and invited artists with their answers](images/calendar-entry.png)](images/calendar-entry.png)
+
 **My calendar** in the navigation lists upcoming and past entries from all
 your bands plus your personal plans, and lets you schedule personal entries
 (or band entries, when you manage a band calendar). To see everything in
@@ -317,6 +343,8 @@ choose **Create subscription link**, and add the link to your calendar app
 only once and works without signing in, so keep it secret; **Replace link**
 invalidates the old one and **Turn off link** removes it. Google Calendar can
 subscribe only when the server is reachable from the internet over HTTPS.
+
+[![My calendar with upcoming Glass Harbor rehearsals, a recording session, a tour planning call, the release show, and a personal entry, each with its time, place, and your answer](images/band-calendar.png)](images/band-calendar.png)
 
 **Band chat** is end-to-end encrypted for the current members, like direct
 messages: set up or unlock your messaging recovery key in the chat's
@@ -352,6 +380,8 @@ people have rated. These measures have limits: an artist who knows that only
 one person could have rated on a given day, or who sees the count move after
 a small change, may still guess who rated, and one person can create several
 accounts. Reviews are not anonymous.
+
+[![Reviews section with an average of 4.7 out of 5 from three approved synthetic reviews, and the Anonymous rating section with the published average from nine ratings and the viewer's own rating, visible only to them](images/musician-reviews.png)](images/musician-reviews.png)
 
 ### Messages and notifications
 
@@ -392,6 +422,8 @@ Push uses short generic text in your chosen language and excludes message
 text, names, and other private content. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
 
+[![Notification center with Mark all read, Manage notification settings, unread new follower, points, and calendar invitation notifications, and older read event updates](images/notifications.png)](images/notifications.png)
+
 Under **Notification channels** in Settings (or **Manage notification settings**
 in the notification center), choose for each type of notification whether it
 appears in the app, as browser push, or by email. Some types are not available
@@ -404,6 +436,8 @@ plan that includes statistics. Inactive accounts may get a few "we miss you"
 reminders by email, and new accounts get one in-app reminder to invite friends.
 Choices apply to notifications created after you save them.
 
+[![Notification channels in Settings: for each type of notification, In app, Push, and Email checkboxes, grouped by Messages, Your announcements and profile, Musicians you follow, and Statistics, with unavailable options marked not available](images/notification-settings.png)](images/notification-settings.png)
+
 ### Marketplace, lessons, and hiring
 
 Open **Marketplace** in the navigation (on mobile, under **More**). Its tabs
@@ -415,6 +449,8 @@ makers, social media managers, coaches, or what you want to hire), and
 companies). Search by keyword and open **Filters and sorting** for type,
 category, condition, price range and currency, location, remote/online,
 shipping, instrument, genre, and sort order. The URL keeps filters and page.
+
+[![Marketplace Gear tab with New listing, My listings, Saved listings, search, filters, and six synthetic listings with generated pictures of instruments, prices, categories, conditions, locations, and shipping](images/marketplace.png)](images/marketplace.png)
 
 Choose **New listing**, pick what you are listing, its category, title,
 description, and price: a fixed amount, a negotiable amount, free, or contact
@@ -433,6 +469,8 @@ edit it, mark it reserved, sold (gear for sale) or closed, reopen it, renew it
 for another listing period, or delete it. Sold, closed, and expired listings
 leave search results; you get a notification a few days before a listing
 expires.
+
+[![Synthetic acoustic guitar listing with a cover picture and a second photo, price, status, shipping, seller, Contact, Saved, Report listing, description and details, and the safety tips beside it](images/marketplace-listing.png)](images/marketplace-listing.png)
 
 Every.music does not process marketplace payments, hold money, offer buyer
 protection, or resolve disputes. Agree on payment, delivery, and terms directly,
@@ -460,12 +498,16 @@ which updates as soon as Stripe confirms the payment. **Manage billing** opens
 Stripe's portal to change plan, update your card, see invoices, or cancel.
 Without payments the page says so and points still work.
 
+[![Premium and points store on the Free plan with Subscribe to Premium and Subscribe to Partner, the plan comparison table, a 500 points pack, and ways to spend points, using synthetic test prices](images/store.png)](images/store.png)
+
 Points never expire. Earn them by inviting friends, rating the app once
 (**Help > Rate the app**), watching sponsored music videos (a few a day), and
 at special events. **Points wallet** shows your balance, ways to earn, the
 sponsored videos you can watch, your promotions, and your points history.
 To earn from a video, select **Watch**, play the video to the end, then
 **Claim** once the short waiting time has passed.
+
+[![Points wallet with a 570 points balance, ways to earn, a sponsored music video with Watch, an active profile boost, and the points history](images/wallet.png)](images/wallet.png)
 
 Spend points from the store or wallet on **Premium days**, from **Profile** on
 **Boost my profile**, and from **My calls** with **Promote** on a published
@@ -502,6 +544,8 @@ signing in. The change applies at once, without reloading, and screen readers
 pronounce each language name correctly in the list. Dates, times, and numbers
 follow the chosen language. What members write (announcements, messages,
 reviews, listings) is shown as written and is not translated.
+
+[![The feed in Italian: Annunci aperti near Bologna sorted by distance, with the navigation, filters, and labels such as In evidenza and Salva translated, while synthetic calls stay in the language their authors wrote them in](images/feed-italian.png)](images/feed-italian.png)
 
 Before you sign in, the choice is kept on this device (or taken from your
 browser language the first time). After you sign in, the language belongs to
@@ -603,6 +647,8 @@ identity check, so the tick means an administrator reviewed the photos, not
 that a legal identity was proven. Administrators review requests under
 **Administration > Overview > Verification requests**; opening photos is
 recorded in the audit log.
+
+[![Administration overview with operational account totals including open reports, consented platform activity, the verification queue with a page verification request and a profile request, and the help desk inbox with a bug report, a contact request, and a Work with us request](images/admin-overview.png)](images/admin-overview.png)
 
 ### Delete your account
 
