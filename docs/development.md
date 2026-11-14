@@ -159,6 +159,9 @@ On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
 to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+`e2e/marketplace.spec.js` mints browser sessions with the synthetic browser
+API signing key instead of using the sign-in form, so it does not consume the
+per-IP login limit that the community suite exercises in the same API process.
 Do not run `npm run check` / `npm run compile` in the same frontend checkout
 while browser tests run: both builds replace `dist`, and the browser build
 embeds its isolated API origin. Backend checks can run independently.
@@ -257,6 +260,10 @@ sessions, and defaults analytics/push off. Application rollback can leave these
 extra tables/columns in place; do not drop messages or media as an automatic
 rollback. Use a reviewed forward fix or deliberately restore a verified backup.
 
+Migration `013_marketplace.sql` adds marketplace listings, photos, tags,
+saved listings, and the optional report `listing_id`. It is additive and
+idempotent; rolling back the application leaves these tables unused.
+
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.
 Legacy plaintext is retained and labelled; deleted tombstones are cleared.
@@ -275,8 +282,10 @@ retention, provisioning and cryptographic limitations.
   `backend/src/engines/notification-catalog.js`; pass `params` so clients can
   localize them.
 - Check plan limits with `entitlementRepository` instead of hard-coding them.
-- Register publicly visible managed images in
-  `backend/src/engines/media-references.js`.
+- Register publicly visible managed images in `publicMediaReferences` and every
+  stored media reference in `retainedMediaReferences`
+  (`backend/src/engines/media-references.js`); unretained uploads are deleted
+  after a day.
 
 - Keep HTTP envelopes consistent: `{ "success": true, "data": ... }` or `{ "success": false, "error": ... }`.
 - Use repository executors supplied by `realmConnector.transaction`; calling the global pool from inside a transaction is not atomic.

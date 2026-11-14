@@ -61,6 +61,8 @@ return focus when a verified message replaces its warning control. Reports must
 explain exactly what is disclosed before the required consent checkbox.
 Administrator overview/queue/audit/detail states and decision confirmations need
 the same keyboard, contrast, narrow-screen and screen-reader checks.
+Marketplace tabs, filters, listing photo ordering, status changes, report and
+removal dialogs, and price/rate announcements need the same checks.
 
 ## Known limitations and reporting
 

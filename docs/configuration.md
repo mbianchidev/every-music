@@ -185,6 +185,17 @@ premium limits and can always manage business pages.
 `PARTNER_PLAN_REQUIRED` (default `false`) restricts venue, organizer, booking
 agency, and label pages to the partner plan.
 
+## Marketplace
+
+| Variable | Default / range | Purpose |
+|---|---|---|
+| `MARKETPLACE_LISTING_DAYS` | `60` (1-365) | Lifetime of a new or renewed marketplace listing |
+| `MARKETPLACE_EXPIRY_REMINDER_DAYS` | `3` (1-30) | Send the `listing_expiring` notification when an open listing is this close to expiry; must be lower than `MARKETPLACE_LISTING_DAYS` |
+
+The API checks expiring listings hourly. Compose forwards both settings.
+Marketplace payments are never processed by Every.music, so there are no
+payment-provider settings for listings.
+
 ## Compose settings
 
 Compose sets the API to production, listens internally on `0.0.0.0:8080`,

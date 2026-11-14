@@ -2,6 +2,7 @@ import { ECDH } from 'node:crypto';
 import * as webpush from 'web-push';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { requestError } from './request-error.js';
+import { retainedMediaReferences } from './media-references.js';
 
 export function isAllowedPushEndpoint(value) {
   try {
@@ -98,8 +99,7 @@ export class PushDispatcher {
     await this.connector.execute("DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '90 days'");
     await this.connector.execute(`
       DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'
-      AND NOT EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)
-      AND NOT EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)`);
+      AND NOT (${retainedMediaReferences.join(' OR ')})`);
     this.lastMaintenance = Date.now();
   }
 

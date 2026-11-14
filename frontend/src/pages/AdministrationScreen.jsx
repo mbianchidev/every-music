@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import FormField from '../components/FormField.jsx';
 import Pagination from '../components/Pagination.jsx';
 import ActivityReport from '../components/ActivityReport.jsx';
+import MarketplaceModeration from '../components/marketplace/MarketplaceModeration.jsx';
 
 const operations = { review: 'Mark reviewed', dismiss: 'Dismiss report', remove_message: 'Remove reported message', suspend_user: 'Suspend reported account' };
 
@@ -63,6 +64,7 @@ export default function AdministrationScreen({ route }) {
           </tr>)}</tbody>
         </table></div>}
         <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label="Moderation pages" />
+        <MarketplaceModeration />
       </>}
       {tab === 'reports' && id && <article className="card report-detail">
         <h2 className="heading-md">Report about {data.reportedName}</h2>

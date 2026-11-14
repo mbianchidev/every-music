@@ -24,6 +24,11 @@ import AppStatus from './components/AppStatus.jsx';
 import AdministrationScreen from './pages/AdministrationScreen.jsx';
 import ReportsScreen from './pages/ReportsScreen.jsx';
 import { applicationsRoute } from './pages/ApplicationsScreen.jsx';
+import { t } from './lib/i18n.js';
+import MarketplaceScreen from './pages/MarketplaceScreen.jsx';
+import ListingScreen from './pages/ListingScreen.jsx';
+import ListingEditorScreen from './pages/ListingEditorScreen.jsx';
+import MyListingsScreen from './pages/MyListingsScreen.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -49,6 +54,12 @@ const ROUTES = {
   reports: { screen: ReportsScreen, title: 'Your reports', protected: true },
   admin: { screen: AdministrationScreen, title: 'Administration', protected: true },
   applications: applicationsRoute,
+  marketplace: { screen: MarketplaceScreen, get title() { return t('marketplace.routes.marketplace'); }, protected: true },
+  listing: { screen: ListingScreen, get title() { return t('marketplace.routes.listing'); }, protected: true },
+  'new-listing': { screen: ListingEditorScreen, get title() { return t('marketplace.routes.newListing'); }, protected: true },
+  'edit-listing': { screen: ListingEditorScreen, get title() { return t('marketplace.routes.editListing'); }, protected: true },
+  'my-listings': { screen: MyListingsScreen, props: { mode: 'own' }, get title() { return t('marketplace.routes.myListings'); }, protected: true },
+  'saved-listings': { screen: MyListingsScreen, props: { mode: 'saved' }, get title() { return t('marketplace.routes.savedListings'); }, protected: true },
 };
 
 function readRoute() {

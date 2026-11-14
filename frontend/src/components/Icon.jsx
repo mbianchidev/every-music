@@ -21,6 +21,7 @@ const paths = {
   arrow: ['M5 12h14m-5-5 5 5-5 5'],
   theme: ['M12 3v18', 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0'],
   inbox: ['M3 13h5l2 3h4l2-3h5', 'M6 4h12l3 9v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z'],
+  tag: ['M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z', 'M7.5 7.5h.01'],
 };
 
 export default function Icon({ name, size = 20, className = '' }) {

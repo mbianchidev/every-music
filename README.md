@@ -126,6 +126,7 @@ not packaged by desktop CI.
 - **Notification channels:** per-type in-app, push, and email choices, localized privacy-safe email, weekly statistics digests, and come-back/invite reminders.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Marketplace:** buy, sell, and request gear, offer lessons and services, hire crew, and post endorsements, with filters, photos, saved listings, encrypted contact, reports, moderation, and expiry reminders; payments happen off-platform.
 
 ### Current limitations
 
