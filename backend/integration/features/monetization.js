@@ -130,7 +130,8 @@ test('monetization: payments, points, promotions, referrals, sponsored cards, re
     assert.equal(await plan(owner), 'free');
     assert.equal(await balance(owner), 0);
     const portal = await call('/billing/portal', { method: 'POST', status: 200 });
-    assert.equal(portal.url, 'http://localhost:3000/synthetic-portal');
+    assert.equal(portal.url, 'http://localhost:3000/#store');
+    assert.equal(client.calls.portals.at(-1).return_url, 'http://localhost:3000/#store');
     await call('/billing/portal', { actor: fan, method: 'POST', status: 404 });
   });
 

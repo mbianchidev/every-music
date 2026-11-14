@@ -36,6 +36,9 @@ export default defineConfig({
         GOOGLE_IDENTITY_KEY: 'synthetic-browser.apps.googleusercontent.com',
         MAIL_GATEWAY: '', MAIL_IDENTITY: '', MAIL_CREDENTIAL: '', MAIL_SENDER_ALIAS: '',
         VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '',
+        STRIPE_SECRET_KEY: 'sk_test_synthetic_browser_key', STRIPE_WEBHOOK_SECRET: 'whsec_synthetic_browser_secret',
+        STRIPE_PREMIUM_PRICE_ID: 'price_syntheticPremium', STRIPE_PARTNER_PRICE_ID: 'price_syntheticPartner',
+        STRIPE_POINTS_PACKS: 'starter:500:price_syntheticStarter:499', REWARDED_VIDEO_MIN_SECONDS: '5',
       },
     },
     {

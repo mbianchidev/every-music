@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 // A stand-in for the Stripe API client used by integration and browser tests.
 // It records calls and returns objects shaped like Stripe's, without any
 // network access. Webhooks are signed with the real SDK helper.
-export function syntheticStripeClient({ origin = 'http://127.0.0.1' } = {}) {
+export function syntheticStripeClient({ origin = 'http://127.0.0.1', checkoutUrl = sessionId => `${origin}/synthetic-checkout/${sessionId}` } = {}) {
   const id = prefix => `${prefix}_synthetic${randomBytes(9).toString('hex')}`;
   const calls = { customers: [], checkouts: [], portals: [], deletedCustomers: [] };
   return {
@@ -24,7 +24,7 @@ export function syntheticStripeClient({ origin = 'http://127.0.0.1' } = {}) {
         async create(params) {
           calls.checkouts.push(params);
           const sessionId = id('cs_test');
-          return { id: sessionId, object: 'checkout.session', url: `${origin}/synthetic-checkout/${sessionId}`, mode: params.mode };
+          return { id: sessionId, object: 'checkout.session', url: checkoutUrl(sessionId), mode: params.mode };
         },
       },
     },
@@ -32,7 +32,7 @@ export function syntheticStripeClient({ origin = 'http://127.0.0.1' } = {}) {
       sessions: {
         async create(params) {
           calls.portals.push(params);
-          return { id: id('bps'), object: 'billing_portal.session', url: `${origin}/synthetic-portal`, return_url: params.return_url };
+          return { id: id('bps'), object: 'billing_portal.session', url: params.return_url ?? `${origin}/synthetic-portal`, return_url: params.return_url };
         },
       },
     },

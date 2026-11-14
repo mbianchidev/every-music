@@ -12,16 +12,20 @@ export default function SponsoredSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [pending, setPending] = useState(null);
   const data = resource.data;
+  const checked = pending ?? data?.hideSponsored ?? false;
   const change = async (event) => {
     const hideSponsored = event.target.checked;
-    setBusy(true); setError(''); setMessage('');
+    setPending(hideSponsored); setBusy(true); setError(''); setMessage('');
     try {
       await conduit.transmit('/monetization/settings', { method: 'PUT', auth: true, body: { hideSponsored } });
       setMessage(t('monetization.settings.saved'));
       resource.reload();
-    } catch (failure) { setError(failure.message); }
-    finally { setBusy(false); }
+    } catch (failure) {
+      setPending(null);
+      setError(failure.message);
+    } finally { setBusy(false); }
   };
   return (
     <section className="detail-section" aria-labelledby="sponsored-settings-heading">
@@ -30,7 +34,7 @@ export default function SponsoredSettings() {
       {resource.error && <ErrorState title={t('monetization.settings.loadError')} message={resource.error} onRetry={resource.reload} />}
       {!data && !resource.error ? <Spinner label={t('monetization.settings.loading')} /> : data && <>
         <label className="checkbox-label">
-          <input type="checkbox" checked={data.hideSponsored} disabled={busy || (!data.eligible && !data.hideSponsored)}
+          <input type="checkbox" checked={checked} disabled={busy || (!data.eligible && !checked)}
             aria-describedby={data.eligible ? undefined : 'sponsored-settings-premium'} onChange={change} />
           {t('monetization.settings.hide')}
         </label>
