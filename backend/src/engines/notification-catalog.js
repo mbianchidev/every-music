@@ -36,6 +36,11 @@ export const notificationKinds = {
   organization_update: { inApp: 'on', push: 'optional', email: 'optional' },
   organization_relation: { inApp: 'on', push: 'on', email: 'optional' },
   organization_claim: { inApp: 'on', push: 'on', email: 'optional' },
+  calendar_invite: { inApp: 'on', push: 'on', email: 'optional' },
+  calendar_reminder: { inApp: 'on', push: 'on', email: 'optional' },
+  band_message: { preference: 'messages', inApp: 'on', push: 'on', email: 'optional' },
+  review_received: { inApp: 'on', push: 'optional', email: 'optional' },
+  review_approved: { inApp: 'on', push: 'optional', email: 'optional' },
 };
 
 export function notificationKind(kind) {

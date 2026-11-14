@@ -23,7 +23,17 @@ export const publicMediaReferences = [
 // predicate must check the viewer's current right to the referencing content.
 // Matches are served with `Cache-Control: private, no-store`. Attachment blobs
 // are never served through publicMediaReferences, only through these.
-export const authorizedMediaReferences = [];
+export const authorizedMediaReferences = [
+  // Band chat attachments: current band members whose chat period began
+  // before the message. Aliases avoid `m`, the media row in the reading query.
+  `EXISTS(SELECT 1 FROM band_chat_attachments ba
+    JOIN band_chat_messages bm ON bm.id = ba.message_id AND NOT bm.is_deleted
+    JOIN organizations bo ON bo.id = bm.organization_id AND NOT bo.is_deleted
+    JOIN organization_members bom ON bom.organization_id = bm.organization_id AND bom.user_id = $3 AND bom.status = 'active'
+    JOIN band_chat_members bc ON bc.organization_id = bm.organization_id AND bc.user_id = $3
+      AND bc.left_at IS NULL AND bc.joined_at <= bm.created_at
+    WHERE ('/realm/media/' || ba.media_id::text) = $2)`,
+];
 
 // SQL predicates (URL bound as $2) that keep media from the hourly orphan
 // cleanup, which deletes unreferenced uploads older than one day together with
@@ -34,4 +44,5 @@ export const retainedMediaReferences = [
   'EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_deleted = FALSE)',
   "EXISTS(SELECT 1 FROM marketplace_listing_photos ph WHERE '/realm/media/' || ph.media_id::text = $2)",
   "EXISTS(SELECT 1 FROM verification_requests v WHERE $2 IN ('/realm/media/' || v.selfie_media_id::text, '/realm/media/' || v.document_media_id::text))",
+  "EXISTS(SELECT 1 FROM band_chat_attachments ba WHERE ('/realm/media/' || ba.media_id::text) = $2)",
 ];

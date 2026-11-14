@@ -21,6 +21,7 @@ import { helpOrchestrator } from './orchestrators/help-orchestrator.js';
 import { infrastructureOrchestrator } from './orchestrators/infrastructure-orchestrator.js';
 import { configureMediaStorage } from './engines/media-storage.js';
 import { organizationOrchestrator } from './orchestrators/organization-orchestrator.js';
+import { bandCollabOrchestrator } from './orchestrators/band-collab-orchestrator.js';
 import { OrganizationFeedImporter } from './engines/organization-feed-importer.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
@@ -185,6 +186,7 @@ export async function buildNexus({
   await nexus.register(helpOrchestrator, { prefix: '/realm', config, backgroundJobs });
   await nexus.register(infrastructureOrchestrator, { prefix: '/realm', config });
   await nexus.register(organizationOrchestrator, { prefix: '/realm' });
+  await nexus.register(bandCollabOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({
