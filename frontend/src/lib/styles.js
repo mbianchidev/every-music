@@ -685,6 +685,46 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .organization-card { padding: 18px; }
   .inline-list { gap: 8px 14px; }
 }
+/* w10-band-collab */
+.view-toggle, .rsvp-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.calendar-list, .review-list { display: grid; gap: 12px; margin: 12px 0; padding: 0; list-style: none; }
+.calendar-item, .review-item { padding: 18px; box-shadow: none; }
+.calendar-item h3 { margin: 0 0 6px; overflow-wrap: anywhere; }
+.calendar-item p { margin: 0 0 4px; }
+.calendar-item .eyebrow { margin-bottom: 4px; }
+.calendar-item.is-cancelled h3 a { text-decoration: line-through; }
+.calendar-item-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.calendar-create { margin-top: 16px; }
+.calendar-create > summary, .band-chat-members-panel > summary { min-height: 44px; padding: 11px 0; cursor: pointer; color: var(--brand-ink); font-weight: 600; }
+.calendar-form { margin-top: 12px; }
+.reminder-options { display: grid; gap: 0; margin: 0; padding: 0; border: 0; min-width: 0; }
+.reminder-options legend { margin-bottom: 6px; padding: 0; font-weight: 600; }
+.reminder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 0 16px; }
+.rsvp-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.rsvp-group legend { margin-bottom: 10px; padding: 0; }
+.rsvp-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--control-border); border-radius: 22px; background: var(--surface); cursor: pointer; }
+.rsvp-option.is-selected { border-color: var(--brand-ink); background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
+.rsvp-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.calendar-invitees { display: grid; gap: 8px; }
+.calendar-feed-link .input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.band-chat .encryption-panel { margin: 16px 0; }
+.band-chat-members-panel { margin: 12px 0; }
+.band-chat-log { margin: 8px 0 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.message-bubble .message-sender { color: var(--muted); font-size: 12px; font-weight: 600; }
+.chat-attachment { display: grid; gap: 6px; margin: 8px 0; }
+.chat-attachment img { display: block; max-width: min(100%, 360px); height: auto; border-radius: 8px; border: 1px solid var(--line); }
+.chat-attachment audio { width: min(100%, 360px); }
+.chat-attachment figcaption { font-size: 12px; overflow-wrap: anywhere; }
+.star-display { display: inline-flex; gap: 2px; vertical-align: middle; color: var(--control-border); }
+.star-display .is-filled { color: var(--brand-ink); fill: currentColor; }
+.review-item p { margin: 0 0 6px; }
+.review-manage { margin: 16px 0; }
+.review-form { margin-top: 16px; }
+@media (max-width: 480px) {
+  .calendar-item, .review-item { padding: 14px; }
+  .band-chat-log { padding: 8px; }
+  .rsvp-option { flex: 1 1 auto; justify-content: center; }
+}
 `;
 
 export default styles;

@@ -4,6 +4,7 @@ import VerifiedBadge from './VerifiedBadge.jsx';
 import ProfileExtras from './ProfileExtras.jsx';
 import MusicLoverDetails from './MusicLoverDetails.jsx';
 import ProfileOrganizations from './ProfileOrganizations.jsx';
+import ProfileReviews from './ProfileReviews.jsx';
 
 const links = { spotify_link: 'Spotify', youtube_link: 'YouTube', bandcamp_link: 'Bandcamp', soundcloud_link: 'SoundCloud', website_link: 'Website' };
 
@@ -50,6 +51,7 @@ export default function ProfileDetails({ profile, showName = true }) {
         ))}</div>
       </section>}
       <ProfileOrganizations userId={profile.userId} />
+      <ProfileReviews profile={profile} />
     </>
   );
 }

@@ -3,6 +3,7 @@ import { bandChatRepository } from '../repositories/band-chat-repository.js';
 import { reviewRepository, profileRatingRepository } from '../repositories/review-repository.js';
 import { requestError } from '../engines/request-error.js';
 import { ok, pagination, pageOf } from './response-helpers.js';
+import { DEFAULT_ATTACHMENT_BYTES } from '../../config/infrastructure.js';
 
 const userOf = request => request.authenticatedUser.userId;
 const lower = value => value.toLowerCase();
@@ -43,6 +44,7 @@ function sendCalendar(reply, body, filename) {
 export class BandCollabConductor {
   constructor(config = {}) {
     this.origin = config.boundaries?.portalOrigins?.[0] ?? '';
+    this.attachmentBytes = config.attachmentLimit ?? DEFAULT_ATTACHMENT_BYTES;
   }
 
   calendar = async (request, reply) => {
@@ -105,7 +107,8 @@ export class BandCollabConductor {
   chat = async (request, reply) => {
     const page = pagination(request);
     const result = await bandChatRepository.chat(lower(request.params.organizationId), userOf(request), page);
-    return ok(reply, { ...pageOf(result.rows, 'messages', page), chat: result.chat, keys: result.keys });
+    const chat = { ...result.chat, limits: { ...result.chat.limits, attachmentBytes: this.attachmentBytes } };
+    return ok(reply, { ...pageOf(result.rows, 'messages', page), chat, keys: result.keys });
   };
 
   sendChat = async (request, reply) => ok(reply,

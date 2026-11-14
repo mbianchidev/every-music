@@ -2,6 +2,7 @@ import {
   CompactEncrypt, GeneralEncrypt, SignJWT, base64url, calculateJwkThumbprint,
   compactDecrypt, exportJWK, generalDecrypt, generateKeyPair, importJWK, jwtVerify,
 } from 'jose';
+import { ATTACHMENT_TYPES, MAX_ATTACHMENTS } from './attachment-types.js';
 
 const audience = 'everymusic.messaging';
 const identityType = 'everymusic.identity.v1+jwt';
@@ -170,12 +171,7 @@ export async function decryptMessage({ message, conversationId, ownUserId, unloc
 const groupAudience = 'everymusic.band-chat';
 const groupMessageType = 'everymusic.group-message.v1+jwt';
 const groupEnvelopeType = 'everymusic.group-message.v1+jwe';
-export const GROUP_MESSAGE_LIMITS = { recipients: 100, attachments: 4, body: 4000, name: 255 };
-export const ATTACHMENT_TYPES = {
-  'image/jpeg': 'image', 'image/png': 'image', 'image/webp': 'image', 'image/gif': 'image',
-  'audio/mpeg': 'audio', 'audio/mp4': 'audio', 'audio/x-m4a': 'audio', 'audio/aac': 'audio', 'audio/ogg': 'audio',
-  'audio/wav': 'audio', 'audio/x-wav': 'audio', 'audio/wave': 'audio', 'audio/webm': 'audio', 'audio/flac': 'audio', 'audio/x-flac': 'audio',
-};
+export const GROUP_MESSAGE_LIMITS = { recipients: 100, attachments: MAX_ATTACHMENTS, body: 4000, name: 255 };
 const attachmentKey = value => typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
 
 function sameIds(left, right) {

@@ -219,3 +219,27 @@ test('a late expired response reuses credentials already refreshed by another re
   assert.deepEqual(await slow, { ok: true });
   assert.equal(refreshes, 1);
 });
+
+test('sends raw binary bodies with their own content type and timeout, retrying after a refresh', async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  const calls = [];
+  const conduit = new Conduit({
+    baseUrl: 'https://api.example.test/realm',
+    session: createSession(),
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/auth/refresh-token')) return jsonResponse({ success: true, data: { accessToken: 'new-access', refreshToken: 'next' } });
+      if (calls.length === 1) return jsonResponse({ success: false, error: { code: 'INVALID_TOKEN', message: 'Expired' } }, 401);
+      return jsonResponse({ success: true, data: { id: 'blob-1' } }, 201);
+    },
+  });
+  const result = await conduit.transmit('/media/blobs', { method: 'POST', auth: true, rawBody: bytes, timeoutMs: 60000 });
+  assert.deepEqual(result, { id: 'blob-1' });
+  const uploads = calls.filter(call => call.url.endsWith('/media/blobs'));
+  assert.equal(uploads.length, 2);
+  for (const upload of uploads) {
+    assert.equal(upload.options.body, bytes);
+    assert.equal(upload.options.headers.get('Content-Type'), 'application/octet-stream');
+  }
+  assert.equal(uploads[1].options.headers.get('Authorization'), 'Bearer new-access');
+});

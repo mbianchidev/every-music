@@ -12,6 +12,7 @@ import PrivacySettings from '../components/PrivacySettings.jsx';
 import DiscoverySettings from '../components/DiscoverySettings.jsx';
 import PushDevices from '../components/PushDevices.jsx';
 import FollowVisibilitySetting from '../components/FollowVisibilitySetting.jsx';
+import CalendarFeedSettings from '../components/CalendarFeedSettings.jsx';
 
 const labels = {
   messages: 'New messages',
@@ -87,6 +88,7 @@ export default function SettingsScreen() {
         <div className="detail-section"><MessagingKeys /></div>
         <DiscoverySettings />
         <FollowVisibilitySetting />
+        <CalendarFeedSettings />
         <section className="detail-section" aria-labelledby="push-heading">
           <h2 className="heading-md" id="push-heading">Browser push</h2>
           <p>Push uses your browser's notification permission and this server's configured push service. It is optional and disabled by default.</p>

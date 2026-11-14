@@ -42,6 +42,8 @@ const OrganizationScreen = lazyScreen(() => import('./pages/OrganizationScreen.j
 const OrganizationEditorScreen = lazyScreen(() => import('./pages/OrganizationEditorScreen.jsx'));
 const OrganizationMembersScreen = lazyScreen(() => import('./pages/OrganizationMembersScreen.jsx'));
 const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
+const CalendarScreen = lazyScreen(() => import('./pages/CalendarScreen.jsx'));
+const CalendarEntryScreen = lazyScreen(() => import('./pages/CalendarEntryScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -82,6 +84,8 @@ const ROUTES = {
   'edit-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.edit'); }, protected: true },
   'organization-members': { screen: OrganizationMembersScreen, get title() { return t('organizations.routes.members'); }, protected: true },
   'your-pages': { screen: YourPagesScreen, get title() { return t('organizations.routes.yours'); }, protected: true },
+  calendar: { screen: CalendarScreen, get title() { return t('calendar.routes.calendar'); }, protected: true },
+  'calendar-entry': { screen: CalendarEntryScreen, get title() { return t('calendar.routes.entry'); }, protected: true },
 };
 
 function readRoute() {
