@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Brand from './Brand.jsx';
 import Icon from './Icon.jsx';
+import { t } from '../lib/i18n.js';
 
 const sections = [
   { label: 'Discover', items: [
@@ -11,6 +12,7 @@ const sections = [
   ] },
   { label: 'Your space', items: [
     { id: 'my-posts', icon: 'post', label: 'My calls' },
+    { id: 'applications', icon: 'inbox', get label() { return t('applications.nav'); } },
     { id: 'saved', icon: 'bookmark', label: 'Saved' },
     { id: 'profile', icon: 'user', label: 'Profile' },
     { id: 'analytics', icon: 'chart', label: 'Analytics' },

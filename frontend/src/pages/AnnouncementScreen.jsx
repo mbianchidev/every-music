@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.jsx';
 import ShareButton from '../components/ShareButton.jsx';
 import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import ManagedImage from '../components/ManagedImage.jsx';
+import ApplicationPanel from '../components/ApplicationPanel.jsx';
 
 export default function AnnouncementScreen({ route }) {
   const id = route.query.get('id');
@@ -80,6 +81,7 @@ export default function AnnouncementScreen({ route }) {
               <ShareButton title={post.title} />
             </div>
           </article>
+          <ApplicationPanel post={post} mine={mine} />
           <section className="detail-section" aria-labelledby="comments-heading">
             <h2 className="heading-md" id="comments-heading" tabIndex="-1">Comments</h2>
             <form className="form-stack" onSubmit={comment}>

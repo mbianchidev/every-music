@@ -23,6 +23,7 @@ import AnalyticsScreen from './pages/AnalyticsScreen.jsx';
 import AppStatus from './components/AppStatus.jsx';
 import AdministrationScreen from './pages/AdministrationScreen.jsx';
 import ReportsScreen from './pages/ReportsScreen.jsx';
+import { applicationsRoute } from './pages/ApplicationsScreen.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -47,6 +48,7 @@ const ROUTES = {
   analytics: { screen: AnalyticsScreen, title: 'Analytics', protected: true },
   reports: { screen: ReportsScreen, title: 'Your reports', protected: true },
   admin: { screen: AdministrationScreen, title: 'Administration', protected: true },
+  applications: applicationsRoute,
 };
 
 function readRoute() {

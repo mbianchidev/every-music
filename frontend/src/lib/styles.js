@@ -398,6 +398,33 @@ tbody th { font-weight: 500; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+/* w4-applications */
+.application-card { display: grid; gap: 12px; }
+.application-card > p, .application-card .musician-summary { margin: 0; }
+.application-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.application-summary .heading-md { margin: 0; }
+.application-status { margin-left: auto; font-size: 12px; }
+.application-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; }
+.application-label { margin: 6px 0 4px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.025em; }
+.application-details .tag-list { margin-bottom: 4px; }
+.application-details .detail-text { margin: 0; }
+.application-links { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.application-links li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
+.application-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.application-note { display: grid; gap: 10px; }
+.application-note .btn { justify-self: start; }
+.application-card .compact-actions { margin-top: 0; }
+.application-form .status-message { margin: 0; }
+.application-fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.application-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
+@media (max-width: 900px) {
+  .application-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .application-controls { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .application-filters { grid-template-columns: minmax(0, 1fr); }
+  .application-status { margin-left: 0; }
+}
 `;
 
 export default styles;
