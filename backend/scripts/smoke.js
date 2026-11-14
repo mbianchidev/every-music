@@ -32,9 +32,11 @@ try {
   assert.equal(ready.response.status, 200);
   assert.equal(ready.payload.status, 'ready');
 
+  const legal = await request('/realm/legal');
+  assert.equal(legal.response.status, 200);
   const registration = await request('/realm/auth/register', {
     method: 'POST',
-    body: { email, password },
+    body: { email, password, acceptedTermsVersion: legal.payload.data.termsVersion },
   });
   assert.equal(registration.response.status, 201);
   userId = registration.payload.data.userId;

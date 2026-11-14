@@ -2,6 +2,7 @@ import { realmConfig } from '../config/realm.js';
 import { googleIdentityBridge } from '../src/engines/google-identity-bridge.js';
 import { requestError } from '../src/engines/request-error.js';
 import { startNexus } from '../src/nexus.js';
+import { onboardingRepository } from '../src/repositories/onboarding-repository.js';
 
 if (realmConfig.environment !== 'test' || !realmConfig.realm.connectionString
   || realmConfig.nexus.host !== '127.0.0.1'
@@ -23,5 +24,9 @@ googleIdentityBridge.verifyCredential = async credential => {
     nonce: claims.nonce, givenName: 'Demo', familyName: 'Google',
   };
 };
+
+// Suites seed accounts directly through SQL; treat those untracked fixtures as
+// having accepted the terms. Accounts with an older accepted version are still prompted.
+onboardingRepository.treatUntrackedAccountsAsAccepted = true;
 
 await startNexus();
