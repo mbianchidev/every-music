@@ -352,6 +352,7 @@ export class MusicianConductor {
       } : null,
       bio: profile.bio,
       profilePictureUrl: profile.profile_picture_url,
+      verifiedAt: profile.verified_at ?? null,
       contacts: {
         phone: profile.phone,
         telegramId: profile.telegram_id,
@@ -379,6 +380,7 @@ export class MusicianConductor {
       country: profile.country,
       bio: profile.bio,
       profilePictureUrl: profile.profile_picture_url,
+      verifiedAt: profile.verified_at ?? null,
       createdAt: profile.created_at,
       instruments: profile.instruments || [],
       genres: profile.genres || [],

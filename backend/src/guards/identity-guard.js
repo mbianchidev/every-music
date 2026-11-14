@@ -28,6 +28,12 @@ async function resolveIdentity(request) {
     return null;
   }
 
+  // "Sign out of all devices" rejects access tokens issued up to that second.
+  if (identity.sessions_revoked_at
+    && payload.iat <= Math.floor(new Date(identity.sessions_revoked_at).getTime() / 1000)) {
+    return null;
+  }
+
   return {
     userId: identity.id,
     email: identity.email,

@@ -2,6 +2,7 @@ import { realmConnector } from './realm-connector.js';
 
 const summaryColumns = `
   p.artist_name AS creator_name, p.profile_picture_url AS creator_picture_url,
+  p.verified_at AS creator_verified_at,
   (SELECT jsonb_agg(jsonb_build_object(
     'instrument_id', ai.instrument_id, 'name', i.name, 'category', i.category
   ) ORDER BY i.name) FROM announcement_instruments ai JOIN instruments i ON i.id = ai.instrument_id

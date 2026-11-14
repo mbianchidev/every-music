@@ -4,6 +4,7 @@ import { realmConnector } from '../repositories/realm-connector.js';
 import { cipherEngine } from '../engines/cipher-engine.js';
 import { mailDispatcher } from '../engines/mail-dispatcher.js';
 import { googleIdentityBridge } from '../engines/google-identity-bridge.js';
+import { twoFactorDelivery } from './two-factor-delivery.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { realmConfig } from '../../config/realm.js';
@@ -199,6 +200,9 @@ export class AuthenticationConductor {
         });
       }
 
+      const challenge = await twoFactorDelivery.beginLogin(identity);
+      if (challenge) return reply.code(200).send({ success: true, data: challenge });
+
       const session = await realmConnector.transaction(async (executor) => {
         await identityRepository.updateLastLogin(identity.id, executor);
         return this.issueSession(identity, executor);
@@ -206,6 +210,7 @@ export class AuthenticationConductor {
 
       return reply.code(200).send({ success: true, data: session });
     } catch (error) {
+      if (error.statusCode) throw error;
       request.log.error({ err: error }, 'Login failed');
       return reply.code(500).send({
         success: false,
@@ -286,6 +291,9 @@ export class AuthenticationConductor {
           },
         });
       }
+
+      const challenge = isNewUser ? null : await twoFactorDelivery.beginLogin(identity);
+      if (challenge) return reply.code(200).send({ success: true, data: { ...challenge, isNewUser } });
 
       const session = await realmConnector.transaction(async (executor) => {
         await identityRepository.updateLastLogin(identity.id, executor);

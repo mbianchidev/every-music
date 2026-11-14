@@ -22,6 +22,9 @@ export const notificationKinds = {
   come_back: { inApp: 'off', push: 'optional', email: 'on' },
   app_update_minor: { inApp: 'on', push: 'off', email: 'off' },
   app_update_major: { inApp: 'on', push: 'on', email: 'on' },
+  security_alert: { inApp: 'on', push: 'on', email: 'optional' },
+  verification_requested: { inApp: 'on', push: 'optional', email: 'off' },
+  verification_decided: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {
