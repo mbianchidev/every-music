@@ -12,11 +12,11 @@ export default function FollowVisibilitySetting() {
   const [message, setMessage] = useState('');
   useEffect(() => { if (resource.data) setVisible(resource.data.visible); }, [resource.data]);
   const change = async next => {
-    setBusy(true); setError(''); setMessage('');
+    setVisible(next); setBusy(true); setError(''); setMessage('');
     try {
       const saved = await conduit.transmit('/follows/visibility', { method: 'PUT', auth: true, body: { visible: next } });
       setVisible(saved.visible); setMessage(t('organizations.settings.saved'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setVisible(!next); setError(failure.message); }
     finally { setBusy(false); }
   };
   return (

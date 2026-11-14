@@ -185,7 +185,7 @@ export default {
     requestDeclined: 'Request declined.',
     pages: 'Pages you manage or belong to',
     noPages: 'You are not part of any page yet. Start one:',
-    createKind: 'Create a {kind} page',
+    createKind: 'Create page: {kind}',
     edit: 'Edit {name}',
     members: 'Members of {name}',
     updates: 'Updates from pages you follow',
