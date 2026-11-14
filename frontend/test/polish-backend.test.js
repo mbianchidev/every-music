@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBandChatUnreadStore, totalUnread } from '../src/lib/band-chat-unread.js';
+import { affectsBandChats, createBandChatUnreadStore, totalUnread } from '../src/lib/band-chat-unread.js';
 
 const deferred = () => {
   let resolve; let reject;
@@ -33,6 +33,35 @@ test('badges share one request and refresh again after updates that arrive mid-r
   await first;
   assert.equal(totalUnread(store.snapshot().chats), 3);
   assert.equal(seen.at(-1).loading, false);
+});
+
+test('every mounted badge shares one request and only events for this account trigger a refresh', async () => {
+  let calls = 0;
+  const events = new EventTarget();
+  const store = createBandChatUnreadStore({
+    transmit: async () => { calls += 1; return { chats: [{ organizationId: 'band-1', unreadCount: calls }] }; },
+    account: () => 'user-1', events, delay: 1,
+  });
+  const updates = [];
+  const stopFirst = store.subscribe(state => updates.push(state));
+  const stopSecond = store.subscribe(() => {});
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(calls, 1, 'the desktop and mobile badges do not double the request');
+  const live = detail => events.dispatchEvent(Object.assign(new Event('everymusic:update'), { detail }));
+  live({ type: 'organizations.changed', id: 'some-page' });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(calls, 1, 'page-wide organization events are ignored');
+  live({ type: 'band-chat.changed', userId: 'user-1', id: 'band-1' });
+  live({ type: 'organizations.changed', userId: 'user-1' });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(calls, 2, 'events for this account are debounced into one refresh');
+  assert.equal(totalUnread(store.snapshot().chats), 2);
+  stopFirst(); stopSecond();
+  live({ type: 'band-chat.changed', userId: 'user-1' });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(calls, 2, 'nothing listens once every badge is gone');
+  assert.equal(affectsBandChats({ type: 'connected' }), true);
+  assert.equal(affectsBandChats({ type: 'notifications.changed', userId: 'user-1' }), false);
 });
 
 test('failed requests keep the last counts, report the error, and are logged', async () => {
