@@ -84,7 +84,7 @@ export default function PlacePicker({ id, label, value, text = '', onChange, onT
           {options.map((place, index) => (
             <li key={place.id} id={`${listId}-${index}`} role="option" aria-selected={index === active}
               onMouseDown={event => event.preventDefault()} onClick={() => choose(place)}>
-              {place.name}<span className="place-meta">{[place.region, place.country].filter(Boolean).join(', ')}</span>
+              {place.name}{' '}<span className="place-meta">{[place.region, place.country].filter(Boolean).join(', ')}</span>
             </li>
           ))}
         </ul>

@@ -107,16 +107,16 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
         </details>
       </form>
       {(instruments.error || genres.error) && <ErrorState message={instruments.error || genres.error} onRetry={() => { instruments.reload(); genres.reload(); }} />}
+      {!profiles && <div className="compact-actions save-search-row">
+        <SaveSearchButton filters={filters} nearMe={nearMe} catalogs={{ instruments: instruments.data?.instruments, genres: genres.data?.genres }} />
+        <a href="#saved-searches">{t('discoveryExtras.saved.title')}</a>
+      </div>}
       <h2 className="sr-only" id="results-heading" tabIndex="-1">Search results</h2>
       {resource.data?.offline && <p className="status-message" role="status">Offline saved copy from {new Date(resource.data.cachedAt).toLocaleString()}. These results may be out of date.</p>}
       {resource.data?.offlineCacheWarning && <p className="status-message" role="status">{resource.data.offlineCacheWarning}</p>}
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!resource.data && !resource.error ? <Spinner label="Searching" /> : resource.data && (
         <section aria-labelledby="results-heading" aria-busy={updating}>
-          {!profiles && <div className="compact-actions save-search-row">
-            <SaveSearchButton filters={filters} nearMe={nearMe} catalogs={{ instruments: instruments.data?.instruments, genres: genres.data?.genres }} />
-            <a href="#saved-searches">{t('discoveryExtras.saved.title')}</a>
-          </div>}
           <div className="results-summary"><p role="status">{updating ? 'Updating results...' : rows.length ? `${rows.length} ${profiles ? 'musicians' : 'open calls'} on this page` : 'No matching results. Try different filters.'}</p>
             <span>Page {page}</span></div>
           <div className="grid">

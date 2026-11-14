@@ -24,12 +24,12 @@ export default function DiscoverySettings() {
     setMessage(t(enabled ? 'places.settings.enabled' : 'places.settings.disabled'));
   };
   const toggleSharing = async enabled => {
-    setBusy(true); setError(''); setMessage('');
+    setBusy(true); setError(''); setMessage(''); setShare(enabled);
     try {
       const saved = await conduit.transmit('/profile-visits/sharing', { method: 'PUT', auth: true, body: { share: enabled } });
       setShare(saved.share);
       setMessage(t(enabled ? 'profileExtras.visits.sharingOn' : 'profileExtras.visits.sharingOff'));
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setShare(!enabled); setError(failure.message); }
     finally { setBusy(false); }
   };
   return (

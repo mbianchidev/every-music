@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import conduit from '../lib/conduit.js';
 import { useResource } from '../lib/resources.js';
 import { useI18n } from '../lib/i18n.js';
@@ -8,6 +8,22 @@ import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import QuotaNotice, { useQuotas } from '../components/QuotaNotice.jsx';
+
+function NotifyToggle({ search, disabled, onToggle, label }) {
+  const [checked, setChecked] = useState(search.notify);
+  useEffect(() => setChecked(search.notify), [search.notify]);
+  return (
+    <label className="checkbox-label">
+      <input type="checkbox" checked={checked} disabled={disabled} aria-describedby={`saved-search-${search.id}`}
+        onChange={async event => {
+          const next = event.target.checked;
+          setChecked(next);
+          if (!await onToggle(next)) setChecked(!next);
+        }} />
+      {label}
+    </label>
+  );
+}
 
 export default function SavedSearchesScreen() {
   const { t, formatDate } = useI18n();
@@ -25,7 +41,8 @@ export default function SavedSearchesScreen() {
       await request();
       setMessage(success);
       resource.reload();
-    } catch (failure) { setError(failure.message); }
+      return true;
+    } catch (failure) { setError(failure.message); return false; }
     finally { setBusy(''); }
   };
   const rows = resource.data?.searches || [];
@@ -42,14 +59,10 @@ export default function SavedSearchesScreen() {
           <h2 className="heading-md" id={`saved-search-${search.id}`}>{search.name}</h2>
           <p className="body-muted">{describeFilters(search.filters, catalogs, t) || t('discoveryExtras.saved.allCalls')}</p>
           <p className="field-hint">{t('discoveryExtras.saved.created', { date: formatDate(search.createdAt) })}</p>
-          <label className="checkbox-label">
-            <input type="checkbox" checked={search.notify} disabled={busy === search.id}
-              aria-describedby={`saved-search-${search.id}`}
-              onChange={event => act(search, () => conduit.transmit(`/saved-searches/${search.id}`, {
-                method: 'PATCH', auth: true, body: { notify: event.target.checked },
-              }), t(event.target.checked ? 'discoveryExtras.saved.notifyOn' : 'discoveryExtras.saved.notifyOff', { name: search.name }))} />
-            {t('discoveryExtras.saved.notify')}
-          </label>
+          <NotifyToggle search={search} disabled={busy === search.id} label={t('discoveryExtras.saved.notify')}
+            onToggle={notify => act(search, () => conduit.transmit(`/saved-searches/${search.id}`, {
+              method: 'PATCH', auth: true, body: { notify },
+            }), t(notify ? 'discoveryExtras.saved.notifyOn' : 'discoveryExtras.saved.notifyOff', { name: search.name }))} />
           <div className="compact-actions">
             <a className="btn btn-secondary" href={savedSearchLink(search)} aria-label={t('discoveryExtras.saved.openNamed', { name: search.name })}>{t('discoveryExtras.saved.open')}</a>
             <button className="btn btn-danger" type="button" disabled={busy === search.id}

@@ -84,6 +84,8 @@ test.beforeAll(async () => {
       rows[0].id, artistName, 'Synthetic City', 'A fictional demo musician. Original songs, shared ideas, and room for a new collaboration.',
     ]);
   }
+  // The analytics journey needs announcementStats; profiles-ads.spec.js covers the free plan.
+  await pool.query("INSERT INTO user_entitlements (user_id, plan, source) VALUES ($1, 'premium', 'admin')", [people[0].id]);
   for (let i = 0; i < 15; i += 1) {
     const [title, instrumentName, genreName] = demoCalls[i];
     const { rows } = await pool.query("INSERT INTO announcements (user_id, title, description, city, is_remote, created_at) VALUES ($1, $2, $3, $4, $5, NOW() - $6 * INTERVAL '1 day') RETURNING id", [
