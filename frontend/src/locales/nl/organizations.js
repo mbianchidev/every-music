@@ -3,7 +3,7 @@ export default {
   routes: {
     discover: 'Bands en podia', page: 'Pagina', create: 'Pagina maken', edit: 'Pagina bewerken', members: 'Paginaleden', yours: 'Jouw pagina\'s',
   },
-  common: { cancel: 'Annuleren', retry: 'Opnieuw proberen', saving: 'Opslaan...' },
+  common: { cancel: 'Annuleren', retry: 'Opnieuw proberen', saving: 'Opslaan...', loadFailed: 'Dit scherm kon niet worden geladen. Controleer je verbinding en probeer het opnieuw.', loadingScreen: 'Scherm laden' },
   kinds: { band: 'Band', venue: 'Podium', organizer: 'Organisator', booking_agency: 'Boekingskantoor', label: 'Platenlabel' },
   kindsPlural: {
     all: 'Alle pagina\'s', band: 'Bands', venue: 'Podia', organizer: 'Organisatoren', booking_agency: 'Boekingskantoren', label: 'Platenlabels',

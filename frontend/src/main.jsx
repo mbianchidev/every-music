@@ -23,12 +23,14 @@ import AnalyticsScreen from './pages/AnalyticsScreen.jsx';
 import AppStatus from './components/AppStatus.jsx';
 import AdministrationScreen from './pages/AdministrationScreen.jsx';
 import ReportsScreen from './pages/ReportsScreen.jsx';
-import OrganizationSearchScreen from './pages/OrganizationSearchScreen.jsx';
-import OrganizationScreen from './pages/OrganizationScreen.jsx';
-import OrganizationEditorScreen from './pages/OrganizationEditorScreen.jsx';
-import OrganizationMembersScreen from './pages/OrganizationMembersScreen.jsx';
-import YourPagesScreen from './pages/YourPagesScreen.jsx';
 import { t } from './lib/i18n.js';
+import lazyScreen from './lib/lazy-screen.jsx';
+
+const OrganizationSearchScreen = lazyScreen(() => import('./pages/OrganizationSearchScreen.jsx'));
+const OrganizationScreen = lazyScreen(() => import('./pages/OrganizationScreen.jsx'));
+const OrganizationEditorScreen = lazyScreen(() => import('./pages/OrganizationEditorScreen.jsx'));
+const OrganizationMembersScreen = lazyScreen(() => import('./pages/OrganizationMembersScreen.jsx'));
+const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },

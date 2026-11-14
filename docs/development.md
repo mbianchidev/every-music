@@ -154,6 +154,12 @@ in a second isolated context, submits selected signed report evidence, grants
 the other actor admin using the real operator CLI, and verifies report removal,
 suspension, audit entries and aggregate analytics. It does not weaken auth limits.
 Do not treat its browser checks as a native screen-reader certification.
+The organizations suite (`e2e/organizations.spec.js`) covers band creation,
+invitations, updates, releases, announcements for a page, discovery,
+music-lover profiles, venue claims and verification, with axe and 320px
+checks. Because sign-in is limited to five attempts per IP, it issues real
+refresh sessions with the browser API's synthetic signing keys instead of
+using the sign-in form.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget

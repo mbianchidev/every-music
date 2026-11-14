@@ -3,7 +3,7 @@ export default {
   routes: {
     discover: 'Bands and venues', page: 'Page', create: 'Create a page', edit: 'Edit page', members: 'Page members', yours: 'Your pages',
   },
-  common: { cancel: 'Cancel', retry: 'Try again', saving: 'Saving...' },
+  common: { cancel: 'Cancel', retry: 'Try again', saving: 'Saving...', loadFailed: 'This screen could not be loaded. Check your connection and try again.', loadingScreen: 'Loading screen' },
   kinds: { band: 'Band', venue: 'Venue', organizer: 'Organizer', booking_agency: 'Booking agency', label: 'Music label' },
   kindsPlural: {
     all: 'All pages', band: 'Bands', venue: 'Venues', organizer: 'Organizers', booking_agency: 'Booking agencies', label: 'Music labels',

@@ -3,7 +3,7 @@ export default {
   routes: {
     discover: 'Band e locali', page: 'Pagina', create: 'Crea una pagina', edit: 'Modifica pagina', members: 'Membri della pagina', yours: 'Le tue pagine',
   },
-  common: { cancel: 'Annulla', retry: 'Riprova', saving: 'Salvataggio...' },
+  common: { cancel: 'Annulla', retry: 'Riprova', saving: 'Salvataggio...', loadFailed: 'Impossibile caricare questa schermata. Controlla la connessione e riprova.', loadingScreen: 'Caricamento della schermata' },
   kinds: { band: 'Band', venue: 'Locale', organizer: 'Organizzatore', booking_agency: 'Agenzia di booking', label: 'Etichetta discografica' },
   kindsPlural: {
     all: 'Tutte le pagine', band: 'Band', venue: 'Locali', organizer: 'Organizzatori', booking_agency: 'Agenzie di booking', label: 'Etichette discografiche',
