@@ -81,6 +81,10 @@ test('APNs uses HTTP/2 token authentication and maps rejected device tokens', as
   assert.equal(await provider.send(iosToken, payload), 'invalid');
   await assert.rejects(provider.send(iosToken, payload), error => error.statusCode === 429 && error.reason === 'TooManyRequests');
   assert.equal(seen[3].headers.authorization, first.headers.authorization, 'provider tokens are reused within their lifetime');
+
+  const fresh = new ApnsProvider({ ...provider.settings }, { origin: provider.origin });
+  const tokens = await Promise.all(Array.from({ length: 5 }, () => fresh.authorization()));
+  assert.equal(new Set(tokens).size, 1, 'concurrent sends share one provider token');
 });
 
 test('native delivery removes unregistered devices and reports retryable failures', async () => {

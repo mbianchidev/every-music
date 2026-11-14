@@ -96,11 +96,26 @@ test('moving PostgreSQL media to object storage switches each row only after its
     remove: async key => { calls.push(['remove', key]); },
   };
   assert.equal(await moveMediaToObjectStorage({ storage, connector, logger: { info() {} }, batch: 1 }), 1);
+  const keys = calls.map(call => call[1]);
+  assert.match(keys[0], /^media\/a\/[0-9a-f-]{36}$/);
+  assert.match(keys[1], /^media\/b\/[0-9a-f-]{36}$/);
   assert.deepEqual(calls, [
-    ['put', 'media/a', 'first', 'image/webp'],
-    ['put', 'media/b', 'second', 'application/octet-stream'],
-    ['remove', 'media/b'],
+    ['put', keys[0], 'first', 'image/webp'],
+    ['put', keys[1], 'second', 'application/octet-stream'],
+    ['remove', keys[1]],
   ]);
-  assert.deepEqual(updates, [['a', 'media/a'], ['b', 'media/b']]);
+  assert.deepEqual(updates, [['a', keys[0]], ['b', keys[1]]]);
   await assert.rejects(moveMediaToObjectStorage({ storage: { usesObjects: false }, connector }), /MEDIA_STORAGE=s3/);
+});
+
+test('the request timeout stops at response headers so slow downloads are not truncated', async () => {
+  let signal;
+  const store = new S3ObjectStore(settings, {
+    timeoutMs: 20,
+    fetch: async (_request, init) => { ({ signal } = init); return new Response('late body'); },
+  });
+  const stream = await store.get('media/1');
+  await new Promise(resolve => { setTimeout(resolve, 40); });
+  assert.equal(signal.aborted, false);
+  assert.equal(Buffer.concat(await stream.toArray()).toString(), 'late body');
 });

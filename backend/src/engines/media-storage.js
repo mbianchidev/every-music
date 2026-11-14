@@ -31,12 +31,24 @@ export class S3ObjectStore {
     return `${this.endpoint.protocol}//${this.bucket}.${this.endpoint.host}/${path}`;
   }
 
+  // The timeout covers sending the request and receiving response headers, not
+  // streaming the body to a slow client.
+  async send(signed, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error('Object storage request timed out')), timeoutMs);
+    try {
+      return await this.fetch(signed, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async request(method, key, { body, headers = {}, timeoutMs = this.timeoutMs } = {}) {
     let lastError;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         const signed = await this.client.sign(this.url(key), { method, body, headers });
-        const response = await this.fetch(signed, { signal: AbortSignal.timeout(timeoutMs) });
+        const response = await this.send(signed, timeoutMs);
         if ((response.status >= 500 || response.status === 429) && attempt === 0) {
           await response.body?.cancel();
           lastError = Object.assign(new Error(`Object storage responded with ${response.status}`), { statusCode: response.status });
@@ -87,7 +99,7 @@ export class S3ObjectStore {
 
   async reachable() {
     try {
-      const response = await this.request('HEAD', '', { timeoutMs: 5000 });
+      const response = await this.request('HEAD', '', { timeoutMs: 2500 });
       await response.body?.cancel();
       return response.ok;
     } catch {

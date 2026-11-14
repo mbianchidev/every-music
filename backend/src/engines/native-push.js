@@ -80,15 +80,20 @@ export class ApnsProvider {
     this.issuedAt = 0;
   }
 
-  async authorization() {
-    // Apple rejects provider tokens older than an hour and throttles refreshes
-    // more often than every 20 minutes.
-    if (this.providerToken && Date.now() - this.issuedAt < 50 * 60 * 1000) return this.providerToken;
-    this.key ??= await importPKCS8(this.settings.privateKey, 'ES256');
-    this.providerToken = await new SignJWT({})
-      .setProtectedHeader({ alg: 'ES256', kid: this.settings.keyId })
-      .setIssuer(this.settings.teamId).setIssuedAt().sign(this.key);
-    this.issuedAt = Date.now();
+  // Apple rejects provider tokens older than an hour and throttles refreshes
+  // more often than every 20 minutes, so concurrent sends share one pending token.
+  authorization() {
+    if (!this.providerToken || Date.now() - this.issuedAt >= 50 * 60 * 1000) {
+      this.issuedAt = Date.now();
+      const pending = (async () => {
+        this.key ??= await importPKCS8(this.settings.privateKey, 'ES256');
+        return new SignJWT({})
+          .setProtectedHeader({ alg: 'ES256', kid: this.settings.keyId })
+          .setIssuer(this.settings.teamId).setIssuedAt().sign(this.key);
+      })();
+      pending.catch(() => { if (this.providerToken === pending) this.providerToken = null; });
+      this.providerToken = pending;
+    }
     return this.providerToken;
   }
 
@@ -105,7 +110,8 @@ export class ApnsProvider {
   }
 
   async send(token, payload) {
-    const authorization = await this.authorization();
+    const pending = this.authorization();
+    const authorization = await pending;
     const { status, body } = await new Promise((resolve, reject) => {
       const request = this.client().request({
         ':method': 'POST',
@@ -136,7 +142,9 @@ export class ApnsProvider {
     let reason;
     try { reason = JSON.parse(body).reason; } catch { reason = undefined; }
     if (status === 410 || (status === 400 && ['BadDeviceToken', 'DeviceTokenNotForTopic'].includes(reason))) return 'invalid';
-    if (reason === 'ExpiredProviderToken' || reason === 'InvalidProviderToken') this.providerToken = null;
+    if ((reason === 'ExpiredProviderToken' || reason === 'InvalidProviderToken') && this.providerToken === pending) {
+      this.providerToken = null;
+    }
     throw deliveryError('APNs', status, reason);
   }
 

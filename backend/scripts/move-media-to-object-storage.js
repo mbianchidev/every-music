@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { realmConfig, validateRealmConfig } from '../config/realm.js';
 import { realmConnector } from '../src/repositories/realm-connector.js';
@@ -21,7 +22,8 @@ export async function moveMediaToObjectStorage({
       ORDER BY created_at, id LIMIT $1`, [batch]);
     if (!rows.length) break;
     for (const row of rows) {
-      const key = `media/${row.id}`;
+      // A unique key per attempt lets an overlapping run discard only its own upload.
+      const key = `media/${row.id}/${randomUUID()}`;
       await storage.put(key, row.content, row.mime_type);
       const { rowCount } = await connector.execute(
         'UPDATE media SET storage_key = $2, content = NULL WHERE id = $1 AND storage_key IS NULL', [row.id, key],
