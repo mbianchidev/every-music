@@ -161,7 +161,7 @@ class RegisterScreen extends Component {
                 <button className="text-link" type="button" onClick={this.loadTerms}>{t('legal.register.retry')}</button>
               </p> : <>
                 <label className="checkbox-label" htmlFor="register-terms">
-                  <input id="register-terms" type="checkbox" checked={acceptTerms} disabled={loading || !termsVersion} required
+                  <input id="register-terms" type="checkbox" checked={acceptTerms} disabled={loading || !termsVersion}
                     aria-describedby="register-terms-hint" onChange={(event) => this.setState({ acceptTerms: event.target.checked })} />
                   {t('legal.register.accept', { version: termsVersion || '...' })}
                 </label>

@@ -71,8 +71,6 @@ export default function ProductTour({ userId, onError }) {
 
   useEffect(() => {
     if (!active) return undefined;
-    if (!dialog.current.open) dialog.current.showModal();
-    next.current?.focus();
     const resize = () => setViewport(value => value + 1);
     window.addEventListener('resize', resize);
     return () => {
@@ -83,6 +81,9 @@ export default function ProductTour({ userId, onError }) {
 
   useLayoutEffect(() => {
     if (!active || !card.current) return;
+    // Open before measuring: a closed dialog is not rendered and has no size.
+    const opening = !dialog.current.open;
+    if (opening) dialog.current.showModal();
     const step = TOUR_STEPS[index];
     const target = resolveTarget(step);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -98,6 +99,7 @@ export default function ProductTour({ userId, onError }) {
       more: Boolean(target?.matches('[aria-controls="workspace-navigation"]')),
       card: cardPosition(rect, { width: CARD_WIDTH, height: size.height }, { width: window.innerWidth, height: window.innerHeight }),
     });
+    if (opening) next.current?.focus();
   }, [active, index, viewport]);
 
   if (!active) return null;
@@ -108,7 +110,7 @@ export default function ProductTour({ userId, onError }) {
       aria-describedby="tour-step" onCancel={event => { event.preventDefault(); finish('skipped'); }}>
       {layout?.rect && <div className="tour-highlight" aria-hidden="true"
         style={{ top: layout.rect.top, left: layout.rect.left, width: layout.rect.width, height: layout.rect.height }} />}
-      <section ref={card} className="tour-card" style={layout ? { top: layout.card.top, left: layout.card.left, width: layout.card.width } : { visibility: 'hidden' }}>
+      <section ref={card} className="tour-card" style={layout ? { top: layout.card.top, left: layout.card.left, width: layout.card.width } : { opacity: 0 }}>
         <p className="tour-progress"><span id="tour-label">{t('onboarding.tour.label')}</span>
           <span>{t('onboarding.tour.progress', { current: index + 1, total: TOUR_STEPS.length })}</span></p>
         <div id="tour-step" aria-live="polite">
