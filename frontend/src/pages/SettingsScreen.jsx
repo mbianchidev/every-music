@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import MessagingKeys from '../components/MessagingKeys.jsx';
+import PushDevices from '../components/PushDevices.jsx';
 
 const labels = {
   messages: 'New messages',
@@ -87,6 +88,7 @@ export default function SettingsScreen() {
             {draft.push && <button className="btn btn-ghost" type="button" disabled={busy} onClick={() => push(false)}>Disable push on all devices</button>}
           </div>
         </section>
+        <PushDevices />
         <section className="detail-section">
           <h2 className="heading-md">Install and use offline</h2>
           <p>Use Install app above when offered, or your browser's Install / Add to Home Screen menu. The production web app saves its shell and your latest matching feed results for this browser tab, for up to 24 hours. Private conversations, profiles, and API responses are never saved by the service worker.</p>

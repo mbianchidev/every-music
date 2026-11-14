@@ -398,6 +398,9 @@ tbody th { font-weight: 500; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+/* w0c-infra */
+.device-list { list-style: none; padding: 0; }
+.device-list .card { overflow-wrap: anywhere; }
 `;
 
 export default styles;
