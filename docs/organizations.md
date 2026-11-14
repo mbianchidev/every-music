@@ -55,6 +55,10 @@ Leaders and admins hold every permission. Members hold only the listed ones.
 `manage_calendar` lets members create and edit the page's events; the calendar
 and rehearsal feature can reuse it.
 
+`manage_calendar` lets a band member create, edit, cancel, and delete band
+calendar entries and invite outside artists to them; every active member can
+read the band calendar and use the band chat.
+
 | Action | Requirement |
 |---|---|
 | Edit profile, photos, releases, similar bands, agency/label requests | `manage_profile` |
@@ -174,5 +178,12 @@ pages and artists, and an events placeholder. `profiles.follows_visible`
   hosts) or a profile (performances and events the person goes to and shows),
   from `GET /realm/gigs/organizations/:id` and `/realm/gigs/profiles/:id`.
 - `manage_calendar` grants event management for the page.
+
+  and "Past events" sections for a page or music-lover profile. It shows an
+  empty state today; the events feature replaces its body.
+- `manage_calendar` gates band calendar writes (see the
+  [calendar API](api.md#calendars)). Band chat membership periods
+  (`band_chat_members`) follow `organization_members` rows: a period ends when
+  its membership row stops being active, and rejoining starts a new one.
 - `organizationRepository.requireMember` and `managerIds` are the supported
   way to authorize and notify organization members.

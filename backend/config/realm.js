@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createECDH } from 'node:crypto';
 import { createInfrastructureConfig, validateInfrastructureConfig } from './infrastructure.js';
 import { createMonetizationConfig, validateMonetizationConfig } from './monetization.js';
+import { createBandCollabConfig } from './band-collab.js';
 
 const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 
@@ -250,6 +251,7 @@ export function createRealmConfig(env = process.env) {
     events: {
       reminderIntervalSeconds: parseInteger(env.EVENT_REMINDER_INTERVAL_SECONDS, 60, 'EVENT_REMINDER_INTERVAL_SECONDS', { maximum: 3600 }),
     },
+    ...createBandCollabConfig(env),
     organizations: {
       youtubeFeedIntervalMinutes: parseInteger(env.YOUTUBE_FEED_INTERVAL_MINUTES, 60, 'YOUTUBE_FEED_INTERVAL_MINUTES', { maximum: 10080 }),
     },

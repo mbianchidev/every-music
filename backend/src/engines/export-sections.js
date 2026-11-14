@@ -185,4 +185,63 @@ export const exportSections = [
         review_note AS "reviewNote", created_at AS "createdAt", reviewed_at AS "reviewedAt"
       FROM verification_requests WHERE requested_by = $1 AND subject_type = 'organization' ORDER BY created_at, id`,
   },
+  {
+    key: 'calendarEntriesOwned', sql: `
+      SELECT e.id, e.kind, e.title, e.starts_at AS "startsAt", e.ends_at AS "endsAt", e.time_zone AS "timeZone",
+        pl.name AS "placeName", e.address, e.notes, e.status, e.created_at AS "createdAt", e.updated_at AS "updatedAt"
+      FROM calendar_entries e LEFT JOIN places pl ON pl.id = e.place_id WHERE e.owner_id = $1 ORDER BY e.starts_at, e.id`,
+  },
+  {
+    key: 'bandCalendarEntriesCreated', sql: `
+      SELECT e.id, e.organization_id AS "organizationId", e.kind, e.title, e.starts_at AS "startsAt", e.ends_at AS "endsAt",
+        e.time_zone AS "timeZone", e.address, e.notes, e.status, e.created_at AS "createdAt"
+      FROM calendar_entries e WHERE e.created_by = $1 AND e.organization_id IS NOT NULL ORDER BY e.starts_at, e.id`,
+  },
+  {
+    key: 'calendarResponses', sql: `
+      SELECT entry_id AS "entryId", invited, response, responded_at AS "respondedAt", created_at AS "createdAt"
+      FROM calendar_participants WHERE user_id = $1 ORDER BY created_at, entry_id`,
+  },
+  {
+    key: 'calendarReminders', sql: `
+      SELECT entry_id AS "entryId", offset_minutes AS "offsetMinutes", remind_at AS "remindAt", sent_at AS "sentAt"
+      FROM calendar_reminders WHERE user_id = $1 ORDER BY remind_at, id`,
+  },
+  {
+    key: 'calendarFeed', single: true, sql: `
+      SELECT created_at AS "createdAt", last_used_at AS "lastUsedAt" FROM calendar_feed_tokens WHERE user_id = $1`,
+  },
+  {
+    key: 'bandChatMemberships', sql: `
+      SELECT organization_id AS "organizationId", joined_at AS "joinedAt", left_at AS "leftAt",
+        NULLIF(read_at, '-infinity') AS "readAt"
+      FROM band_chat_members WHERE user_id = $1 ORDER BY joined_at, id`,
+  },
+  {
+    key: 'bandChatMessagesSent', sql: `
+      SELECT bm.id, bm.organization_id AS "organizationId", bm.created_at AS "createdAt", bm.is_deleted AS "isDeleted",
+        (SELECT COUNT(*) FROM band_chat_attachments ba WHERE ba.message_id = bm.id)::int AS "attachmentCount"
+      FROM band_chat_messages bm WHERE bm.sender_id = $1 ORDER BY bm.created_at, bm.id`,
+  },
+  {
+    key: 'reviewsWritten', sql: `
+      SELECT id, subject_id AS "subjectId", stars, body, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM profile_reviews WHERE author_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'reviewsReceived', sql: `
+      SELECT id, author_id AS "authorId", stars, body, status, created_at AS "createdAt", approved_at AS "approvedAt"
+      FROM profile_reviews WHERE subject_id = $1 ORDER BY created_at, id`,
+  },
+  {
+    key: 'profileRatingsGiven', sql: `
+      SELECT subject_id AS "subjectId", stars, created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM profile_ratings WHERE rater_id = $1 ORDER BY created_at, subject_id`,
+  },
+  {
+    key: 'profileRatingSummary', single: true, sql: `
+      SELECT rating_count AS "count", CASE WHEN rating_count >= 3 THEN ROUND(star_total::numeric / rating_count, 1) END AS "average",
+        published_at AS "publishedAt"
+      FROM profile_rating_stats WHERE subject_id = $1`,
+  },
 ];

@@ -135,6 +135,7 @@ development packages; store signing is still a manual step.
 - **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
 - **Premium and points:** Stripe Checkout subscriptions and points packs (disabled without keys), a points wallet earned from invites, ratings, rewarded sponsored videos and events, paid boosts and area pins labelled as promoted, first-party sponsored cards, offer broadcasts, and an admin monetization console.
 - **Events:** concerts and festivals with linked lineups, organizers, venues with map links, time zones, capacity and tickets sold, external ticket links, search and filters, going/interested replies, calendar files, reminders, an attendee discussion, official organizer updates, past and next events on pages and profiles, and page verification requests.
+- **Band collaboration:** band and personal calendars with invitees, RSVPs, reminders, map links, ICS files and private Google/Apple Calendar feeds; an end-to-end encrypted band chat with encrypted audio and pictures; artist reviews approved by the artist; and anonymous star ratings.
 
 ### Current limitations
 
@@ -145,6 +146,7 @@ development packages; store signing is still a manual step.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Band update feeds import only public YouTube channel feeds; Spotify and other services need manual updates or releases.
 - Event tickets are sold on external sites; organizers update the tickets-sold count by hand. Maps and directions open OpenStreetMap; the API does not geocode addresses.
+- Google Calendar subscriptions need an API reachable from the internet over HTTPS. Anonymous rating totals are published daily and hide averages below three ratings, which reduces but cannot rule out guessing on quiet profiles. Band chat has the same limits as direct messages and does not re-encrypt history for new members.
 - AT Protocol federation is not implemented. Payments run through Stripe on the web; native store builds would need App Store and Google Play billing, which is not implemented (see [monetization](docs/monetization.md#platform-fees-and-app-stores)). The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
 - Desktop and mobile CI provide unsigned development artifacts, not signed/notarized or store releases. The mobile shell does not register for native push yet. Mobile distribution and cross-platform accessibility still need platform-specific verification.

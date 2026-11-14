@@ -1350,3 +1350,139 @@ client. Places come from the GeoNames `cities15000` export with admin1 regions
 and country names, licensed under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); see
 [development](development.md#places-dataset) for regeneration.
+
+## Band calendars, band chat, reviews, and ratings
+
+All routes below require Bearer authentication except the calendar feed.
+
+### Calendars
+
+Band entries belong to a band page: every active member sees them, and members
+with the `manage_calendar` permission (leaders and admins always) create, edit,
+cancel, and delete them. Personal entries belong to their organizer. Either
+kind can invite other active artists, who then see the entry, answer, and set
+reminders. Everyone else receives 404 `CALENDAR_ENTRY_NOT_FOUND`.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/calendar` | Entries you can see: `when` (`upcoming`, default, by start; `past`, newest first), paging; returns `entries` |
+| GET | `/realm/organizations/:organizationId/calendar` | Band entries, same query, active members only |
+| POST | `/realm/calendar/entries` | Create (fields below), 201; 60 per hour |
+| GET | `/realm/calendar/entries/:entryId` | Detail with `participants` (`userId`, `name`, `member`, `invited`, `organizer`, `response`) |
+| PATCH | `/realm/calendar/entries/:entryId` | Partial update by managers, plus `status` (`scheduled` or `cancelled`) |
+| DELETE | `/realm/calendar/entries/:entryId` | Delete, managers |
+| GET | `/realm/calendar/entries/:entryId/ics` | One-entry iCalendar file (`text/calendar`, attachment) |
+| POST | `/realm/calendar/entries/:entryId/invitees` | `{ userIds }` (1-50), managers; 60 per hour |
+| DELETE | `/realm/calendar/entries/:entryId/invitees/:userId` | Managers remove an invitee; invitees remove themselves |
+| PUT | `/realm/calendar/entries/:entryId/response` | `{ response: yes \| maybe \| no }` |
+| PUT | `/realm/calendar/entries/:entryId/reminders` | `{ offsets }`: up to three of 0, 15, 30, 60, 120, 1440, 2880, 10080 minutes before the start, for you only |
+| GET / POST / DELETE | `/realm/calendar/feed` | Feed status `{ active, createdAt, lastUsedAt }`; POST (201, 10 per hour) issues a new token, replacing any previous one, and returns it once as `token`; DELETE revokes it |
+| GET | `/realm/calendar/feeds/:token.ics` | No authentication: the iCalendar feed of every entry the token owner can see from 90 days ago to 400 days ahead (1,000 at most). 404 `CALENDAR_FEED_NOT_FOUND` for unknown or revoked tokens; 60 requests per hour per token |
+
+Create accepts `kind` (`rehearsal`, `gig`, `recording`, `meeting`, `other`),
+`title` (1-200), `startLocal` and `endLocal` (`YYYY-MM-DDTHH:mm` wall-clock
+times), `timeZone` (IANA name), optional `organizationId` (a band; otherwise a
+personal entry), `placeId` (a `/realm/catalog/places` ID, or `null`),
+`address` (500), `notes` (4,000), `inviteeIds` (up to 50 user IDs), and
+`reminderOffsets` for yourself. Updates take the same fields; `startLocal`,
+`endLocal`, and `timeZone` must be sent together. The end must follow the
+start by at most 14 days; times that do not exist because of a daylight saving
+change return 400 `INVALID_TIME`, and unknown zones `INVALID_TIME_ZONE`.
+Ambiguous repeated times resolve to the earlier instant. Inviting blocked,
+inactive, or unknown accounts returns 400 `INVALID_INVITEE`; band members are
+never added as invitees. A calendar holds at most 500 upcoming entries.
+
+Entries return `startsAt`/`endsAt` (UTC), `timeZone`, `startLocal`/`endLocal`
+in that zone, `place` (with `label` and coordinates), `address`, `notes`,
+`status`, `sequence` (incremented on significant changes, used as the ICS
+`SEQUENCE`), `organization`, `ownerId`, `createdBy`, and
+`viewer: { canManage, invited, response, reminders }`. iCalendar output uses
+UTC times, RFC 5545 text escaping, 75-octet line folding, and CRLF line
+endings; it includes the title, notes, place, address, `GEO`, status, and a
+link to the entry, never attendee names or email addresses. Clients build map
+links (OpenStreetMap and Google Maps search URLs) and Google Calendar template
+links from these fields; no map or calendar API keys are used.
+
+New band entries notify the other members, invitations notify invitees, and
+time, place, title, kind, or status changes notify everyone else who can see
+the entry, all as `calendar_invite` with `params: { entryId, title, startsAt,
+change }` (`created`, `invited`, `updated`, `cancelled`, `removed`). Each
+process checks due reminders every `CALENDAR_REMINDER_INTERVAL_SECONDS`,
+leasing them with `SKIP LOCKED`, and creates `calendar_reminder`
+notifications (`params: { entryId, title, startsAt, offsetMinutes }`) unless
+the entry is cancelled, over, or no longer visible to that person. Reminders
+whose time has already passed when they are set are not sent. Live
+`calendar.changed` events target everyone who can see an entry.
+
+### Band chat
+
+Every band page has one end-to-end encrypted group chat for its active
+members (see [messaging security](messaging-security.md#band-chat)). Chat
+membership periods follow band membership: leaving, being removed, or
+rejoining ends the period, and a member only receives messages created during
+their current period.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/band-chats` | Your bands' chats with `unreadCount` and `lastMessageAt` |
+| GET | `/realm/organizations/:organizationId/chat` | Paged `messages` (newest first), sender `keys`, and `chat: { organizationId, name, joinedAt, readAt, unreadCount, members, limits }`; members list `userId`, `name`, current `key` (or `null`) and `canReceive` |
+| PATCH | `/realm/organizations/:organizationId/chat` | `{ "read": true }` marks the chat and its `band_message` notifications read |
+| POST | `/realm/organizations/:organizationId/chat/messages` | `{ clientId, ciphertext, senderKeyId, recipientKeyIds, attachmentIds? }`, 201; 60 per minute |
+| DELETE | `/realm/organizations/:organizationId/chat/messages/:messageId` | Sender removes the message and its attachment references |
+| POST | `/realm/organizations/:organizationId/chat/messages/:messageId/reports` | `{ category, details, signedEvidence, consent: true }`, 201; 20 per hour |
+
+`recipientKeyIds` must list exactly the current keys of all active members
+with a published key, including yours, and the envelope must address exactly
+those keys; otherwise the API returns 409 `BAND_CHAT_RECIPIENTS_CHANGED`
+(reload and resend), 409 `MESSAGING_KEYS_CHANGED` (your key is not current),
+409 `BAND_CHAT_NO_RECIPIENTS` (nobody else can receive yet), or 400
+`INVALID_ENCRYPTION`. Up to 100 recipients and four `attachmentIds` are
+accepted; attachments are your own unattached `/realm/media/blobs` uploads
+(400 `INVALID_ATTACHMENT` otherwise) and stay readable through
+`GET /realm/media/:id` only by current members whose period began before the
+message. Retrying with the same `clientId` returns the stored message; reusing
+it for different content returns 409 `MESSAGE_CONFLICT`. Messages return
+`ciphertext`, `senderKeyId`, `recipientKeyIds`, `attachments` (media IDs),
+`isDeleted`, and `removedByModeration`; the server never receives plaintext.
+
+New messages create one `band_message` notification per member until that
+member reads the chat (`params: { organizationId, name }`, never message
+text, gated by the Messages category) and `band-chat.changed` live events.
+Reports verify the sender-signed record against the stored message, chat,
+client ID, and recipients (400 `INVALID_REPORT_EVIDENCE`), store it with
+`user_reports.band_message_id`, and appear in the administrator report queue.
+The administrator report view shows the verified text and the number of
+attachments, never their keys or contents; `remove_message` removes the band
+message.
+
+### Reviews and ratings
+
+`:profileId` accepts a user or profile ID of an active artist profile you have
+not blocked and that has not blocked you; other profiles return 404
+`PROFILE_NOT_FOUND`.
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/profiles/:profileId/reviews` | Approved `reviews` (paged), `summary: { count, average }` of approved reviews, your own review as `mine`, `canReview`, and for the profile owner `manage: { pending, hidden }` |
+| PUT | `/realm/profiles/:profileId/review` | `{ stars: 1-5, body }` (1-2,000) creates (201) or edits (200) your review; 20 per hour |
+| DELETE | `/realm/profiles/:profileId/review` | Delete your review |
+| PATCH | `/realm/reviews/:reviewId` | Profile owner: `{ status: approved \| hidden }` |
+| DELETE | `/realm/reviews/:reviewId` | Profile owner or author deletes the review |
+| GET | `/realm/profiles/:profileId/rating` | `{ subjectId, count, average, minimumCount, publishedAt, mine, canRate }` |
+| PUT / DELETE | `/realm/profiles/:profileId/rating` | Your anonymous rating `{ stars: 1-5 }` (60 per hour), or remove it (404 `RATING_NOT_FOUND` without one); returns the summary |
+
+Writing or editing a review requires that you and the artist follow each
+other at that moment (403 `REVIEW_REQUIRES_MUTUAL_FOLLOW`); reviewing yourself
+returns 400 `INVALID_REVIEW`. Every new or edited review is `pending` until
+the artist approves it, which notifies the author (`review_approved`); new and
+edited reviews notify the artist (`review_received`, `params: { reviewId,
+authorId, name, edited }`). Live `reviews.changed` events are public.
+
+Ratings are anonymous. `mine` is only ever your own rating; no API, export,
+or administrator view returns another person's rating or the raters of a
+profile. `count` and `average` come from a snapshot republished once a day, so
+individual changes are not observable as they happen, and `average` is `null`
+until at least three ratings are published. Rating yourself returns 400
+`INVALID_RATING`. Ratings by inactive accounts are excluded from the next
+snapshot. Saving or removing a rating sends `ratings.changed` only to the
+rater. See [anonymity limits](usage.md#reviews-and-anonymous-ratings).

@@ -5,6 +5,7 @@ import ProfileExtras from './ProfileExtras.jsx';
 import MusicLoverDetails from './MusicLoverDetails.jsx';
 import ProfileOrganizations from './ProfileOrganizations.jsx';
 import PastAndNextEvents from './PastAndNextEvents.jsx';
+import ProfileReviews from './ProfileReviews.jsx';
 
 const links = { spotify_link: 'Spotify', youtube_link: 'YouTube', bandcamp_link: 'Bandcamp', soundcloud_link: 'SoundCloud', website_link: 'Website' };
 
@@ -52,6 +53,7 @@ export default function ProfileDetails({ profile, showName = true }) {
       </section>}
       <ProfileOrganizations userId={profile.userId} />
       <PastAndNextEvents subject={{ type: 'profile', id: profile.userId }} />
+      <ProfileReviews profile={profile} />
     </>
   );
 }

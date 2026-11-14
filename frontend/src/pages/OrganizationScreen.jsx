@@ -22,6 +22,7 @@ import SimilarBands from '../components/SimilarBands.jsx';
 import ClaimVenue from '../components/ClaimVenue.jsx';
 import PastAndNextEvents from '../components/PastAndNextEvents.jsx';
 import OrganizationVerificationRequest from '../components/OrganizationVerificationRequest.jsx';
+import BandWorkspace from '../components/BandWorkspace.jsx';
 
 function Details({ organization }) {
   const { t, formatNumber } = useI18n();
@@ -113,6 +114,7 @@ export default function OrganizationScreen({ route }) {
           </section>}
         </article>
         <OrganizationMembers organization={organization} />
+        {member && organization.kind === 'band' && <BandWorkspace organization={organization} route={route} />}
         {organization.kind === 'band' && <OrganizationReleases organization={organization} onChanged={resource.reload} />}
         {organization.managed && <OrganizationPosts organization={organization} />}
         <section className="detail-section" aria-labelledby="announcements-heading">

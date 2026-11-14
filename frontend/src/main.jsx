@@ -49,6 +49,8 @@ const EventsScreen = lazyScreen(() => import('./pages/EventsScreen.jsx'));
 const EventScreen = lazyScreen(() => import('./pages/EventScreen.jsx'));
 const EventEditorScreen = lazyScreen(() => import('./pages/EventEditorScreen.jsx'));
 const MyEventsScreen = lazyScreen(() => import('./pages/MyEventsScreen.jsx'));
+const CalendarScreen = lazyScreen(() => import('./pages/CalendarScreen.jsx'));
+const CalendarEntryScreen = lazyScreen(() => import('./pages/CalendarEntryScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -97,6 +99,8 @@ const ROUTES = {
   'new-event': { screen: EventEditorScreen, get title() { return t('events.routes.create'); }, protected: true },
   'edit-event': { screen: EventEditorScreen, get title() { return t('events.routes.edit'); }, protected: true },
   'my-events': { screen: MyEventsScreen, get title() { return t('events.routes.mine'); }, protected: true },
+  calendar: { screen: CalendarScreen, get title() { return t('calendar.routes.calendar'); }, protected: true },
+  'calendar-entry': { screen: CalendarEntryScreen, get title() { return t('calendar.routes.entry'); }, protected: true },
 };
 
 function readRoute() {

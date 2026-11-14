@@ -369,6 +369,28 @@ videos, and sponsored cards keep working. Compose forwards every setting below.
 Duration lists accept up to six distinct day counts between 1 and 365. App
 store pricing for paid downloads is configured in the store listing, not here.
 
+## Band calendars and ratings
+
+| Variable | Default / range | Purpose |
+|---|---|---|
+| `CALENDAR_REMINDER_INTERVAL_SECONDS` | `60` (10-3600) | How often each API process looks for due calendar reminders; reminders can arrive up to this late |
+
+Due reminders are leased with `SKIP LOCKED`, so several API processes never
+send the same reminder twice. Anonymous rating averages are republished once a
+day under a `notification_job_runs` lease, independent of this interval.
+Compose forwards the setting.
+
+Calendar subscription feeds are served by the API at
+`/realm/calendar/feeds/<token>.ics` without an `Authorization` header. Google
+Calendar fetches them from Google's servers, so subscriptions only work when
+the API (or the web origin proxying `/realm`) is reachable from the internet
+over HTTPS. The token is the credential: the API keeps only its SHA-256 hash
+and does not log feed requests at `info` level, and the bundled nginx turns
+off access logs for `/realm/calendar/feeds/`. Other reverse proxies may record
+request URLs; exclude that path from their access logs or treat those logs as
+secrets.
+Band chat attachments use the existing `ATTACHMENT_BYTE_LIMIT`.
+
 ## Compose settings
 
 Compose sets the API to production, listens internally on `0.0.0.0:8080`,

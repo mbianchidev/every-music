@@ -92,6 +92,12 @@ carries the value; the bar is decorative), going/interested toggle buttons
 with `aria-pressed`, reminder checkboxes, the calendar download, the status
 dialog, official updates, and the discussion; check them the same way.
 
+Band calendars add date, time and time zone fields, RSVP radios, reminder
+checkboxes and the subscription link; the band chat adds file pickers, picture
+alternatives, audio players and the band message report dialog; profiles add
+review approval controls and star radios. Check them the same way, including
+that encrypted attachments announce their loading and failure states.
+
 ## Known limitations and reporting
 
 There is no completed independent WCAG audit or verified cross-platform

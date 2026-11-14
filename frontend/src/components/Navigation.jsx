@@ -18,6 +18,7 @@ const sections = [
     { id: 'applications', icon: 'inbox', labelKey: 'applications.nav' },
     { id: 'saved', icon: 'bookmark', label: 'Saved' },
     { id: 'your-pages', icon: 'feed', labelKey: 'organizations.nav.yours' },
+    { id: 'calendar', icon: 'calendar', labelKey: 'calendar.nav.myCalendar' },
     { id: 'profile', icon: 'user', label: 'Profile' },
     { id: 'analytics', icon: 'chart', label: 'Analytics' },
     { id: 'store', icon: 'star', labelKey: 'monetization.nav.store' },
