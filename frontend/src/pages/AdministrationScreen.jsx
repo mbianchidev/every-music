@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import FormField from '../components/FormField.jsx';
 import Pagination from '../components/Pagination.jsx';
 import ActivityReport from '../components/ActivityReport.jsx';
+import HelpDesk from '../components/HelpDesk.jsx';
 
 const operations = { review: 'Mark reviewed', dismiss: 'Dismiss report', remove_message: 'Remove reported message', suspend_user: 'Suspend reported account' };
 
@@ -93,5 +94,6 @@ export default function AdministrationScreen({ route }) {
         <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label="Audit pages" />
       </>}
     </>}
+    <HelpDesk route={route} />
   </div>;
 }
