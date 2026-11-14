@@ -244,6 +244,62 @@ and projects are hidden and your profile shows your bio, contacts, and the
 bands and artists you follow. **Settings > Profile visibility** hides those
 follow lists from other people.
 
+### Band calendar and band chat
+
+Band members see **Band calendar** and **Band chat** on their band's page.
+Members with the calendar permission (leaders and admins always) choose
+**Schedule a rehearsal or gig**: pick the type, title, start and end, time
+zone, city, address, notes, your reminders, and optionally invite artists from
+outside the band, such as a session musician. Everyone sees times in the
+entry's time zone and in their own. The entry page shows map links
+(OpenStreetMap and Google Maps), **Download .ics file**, **Add to Google
+Calendar**, the people involved and their answers. Answer **Going**, **Maybe**,
+or **Not going**, and choose up to three personal reminders (from "At the
+start" to "1 week before"). Organizers can edit, invite more people, cancel or
+restore, and delete entries; members and invitees are notified about changes.
+Invitees can leave an entry.
+
+**My calendar** in the navigation lists upcoming and past entries from all
+your bands plus your personal plans, and lets you schedule personal entries
+(or band entries, when you manage a band calendar). To see everything in
+Google Calendar or Apple Calendar, open **Settings > Calendar subscription**,
+choose **Create subscription link**, and add the link to your calendar app
+(**Add to Google Calendar** or **Open in Apple Calendar**). The link is shown
+only once and works without signing in, so keep it secret; **Replace link**
+invalidates the old one and **Turn off link** removes it. Google Calendar can
+subscribe only when the server is reachable from the internet over HTTPS.
+
+**Band chat** is end-to-end encrypted for the current members, like direct
+messages: set up or unlock your messaging recovery key in the chat's
+**Encrypted messaging** panel. **Who can read new messages** lists members, the
+ones who cannot receive yet because they have not set up encrypted messaging,
+and fingerprints to compare. Attach up to four audio files (MP3, M4A, AAC,
+OGG, WAV, WebM, FLAC) or pictures (JPEG, PNG, WebP, GIF) per message, each up
+to the server's attachment limit (10 MB by default); they are encrypted before
+upload. Pictures open in the chat; choose **Play audio** to decrypt a track.
+New members cannot read messages from before they joined, and leaving the
+band ends access. Use **Report message** to send one decrypted message to
+administrators; attachments are not shared with the report.
+
+### Reviews and anonymous ratings
+
+Artist profiles show **Reviews** and **Anonymous rating**. While you and an
+artist follow each other, you can write one review with 1-5 stars and text.
+It stays private until the artist approves it in their profile's **Waiting for
+your approval** list; editing it needs approval again. Artists can approve,
+hide, or delete reviews, and authors can edit or delete their own. The profile
+shows approved reviews with your name and their average.
+
+Any signed-in member can leave one anonymous 1-5 star rating per artist
+profile, change it, or remove it. Only you can see your own rating; the artist,
+other members, administrators, and data exports see only the number of ratings
+and their average. To make individual ratings harder to infer, totals are
+republished once a day and the average stays hidden until at least three
+people have rated. These measures have limits: an artist who knows that only
+one person could have rated on a given day, or who sees the count move after
+a small change, may still guess who rated, and one person can create several
+accounts. Reviews are not anonymous.
+
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives
@@ -443,6 +499,11 @@ sessions end immediately. A confirmation email is sent when mail is configured.
 - Pages you lead: leadership passes to the longest-serving active admin, or
   else member, who is notified. A page with no other active member is retired.
   Pages you created but do not lead stay with their members.
+- Calendars, band chat, reviews, and ratings: your personal calendar entries,
+  answers, reminders, subscription link, band chat messages and attachments,
+  the reviews you wrote or received, and the ratings you left are deleted.
+  Band calendar entries you created stay with the band without your name.
+  Rating totals change at the next daily update.
 - Reports filed by you or about you are removed. Administrator audit entries
   keep only the action and time; their actor or target IDs no longer lead to an
   account. They expire after 365 days.

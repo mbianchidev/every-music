@@ -49,7 +49,9 @@ media cleanup.
 | `joined_on` / `left_on` | Member timeline shown as current line-up and former members |
 
 Leaders and admins hold every permission. Members hold only the listed ones.
-`manage_calendar` is reserved for the calendar and rehearsal feature.
+`manage_calendar` lets a band member create, edit, cancel, and delete band
+calendar entries and invite outside artists to them; every active member can
+read the band calendar and use the band chat.
 
 | Action | Requirement |
 |---|---|
@@ -166,6 +168,9 @@ pages and artists, and an events placeholder. `profiles.follows_visible`
 - `frontend/src/components/PastAndNextEvents.jsx` renders the "Next events"
   and "Past events" sections for a page or music-lover profile. It shows an
   empty state today; the events feature replaces its body.
-- `manage_calendar` is already a grantable permission.
+- `manage_calendar` gates band calendar writes (see the
+  [calendar API](api.md#calendars)). Band chat membership periods
+  (`band_chat_members`) follow `organization_members` rows: a period ends when
+  its membership row stops being active, and rejoining starts a new one.
 - `organizationRepository.requireMember` and `managerIds` are the supported
   way to authorize and notify organization members.

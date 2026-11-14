@@ -308,6 +308,37 @@ notifications atomically. The client loads organization screens on demand
 through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
 the shell. See the [organization model](organizations.md).
 
+## Band collaboration
+
+Migration `016_band_collaboration.sql` adds calendars (`calendar_entries`,
+`calendar_participants`, `calendar_reminders`, `calendar_feed_tokens`), the band
+chat (`band_chat_members`, `band_chat_messages`, `band_chat_attachments`, and
+`user_reports.band_message_id`), and reviews and ratings (`profile_reviews`,
+`profile_ratings`, `profile_rating_stats`). Routes live in
+`band-collab-orchestrator.js` and `band-collab-conductor.js`; SQL in
+`calendar-repository.js`, `band-chat-repository.js`, and
+`review-repository.js`. `engines/calendar-time.js` converts wall-clock times in
+IANA zones with the runtime's ICU data and `engines/ics.js` writes RFC 5545
+output. Band calendar writes authorize through
+`organizationRepository.requireMember(..., 'manage_calendar')`.
+
+`BandCollabJobs` runs in every API process: each interval it leases due
+reminders with `SKIP LOCKED` and creates their notifications in the same
+transaction, and once a day (leased through `notification_job_runs`) it
+republishes the anonymous rating aggregates. Individual ratings are only
+readable by their rater.
+
+Band chat periods are reconciled with active `organization_members` rows inside
+each chat transaction; sends share-lock the organization row, which membership
+changes lock for update, so the recipient check sees a consistent member list.
+Envelopes are validated in `engines/message-security.js` and produced and
+verified by `frontend/src/lib/message-crypto.js`. Attachment bytes go through
+`/realm/media/blobs`; `authorizedMediaReferences` grants them to current
+members whose period began before the message, and `retainedMediaReferences`
+keeps them while a message references them. Account deletion relies on
+cascades: personal entries, chat rows, reviews, and ratings are removed, while
+band entries keep the band and lose their creator.
+
 ## Operational boundaries and extension points
 
 `/health/live` reports process liveness; `/health/ready` checks PostgreSQL (and

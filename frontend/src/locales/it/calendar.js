@@ -21,7 +21,6 @@ export default {
     newEntry: 'Programma qualcosa',
     subscribe: 'Iscriviti al tuo calendario in Google Calendar o Apple Calendar dalle Impostazioni.',
     subscribeLink: "Impostazioni dell'abbonamento al calendario",
-    created: 'Evento programmato.',
   },
   list: {
     personal: 'Personale',
@@ -82,7 +81,6 @@ export default {
     inviteeRole: 'Invitato',
     leave: 'Lascia questo evento',
     leaveConfirm: 'Vuoi toglierti da questo evento? Non lo vedrai più.',
-    left: 'Hai lasciato questo evento.',
     manage: 'Gestisci questo evento',
     edit: 'Modifica i dettagli',
     saved: 'Evento aggiornato.',
@@ -91,7 +89,6 @@ export default {
     restore: 'Ripristina evento',
     remove: 'Elimina evento',
     removeConfirm: 'Eliminare definitivamente questo evento? Chi può vederlo riceve una notifica.',
-    removed: 'Evento eliminato.',
     inviteSaved: 'Invito inviato.',
     inviteeRemoved: 'Invito rimosso.',
   },

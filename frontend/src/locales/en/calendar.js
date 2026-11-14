@@ -21,7 +21,6 @@ export default {
     newEntry: 'Schedule something',
     subscribe: 'Subscribe to your calendar in Google Calendar or Apple Calendar from Settings.',
     subscribeLink: 'Calendar subscription settings',
-    created: 'Entry scheduled.',
   },
   list: {
     personal: 'Personal',
@@ -82,7 +81,6 @@ export default {
     inviteeRole: 'Invited',
     leave: 'Leave this entry',
     leaveConfirm: 'Remove yourself from this entry? You will no longer see it.',
-    left: 'You left this entry.',
     manage: 'Manage this entry',
     edit: 'Edit details',
     saved: 'Entry updated.',
@@ -91,7 +89,6 @@ export default {
     restore: 'Restore entry',
     remove: 'Delete entry',
     removeConfirm: 'Delete this entry permanently? Everyone who can see it is notified.',
-    removed: 'Entry deleted.',
     inviteSaved: 'Invitation sent.',
     inviteeRemoved: 'Invitation removed.',
   },

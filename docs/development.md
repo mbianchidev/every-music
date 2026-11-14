@@ -201,6 +201,13 @@ They start fixture sessions directly and synthesize only the first sign-in
 step's challenge response, so they stay within the shared per-IP sign-in
 limits; the second step, and every other request, uses the real API. The
 first step itself is covered by `integration/features/w2-account-trust.js`.
+`e2e/w10-band-collab.spec.js` schedules a band rehearsal with an outside
+invitee, answers and sets reminders, downloads its `.ics` file, subscribes to
+and revokes a private feed, exchanges end-to-end encrypted band chat messages
+with a picture and an audio file between two real browser identities, reports
+a message with signed evidence, and approves a review and saves an anonymous
+rating, with axe and 320px checks. It mints sessions with the browser server's
+synthetic keys and seeds the published rating snapshot directly.
 The Google browser server is a loopback-only integration entrypoint requiring
 `REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
 not the production server and must never be exposed as one.
@@ -299,6 +306,12 @@ rollback. Use a reviewed forward fix or deliberately restore a verified backup.
 Migration `013_marketplace.sql` adds marketplace listings, photos, tags,
 saved listings, and the optional report `listing_id`. It is additive and
 idempotent; rolling back the application leaves these tables unused.
+
+Migration `016_band_collaboration.sql` adds band and personal calendars,
+band chat tables, `user_reports.band_message_id`, reviews, and anonymous
+ratings. It is additive and idempotent; rolling back the application leaves
+the tables unused. Do not drop band chat messages or attachments as an
+automatic rollback.
 
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.

@@ -21,7 +21,6 @@ export default {
     newEntry: 'Iets plannen',
     subscribe: 'Abonneer je via Instellingen op je agenda in Google Agenda of Apple Agenda.',
     subscribeLink: 'Instellingen voor agenda-abonnement',
-    created: 'Item gepland.',
   },
   list: {
     personal: 'Persoonlijk',
@@ -82,7 +81,6 @@ export default {
     inviteeRole: 'Uitgenodigd',
     leave: 'Dit item verlaten',
     leaveConfirm: 'Jezelf uit dit item verwijderen? Je ziet het daarna niet meer.',
-    left: 'Je hebt dit item verlaten.',
     manage: 'Dit item beheren',
     edit: 'Gegevens bewerken',
     saved: 'Item bijgewerkt.',
@@ -91,7 +89,6 @@ export default {
     restore: 'Item herstellen',
     remove: 'Item verwijderen',
     removeConfirm: 'Dit item definitief verwijderen? Iedereen die het kan zien krijgt een melding.',
-    removed: 'Item verwijderd.',
     inviteSaved: 'Uitnodiging verstuurd.',
     inviteeRemoved: 'Uitnodiging verwijderd.',
   },
