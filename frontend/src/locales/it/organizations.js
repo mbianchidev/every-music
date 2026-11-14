@@ -306,6 +306,7 @@ export default {
     contacts: 'Contatti',
     contactsHint: 'Mostrati sul tuo profilo pubblico.',
     website: 'Il tuo sito web',
+    websiteLink: 'Sito web',
     telegram: 'Nome utente Telegram',
     follows: 'Segue',
     followedBands: 'Band e pagine',

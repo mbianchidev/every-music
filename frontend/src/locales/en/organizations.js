@@ -306,6 +306,7 @@ export default {
     contacts: 'Contacts',
     contactsHint: 'Shown on your public profile.',
     website: 'Your website',
+    websiteLink: 'Website',
     telegram: 'Telegram username',
     follows: 'Following',
     followedBands: 'Bands and pages',

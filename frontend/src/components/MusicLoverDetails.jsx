@@ -24,7 +24,7 @@ export default function MusicLoverDetails({ profile, showName = true }) {
       {(contacts.websiteUrl || contacts.telegramId) && <section className="detail-section">
         <h2 className="heading-md">{t('organizations.profile.contacts')}</h2>
         <ul className="inline-list">
-          {contacts.websiteUrl && <li><a href={contacts.websiteUrl} target="_blank" rel="noopener noreferrer">{t('organizations.profile.website')}</a></li>}
+          {contacts.websiteUrl && <li><a href={contacts.websiteUrl} target="_blank" rel="noopener noreferrer">{t('organizations.profile.websiteLink')}</a></li>}
           {contacts.telegramId && <li>{t('organizations.profile.telegram')}: {contacts.telegramId}</li>}
         </ul>
       </section>}

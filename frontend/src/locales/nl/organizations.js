@@ -306,6 +306,7 @@ export default {
     contacts: 'Contact',
     contactsHint: 'Getoond op je openbare profiel.',
     website: 'Jouw website',
+    websiteLink: 'Website',
     telegram: 'Telegram-gebruikersnaam',
     follows: 'Volgt',
     followedBands: 'Bands en pagina\'s',

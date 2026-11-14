@@ -66,7 +66,7 @@ async function reflows(page, label) {
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
-test('a musician creates a band page, invites a bandmate, and publishes on behalf of the band', async ({ browser }) => {
+test('a musician creates a band page, invites a bandmate, and publishes on behalf of the band', async ({ browser }, testInfo) => {
   const leaderContext = await browser.newContext();
   const memberContext = await browser.newContext();
   const leader = await leaderContext.newPage();
@@ -147,6 +147,7 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
     for (const theme of ['light', 'dark']) {
       await leader.getByLabel('Color theme', { exact: true }).selectOption(theme);
       await assertAccessible(leader, `${theme} band page for its leader`);
+      await leader.screenshot({ path: testInfo.outputPath(`${theme}-band-page.png`), fullPage: true });
     }
     await reflows(leader, 'band page at 320px');
   } finally {
@@ -155,7 +156,7 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
   }
 });
 
-test('fans discover and follow pages, music lovers share follows, and venues are claimed and verified', async ({ browser }) => {
+test('fans discover and follow pages, music lovers share follows, and venues are claimed and verified', async ({ browser }, testInfo) => {
   const fanContext = await browser.newContext();
   const bookerContext = await browser.newContext();
   const adminContext = await browser.newContext();
@@ -170,6 +171,7 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await fan.getByLabel('Page type', { exact: true }).selectOption('band');
     await expect(fan.getByRole('region', { name: 'Page results' }).getByRole('article')).toHaveCount(1);
     await assertAccessible(fan, 'page discovery');
+    await fan.screenshot({ path: testInfo.outputPath('discovery.png') });
     await fan.getByRole('link', { name: band.name, exact: true }).click();
     await fan.getByRole('button', { name: 'Follow', exact: true }).click();
     await expect(fan.getByRole('button', { name: 'Unfollow', exact: true })).toBeVisible();
@@ -187,6 +189,7 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await expect(fan.getByRole('region', { name: 'Following' }).getByRole('link', { name: band.name, exact: true })).toBeVisible();
     await expect(fan.getByText('Music lover', { exact: true })).toBeVisible();
     await assertAccessible(fan, 'music lover profile');
+    await fan.screenshot({ path: testInfo.outputPath('music-lover.png'), fullPage: true });
 
     await fan.goto('/#create-organization?kind=venue');
     await fan.getByRole('checkbox', { name: /I do not run this venue/ }).check();
@@ -226,6 +229,7 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await admin.getByRole('button', { name: `Verify ${band.name}`, exact: true }).click();
     await expect(admin.getByRole('status').filter({ hasText: `${band.name} is now verified.` })).toBeVisible();
     await assertAccessible(admin, 'administration organization tools');
+    await admin.screenshot({ path: testInfo.outputPath('admin.png'), fullPage: true });
     await admin.getByRole('link', { name: 'Audit log', exact: true }).click();
     await expect(admin.getByRole('cell', { name: 'organization claim approved', exact: true })).toBeVisible();
     await expect(admin.getByRole('cell', { name: 'organization verified', exact: true })).toBeVisible();

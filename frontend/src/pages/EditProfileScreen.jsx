@@ -158,7 +158,7 @@ class EditProfileScreen extends Component {
           <FormField id="profile-bio" label="Bio">
             <textarea className="input" style={{ minHeight: '140px', resize: 'vertical' }} value={bio} onChange={(event) => this.setState({ bio: event.target.value })} maxLength="5000" disabled={saving} />
           </FormField>
-          <ProfileContactFields websiteUrl={this.state.websiteUrl} telegramId={this.state.telegramId} disabled={saving} onChange={(key, value) => this.setState({ [key]: value })} />
+          <ProfileContactFields websiteUrl={this.state.websiteUrl} telegramId={this.state.telegramId} showTelegram={this.state.accountKind === 'music_lover'} disabled={saving} onChange={(key, value) => this.setState({ [key]: value })} />
           <CatalogSelections instruments={this.state.instruments} genres={this.state.genres} hideInstruments={this.state.accountKind === 'music_lover'}
             instrumentIds={this.state.instrumentIds} genreIds={this.state.genreIds}
             onInstruments={instrumentIds => this.setState({ instrumentIds })} onGenres={genreIds => this.setState({ genreIds })}
