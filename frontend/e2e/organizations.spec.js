@@ -189,7 +189,7 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await fan.getByRole('radio', { name: 'Music lover', exact: true }).check();
     await expect(fan.getByText(/^Instruments \(/)).toHaveCount(0);
     await fan.getByLabel('Bio', { exact: true }).fill('I go to every synthetic show.');
-    await fan.getByLabel('Your website', { exact: true }).fill('https://example.test/fan');
+    await fan.getByLabel('Personal website', { exact: true }).fill('https://example.test/fan');
     await assertAccessible(fan, 'music lover profile editor');
     await fan.getByRole('button', { name: 'Save profile', exact: true }).click();
     await expect(fan.getByRole('heading', { name: 'Following', exact: true })).toBeVisible();
