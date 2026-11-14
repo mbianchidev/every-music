@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import nucleus from './nucleus.js';
 import conduit from './conduit.js';
+import { t } from './i18n.js';
 
-const changed = () => Object.assign(new Error('Your sign-in changed. Unlock messaging for the current account.'), { code: 'SESSION_CHANGED' });
+const changed = () => Object.assign(new Error(t('messages.vault.sessionChanged')), { code: 'SESSION_CHANGED' });
 
 export class MessageVault {
   constructor({ session = nucleus, transport = conduit, storage = () => globalThis.localStorage } = {}) {
@@ -82,7 +83,7 @@ export class MessageVault {
         || !state || typeof state !== 'object' || typeof state.verified !== 'boolean')) throw new Error('Invalid fingerprint record');
       return record;
     } catch {
-      throw Object.assign(new Error('Messaging fingerprint storage is unavailable or unreadable. Verify the fingerprint before replacing the trust record.'), { code: 'TRUST_STORAGE_UNAVAILABLE' });
+      throw Object.assign(new Error(t('messages.vault.trustStorage')), { code: 'TRUST_STORAGE_UNAVAILABLE' });
     }
   }
 
@@ -91,18 +92,18 @@ export class MessageVault {
     try {
       const key = `everymusic.conversation-peer.v1.${this.userId}.${conversationId}`;
       const existing = this.storage().getItem(key);
-      if (existing && existing !== peerId) throw Object.assign(new Error('This conversation now names a different participant. Do not send; check identities through another channel.'), { code: 'CONVERSATION_IDENTITY_CHANGED' });
+      if (existing && existing !== peerId) throw Object.assign(new Error(t('messages.vault.identityChanged')), { code: 'CONVERSATION_IDENTITY_CHANGED' });
       if (!existing) this.storage().setItem(key, peerId);
     } catch (error) {
       if (error.code === 'CONVERSATION_IDENTITY_CHANGED') throw error;
-      throw new Error('The conversation identity could not be pinned. Enable browser storage before messaging.');
+      throw new Error(t('messages.vault.pinFailed'));
     }
   }
 
   async checkPeer(peer, expectedUserId, conversationId) {
     const userId = this.userId;
     this.ensure(userId);
-    if (peer.userId !== expectedUserId) throw Object.assign(new Error('The messaging key belongs to a different participant.'), { code: 'INVALID_IDENTITY' });
+    if (peer.userId !== expectedUserId) throw Object.assign(new Error(t('messages.vault.wrongParticipant')), { code: 'INVALID_IDENTITY' });
     const { verifyIdentity } = await import('./message-crypto.js');
     await verifyIdentity(peer);
     this.ensure(userId);
@@ -113,20 +114,20 @@ export class MessageVault {
       return false;
     }
     if (!Object.hasOwn(known, peer.fingerprint)) {
-      throw Object.assign(new Error('This musician has a new messaging fingerprint. Compare it through another channel before sending or trusting messages from the new key.'), { code: 'FINGERPRINT_CHANGED' });
+      throw Object.assign(new Error(t('messages.vault.fingerprintChanged')), { code: 'FINGERPRINT_CHANGED' });
     }
     return known[peer.fingerprint].verified === true;
   }
 
   saveTrust(peer, value) {
     try { this.storage().setItem(`everymusic.message-trust.v1.${this.userId}.${peer.userId}`, JSON.stringify(value)); }
-    catch { throw new Error('The fingerprint could not be saved. Enable browser storage before using encrypted messaging.'); }
+    catch { throw new Error(t('messages.vault.fingerprintSave')); }
   }
 
   async verifyPeer(peer, expectedUserId, conversationId) {
     const userId = this.userId;
     this.ensure(userId);
-    if (peer.userId !== expectedUserId) throw new Error('The messaging key belongs to a different participant.');
+    if (peer.userId !== expectedUserId) throw new Error(t('messages.vault.wrongParticipant'));
     const { verifyIdentity } = await import('./message-crypto.js');
     await verifyIdentity(peer);
     this.ensure(userId);

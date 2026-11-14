@@ -41,6 +41,8 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     users.push(rows[0].id);
     tokens.push(cipherEngine.createAccessToken(rows[0].id, `${marker}-${i}@example.test`));
     await realmConnector.execute('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [rows[0].id, `${marker} artist ${i}`]);
+    // Premium lifts the freemium caps; features/profiles-ads.js covers the free plan limits.
+    await realmConnector.execute("INSERT INTO user_entitlements (user_id, plan, source) VALUES ($1, 'premium', 'admin')", [rows[0].id]);
   }
   async function call(path, { actor = 0, method = 'GET', body, status = 200 } = {}) {
     if (method === 'GET' && /\/conversations\/[^/]+\/messages(?:\?|$)/.test(path)) {
@@ -334,7 +336,8 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     } });
     await dispatcher.dispatch();
     assert.equal(payloads.length, 1);
-    assert.equal(payloads[0].body, 'You have a new message');
+    assert.equal(payloads[0].title, 'You have a new message');
+    assert.equal(payloads[0].body, 'A musician sent you a new message. Open Every.music to read it.');
     assert.equal(JSON.stringify(payloads).includes('Never include'), false);
     assert.equal((await realmConnector.execute(
       'SELECT push_sent FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1', [users[1]],

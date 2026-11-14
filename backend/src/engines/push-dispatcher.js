@@ -2,6 +2,11 @@ import { ECDH } from 'node:crypto';
 import * as webpush from 'web-push';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { requestError } from './request-error.js';
+import { maintainAccountTrust } from './account-maintenance.js';
+import { NativePush } from './native-push.js';
+import { mediaRepository } from '../repositories/media-repository.js';
+import { mediaStorage } from './media-storage.js';
+import { composeNotificationPush } from './notification-email.js';
 
 export function isAllowedPushEndpoint(value) {
   try {
@@ -31,40 +36,55 @@ export function validatePushSubscription(subscription) {
   }
 }
 
+// Push text is rebuilt from the kind and safe params in the recipient's
+// language; the stored English title can name people or content, so it is
+// never sent through a push provider.
+export function pushPayload(notification) {
+  const { title, body } = composeNotificationPush({
+    kind: notification.kind, params: notification.params, locale: notification.locale,
+  });
+  return { title, body, tag: notification.id, url: notification.link };
+}
+
 export class PushDispatcher {
-  constructor({ config, connector = realmConnector, send = webpush.sendNotification.bind(webpush), logger = console }) {
+  constructor({
+    config, connector = realmConnector, send = webpush.sendNotification.bind(webpush), logger = console,
+    nativePush, storage,
+  }) {
     this.config = config;
     this.connector = connector;
     this.send = send;
     this.logger = logger;
+    this.nativePush = nativePush instanceof NativePush ? nativePush : new NativePush(nativePush, { connector, logger });
+    this.storage = storage;
     this.running = null;
     this.lastMaintenance = 0;
   }
 
   async dispatch() {
-    if (!this.config?.publicKey || !this.config?.privateKey) return;
+    const webPush = Boolean(this.config?.publicKey && this.config?.privateKey);
+    if (!webPush && !this.nativePush.enabled) return;
     const { rows } = await this.connector.execute(`
       WITH jobs AS (
-        SELECT n.id FROM notifications n JOIN user_preferences p ON p.user_id = n.user_id AND p.push = TRUE
+        SELECT n.id, p.locale FROM notifications n JOIN user_preferences p ON p.user_id = n.user_id AND p.push = TRUE
         WHERE n.push_sent = FALSE AND n.read_at IS NULL AND n.push_attempts < 3
           AND n.next_push_at <= NOW() AND n.created_at > NOW() - INTERVAL '1 day'
         ORDER BY n.next_push_at LIMIT 5 FOR UPDATE OF n SKIP LOCKED
       )
       UPDATE notifications n SET push_attempts = push_attempts + 1, next_push_at = NOW() + INTERVAL '1 minute'
-      FROM jobs WHERE n.id = jobs.id RETURNING n.*`);
+      FROM jobs WHERE n.id = jobs.id RETURNING n.*, jobs.locale`);
     await Promise.all(rows.map(async (notification) => {
-      const { rows: subscriptions } = await this.connector.execute(
+      const payload = pushPayload(notification);
+      const { rows: subscriptions } = webPush ? await this.connector.execute(
         'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5',
         [notification.user_id],
-      );
+      ) : { rows: [] };
       const outcomes = await Promise.all(subscriptions.map(async (subscription) => {
         try {
           validatePushSubscription({ endpoint: subscription.endpoint, keys: subscription });
           await this.send({
             endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-          }, JSON.stringify({
-            title: 'Every.music', body: notification.title, tag: notification.id, url: notification.link,
-          }), {
+          }, JSON.stringify(payload), {
             vapidDetails: { subject: this.config.subject, publicKey: this.config.publicKey, privateKey: this.config.privateKey },
             TTL: 300, timeout: 10000,
           });
@@ -82,6 +102,7 @@ export class PushDispatcher {
           return false;
         }
       }));
+      outcomes.push(...await this.nativePush.deliver(notification, payload));
       if (outcomes.every(Boolean)) {
         await this.connector.execute('UPDATE notifications SET push_sent = TRUE WHERE id = $1', [notification.id]);
       }
@@ -96,17 +117,24 @@ export class PushDispatcher {
     await this.connector.execute("DELETE FROM user_reports WHERE reviewed_at < NOW() - INTERVAL '90 days'");
     await this.connector.execute("DELETE FROM admin_audit WHERE created_at < NOW() - INTERVAL '365 days'");
     await this.connector.execute("DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '90 days'");
-    await this.connector.execute(`
-      DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'
-      AND NOT EXISTS(SELECT 1 FROM profiles p WHERE p.profile_picture_url = '/realm/media/' || m.id)
-      AND NOT EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = '/realm/media/' || m.id AND a.is_deleted = FALSE)`);
+    await this.connector.execute("DELETE FROM profile_visits WHERE day < CURRENT_DATE - 29");
+    await mediaRepository.removeOrphans(this.connector);
+    await maintainAccountTrust(this.connector);
+    const storage = this.storage ?? mediaStorage();
+    if (!storage.objects && await mediaRepository.pendingObjectDeletions(this.connector)) {
+      this.logger.warn('Stored media objects are waiting for deletion; configure the S3 settings to remove them');
+    }
     this.lastMaintenance = Date.now();
+  }
+
+  async purgeObjects() {
+    await mediaRepository.purgeObjects({ storage: this.storage ?? mediaStorage(), connector: this.connector, logger: this.logger });
   }
 
   start() {
     const tick = () => {
       if (this.running) return;
-      this.running = (async () => { await this.maintain(); await this.dispatch(); })()
+      this.running = (async () => { await this.maintain(); await this.dispatch(); await this.purgeObjects(); })()
         .catch(error => this.logger.error({ err: error }, 'Notification maintenance failed'))
         .finally(() => { this.running = null; });
     };
@@ -118,5 +146,6 @@ export class PushDispatcher {
   async stop() {
     clearInterval(this.timer);
     await this.running;
+    this.nativePush.close();
   }
 }

@@ -4,9 +4,11 @@
 
 [Quickstart](#quick-start-with-docker-compose) | [Documentation](docs/README.md) | [Build/download](docs/releases.md) | [Report a bug](https://github.com/mbianchidev/every-music/issues/new?template=bug_report.md) | [Roadmap](docs/main.md)
 
-[![Every.music feed with keyword search, one active filter, synthetic open calls, and community navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
+[![Every.music feed in the Dark theme with a keyword search, one active filter, a promoted call, synthetic open calls, and the full navigation](docs/images/every-music-feed.png)](docs/images/every-music-feed.png)
 
-Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, browse opportunities, and build a musician profile using a React web client backed by a Fastify API and PostgreSQL.
+Screenshots of the main features, all with synthetic demo data, are in the [usage guide](docs/usage.md).
+
+Every.music is a self-hosted application for musicians looking for band members and collaborators. Publish open calls, build a musician or band profile, join a community of bands, venues, and fans, find events and gear, and keep your band organized, using a React web client backed by a Fastify API and PostgreSQL.
 
 ## Contents
 
@@ -37,6 +39,7 @@ Edit `.env` before starting:
 - Set `CIPHER_PRIMARY_KEY` and `CIPHER_REFRESH_KEY` to **different random values of at least 32 characters**.
 - Configure `MAIL_GATEWAY`, `MAIL_PORT`, `MAIL_IDENTITY`, `MAIL_CREDENTIAL`, and `MAIL_SENDER_ALIAS` for your SMTP service. The example credentials do not send mail.
 - Keep `http://localhost` first in `PORTAL_ORIGINS` for this setup. Verification and password-reset links use the first configured origin.
+- Set `OPERATOR_NAME`, `OPERATOR_CONTACT_EMAIL`, `OPERATOR_JURISDICTION`, and `LEGAL_EFFECTIVE_DATE`, then review the legal templates under Help before inviting users.
 
 Do not commit `.env`. Build and start the stack:
 
@@ -61,7 +64,7 @@ Compose initializes a new database volume with the schema and instrument/genre c
 
 ### First use
 
-1. Open <http://localhost> and create an account. Passwords need at least eight characters, uppercase, lowercase, and a number.
+1. Open <http://localhost> and create an account, accepting the Terms of Use. Passwords need at least eight characters, uppercase, lowercase, and a number.
 2. Follow the verification link in your email, then sign in.
 3. Open your profile and fill in your artist name, first and last name, city, and biography.
 4. Publish an announcement, browse the feed, and save opportunities. Use the navigation to manage your own announcements and bookmarks.
@@ -70,11 +73,11 @@ Compose initializes a new database volume with the schema and instrument/genre c
 
 ## Why Every.music
 
-Keep your musician profile, open calls, and bookmarked opportunities in one place. Announcements describe the collaborator you need, including whether remote collaboration is welcome. Self-hosting keeps the deployment and database under your control, at the cost of operating the API, PostgreSQL, and SMTP.
+Keep your musician profile, open calls, and bookmarked opportunities in one place. Announcements describe the collaborator you need, including whether remote collaboration is welcome. Self-hosting keeps the deployment and database under your control, at the cost of operating the API, PostgreSQL, and SMTP. The stack runs on Docker Compose for a local proof of concept and on any container host or Kubernetes cluster with managed PostgreSQL and S3-compatible storage; see [deployment](docs/deployment.md).
 
 ## How it works
 
-The React client calls the Fastify API under `/realm`; the API stores accounts, profiles, announcements, and bookmarks in PostgreSQL. Compose runs the database, API, and nginx web server together. The same client is wrapped by Tauri for native builds.
+The React client calls the Fastify API under `/realm`; the API stores all application data in PostgreSQL and media in PostgreSQL or an optional S3-compatible bucket. Compose runs the database, API, and nginx web server together, with an optional SeaweedFS object store. SMTP, Stripe, Twilio, Web Push, FCM, and APNs are optional integrations that stay off until configured. The same client is wrapped by Tauri for native builds.
 
 ### Stack and platforms
 
@@ -109,30 +112,47 @@ For desktop installers, use the [verified release command or CI artifacts](docs/
 These are unsigned development builds, not published store releases. Native
 clients need an absolute API URL ending in `/realm`, backend CORS, and the Tauri
 CSP aligned with that URL. See [desktop/mobile setup](docs/mobile.md) for Rust
-and platform SDKs. Android/iOS require separate initialization/signing and are
-not packaged by desktop CI.
+and platform SDKs. A separate mobile workflow builds unsigned Android and iOS
+development packages; store signing is still a manual step.
 
 ## Implemented features
 
 - **Accounts:** email/password registration, email verification, password reset, sign-out, and automatic session refresh.
-- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators and roles.
+- **Profiles:** edit your identity, image, instruments, experience, genres, and musical projects with collaborators, roles, and the instruments you played.
 - **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
 - **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
+- **Applications:** reply to calls in app, then track replies; owners get a per-call and all-calls applicant dashboard with statuses, private notes, and messaging.
 - **Collaboration:** end-to-end encrypted new messages, recovery keys/fingerprints, read/archive/block controls, and notifications with optional browser push.
 - **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
+- **Languages:** the whole interface in English, Dutch, and Italian, chosen on the sign-in screen or in Settings, saved to the account, with localized dates, numbers, and server errors.
+- **Notification channels:** per-type in-app, push, and email choices, privacy-safe email and push text in every supported language, weekly statistics digests, and come-back/invite reminders.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
+- **Marketplace:** buy, sell, and request gear, offer lessons and services, hire crew, and post endorsements, with filters, photos, saved listings, encrypted contact, reports, moderation, and expiry reminders; payments happen off-platform.
+- **Account trust:** two-step sign-in (authenticator app, email, or optional SMS) with recovery codes, sign-out everywhere, GDPR data export and account deletion, opt-in find-by-email with hashed contacts, and administrator-reviewed profile verification with a blue tick.
+- **Places and plans:** GeoNames city picker, distance/region/cover-band/open-to discovery, opt-in "near me", saved searches with alerts, contacts with visibility, profile links, follow alerts, profile blocks, owner-only reactions, and free-plan limits with Premium statistics and profile visitors.
+- **Help and onboarding:** help center with bug/contact/job forms and an admin inbox, operator-configured legal templates with terms acceptance, a skippable welcome tour, Back controls, update notices, in-app ratings, and branded icons and splash screens.
+- **Hosting and storage:** deploy on Compose, any container host, or Kubernetes; keep media in PostgreSQL or any private S3-compatible bucket (optional bundled SeaweedFS), store encrypted attachment blobs, deliver native Android/iOS push, and build unsigned mobile packages in CI.
+- **Bands and venues:** band, venue, organizer, booking agency and label pages with members, permissions, invitations, releases, followable update feeds (including YouTube videos), rosters/labels, similar bands, venue claims, verification, and music-lover profiles.
+- **Premium and points:** Stripe Checkout subscriptions and points packs (disabled without keys), a points wallet earned from invites, ratings, rewarded sponsored videos and events, paid boosts and area pins labelled as promoted, first-party sponsored cards, offer broadcasts, and an admin monetization console.
+- **Events:** concerts and festivals with linked lineups, organizers, venues with map links, time zones, capacity and tickets sold, external ticket links, search and filters, going/interested replies, calendar files, reminders, an attendee discussion, official organizer updates, past and next events on pages and profiles, and page verification requests.
+- **Band collaboration:** band and personal calendars with invitees, RSVPs, reminders, map links, ICS files and private Google/Apple Calendar feeds; an end-to-end encrypted band chat with encrypted audio and pictures and unread counts; artist reviews approved by the artist; and anonymous star ratings.
 
 ### Current limitations
 
 - Google sign-in needs a configured web OAuth client; browser push needs HTTPS, VAPID keys, browser support, and permission. Native WebViews use email/password, not embedded Google sign-in.
 - Legacy history and voluntarily reported excerpts remain server-readable. New-message E2EE has no ratchet/forward secrecy or independent security audit; recovery keys and trusted clients matter. See [messaging security and administration](docs/messaging-security.md).
 - Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
+- Distance, region and country filters use city-level GeoNames coordinates for cities above 15,000 people; towns typed as free text are shown but not found by those filters.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
-- Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
-- Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.
+- Band update feeds import only public YouTube channel feeds; Spotify and other services need manual updates or releases.
+- Event tickets are sold on external sites; organizers update the tickets-sold count by hand. Maps and directions open OpenStreetMap; the API does not geocode addresses.
+- Google Calendar subscriptions need an API reachable from the internet over HTTPS. Anonymous rating totals are published daily and hide averages below three ratings, which reduces but cannot rule out guessing on quiet profiles. Band chat has the same limits as direct messages and does not re-encrypt history for new members.
+- AT Protocol federation is not implemented. Payments run through Stripe on the web; native store builds would need App Store and Google Play billing, which is not implemented (see [monetization](docs/monetization.md#platform-fees-and-app-stores)). The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
+- Profile verification is a manual administrator review of a coded selfie and optional document scan, with no automated face matching or third-party identity check. SMS two-step codes need a Twilio account; email codes need SMTP.
+- Desktop and mobile CI provide unsigned development artifacts, not signed/notarized or store releases. The mobile shell does not register for native push yet. Mobile distribution and cross-platform accessibility still need platform-specific verification.
 
 ## Documentation
 

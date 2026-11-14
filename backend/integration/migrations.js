@@ -21,6 +21,7 @@ test('fresh installs and upgrades converge, preserve legacy data, and allow migr
   const current = await readFile(new URL('../database/schema.sql', import.meta.url), 'utf8');
   const migration = await readFile(new URL('../database/migrations/003_community.sql', import.meta.url), 'utf8');
   const encryptionMigration = await readFile(new URL('../database/migrations/004_admin_and_encryption.sql', import.meta.url), 'utf8');
+  const discoveryMigration = await readFile(new URL('../database/migrations/008_profiles_ads_discovery.sql', import.meta.url), 'utf8');
   const admin = new pg.Pool({ connectionString: realmConfig.realm.connectionString, max: 1 });
   const created = [];
   const pools = [];
@@ -66,14 +67,21 @@ test('fresh installs and upgrades converge, preserve legacy data, and allow migr
     const liveMessage = (await pool.query('INSERT INTO messages (conversation_id, sender_id, client_id, body) VALUES ($1, $2, $3, $4) RETURNING id',
       [conversation, userId, randomUUID(), 'Synthetic legacy history retained without relabelling it encrypted.'])).rows[0].id;
     const alreadyEncryptedSchema = (await pool.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'messages' AND column_name = 'encryption_version'")).rowCount > 0;
+    const legacyMedia = (await pool.query("INSERT INTO media (user_id, purpose, content) VALUES ($1, 'profile', $2) RETURNING id",
+      [userId, Buffer.from('synthetic legacy image bytes')])).rows[0].id;
     const deletedMessage = (await pool.query('INSERT INTO messages (conversation_id, sender_id, client_id, body, is_deleted) VALUES ($1, $2, $3, $4, TRUE) RETURNING id',
       [conversation, userId, randomUUID(), alreadyEncryptedSchema ? null : 'Message removed'])).rows[0].id;
-    await runMigrations({ connectionString, logger });
+    await Promise.all([runMigrations({ connectionString, logger }), runMigrations({ connectionString, logger })]);
     await runMigrations({ connectionString, logger });
     await pool.query(migration);
     await pool.query(migration);
     await pool.query(encryptionMigration);
     await pool.query(encryptionMigration);
+    await pool.query(discoveryMigration);
+    await pool.query(discoveryMigration);
+    assert.deepEqual((await pool.query('SELECT place_id, contact_visibility, open_to_projects FROM profiles WHERE user_id = $1', [userId])).rows[0],
+      { place_id: null, contact_visibility: 'members', open_to_projects: false });
+    assert.ok((await pool.query('SELECT COUNT(*)::int AS count FROM places')).rows[0].count > 30000);
     assert.equal((await pool.query('SELECT artist_name FROM profiles WHERE user_id = $1', [userId])).rows[0].artist_name, 'Synthetic legacy musician');
     assert.deepEqual((await pool.query('SELECT name, collaborators FROM projects')).rows, [
       { name: 'Synthetic legacy project', collaborators: [] },
@@ -85,6 +93,9 @@ test('fresh installs and upgrades converge, preserve legacy data, and allow migr
       body: 'Synthetic legacy history retained without relabelling it encrypted.', encryption_version: 0, ciphertext: null,
     });
     assert.equal((await pool.query('SELECT body FROM messages WHERE id = $1', [deletedMessage])).rows[0].body, null);
+    assert.deepEqual((await pool.query('SELECT storage_key, mime_type, byte_size FROM media WHERE id = $1', [legacyMedia])).rows[0], {
+      storage_key: null, mime_type: 'image/webp', byte_size: 28,
+    });
     results.push(await schema(pool));
   }
   assert.deepEqual(results[1], results[0]);

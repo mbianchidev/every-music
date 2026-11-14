@@ -1,0 +1,19 @@
+{
+  "dataset": "GeoNames cities15000 with admin1 regions and country names",
+  "license": "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
+  "attribution": "GeoNames (https://www.geonames.org/)",
+  "source": "https://download.geonames.org/export/dump/",
+  "inputs": {
+    "cities15000.zip": {
+      "sha256": "f274b5e5f2cff6211cb10cc5b348254a6e00dde9449244d18c0f542beb7581e5"
+    },
+    "admin1CodesASCII.txt": {
+      "sha256": "2e4867f5397acb056ea26377601b57af37cb4c81399770225018e9e439e91ad3"
+    },
+    "countryInfo.txt": {
+      "sha256": "79f8f59ea01cbb40438bf1856dd6c2ff201f03f8fc72d0530b2646aaf603ef04"
+    }
+  },
+  "rows": 34193,
+  "contentSha256": "99cd849f5f46a30f4149cb999329f4e4129d1c628c9bf2499d0333b9fd39c6a3"
+}

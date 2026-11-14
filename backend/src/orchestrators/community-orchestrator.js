@@ -1,6 +1,8 @@
 import { CommunityConductor } from '../conductors/community-conductor.js';
 import { identityGuard, optionalIdentityGuard } from '../guards/identity-guard.js';
 import { uuid, text, object, params, paging as pageProperties } from '../validators/http-schemas.js';
+
+export const IMAGE_PURPOSES = ['profile', 'announcement', 'organization', 'listing', 'event', 'verification', 'sponsored', 'support'];
 const paging = object({ ...pageProperties, archived: { enum: ['true', 'false'] }, format: { const: 'encrypted-v1' } });
 
 export async function communityOrchestrator(fastify, { config }) {
@@ -8,9 +10,12 @@ export async function communityOrchestrator(fastify, { config }) {
   const route = (method, url, handler, schema = {}, guard = identityGuard) => fastify.route({
     method, url, preHandler: guard, schema, handler,
   });
-  const preferences = object(Object.fromEntries(
-    ['messages', 'announcements', 'engagements', 'profileViews', 'push', 'analytics', 'platformAnalytics'].map(key => [key, { type: 'boolean' }]),
-  ));
+  const preferences = object({
+    ...Object.fromEntries(
+      ['messages', 'announcements', 'engagements', 'profileViews', 'push', 'analytics', 'platformAnalytics'].map(key => [key, { type: 'boolean' }]),
+    ),
+    locale: { enum: ['en', 'nl', 'it'] },
+  });
   route('GET', '/account', conductor.getAccount);
   route('GET', '/preferences', conductor.getPreferences);
   route('PUT', '/preferences', conductor.updatePreferences, { body: preferences });
@@ -38,7 +43,7 @@ export async function communityOrchestrator(fastify, { config }) {
     params: params('notificationId'), body: object({ read: { const: true } }, ['read']),
   });
   route('POST', '/media', conductor.uploadImage, {
-    body: object({ data: text(2796204), mimeType: { enum: ['image/jpeg', 'image/png'] }, purpose: { enum: ['profile', 'announcement'] } },
+    body: object({ data: text(2796204), mimeType: { enum: ['image/jpeg', 'image/png'] }, purpose: { enum: IMAGE_PURPOSES } },
       ['data', 'mimeType', 'purpose']),
   });
   route('GET', '/media/:mediaId', conductor.getImage, { params: params('mediaId') }, optionalIdentityGuard);

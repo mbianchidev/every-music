@@ -2,6 +2,8 @@ import { realmConfig } from '../config/realm.js';
 import { googleIdentityBridge } from '../src/engines/google-identity-bridge.js';
 import { requestError } from '../src/engines/request-error.js';
 import { startNexus } from '../src/nexus.js';
+import { onboardingRepository } from '../src/repositories/onboarding-repository.js';
+import { syntheticStripeClient } from './synthetic-stripe.js';
 
 if (realmConfig.environment !== 'test' || !realmConfig.realm.connectionString
   || realmConfig.nexus.host !== '127.0.0.1'
@@ -23,5 +25,19 @@ googleIdentityBridge.verifyCredential = async credential => {
     nonce: claims.nonce, givenName: 'Demo', familyName: 'Google',
   };
 };
+
+// Suites seed accounts directly through SQL; treat those untracked fixtures as
+// having accepted the terms. Accounts with an older accepted version are still prompted.
+onboardingRepository.treatUntrackedAccountsAsAccepted = true;
+
+// Payments use a synthetic stand-in for the Stripe API: checkout "returns"
+// straight to the store and nothing leaves the machine. Webhooks are still
+// verified by the real SDK with the synthetic signing secret.
+const stripe = realmConfig.monetization.stripe;
+if (stripe.secretKey) {
+  if (!stripe.secretKey.startsWith('sk_test_synthetic')) throw new Error('Browser tests only accept a synthetic Stripe key');
+  const origin = realmConfig.boundaries.portalOrigins[0];
+  stripe.client = syntheticStripeClient({ origin, checkoutUrl: sessionId => `${origin}/#store?checkout=success&session=${sessionId}` });
+}
 
 await startNexus();

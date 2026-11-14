@@ -193,7 +193,10 @@ jobs:
           MAIL_IDENTITY: noreply@example.test
           MAIL_CREDENTIAL: compose-mail-password
           MAIL_SENDER_ALIAS: Every.music <noreply@example.test>
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          MEDIA_STORAGE=s3 S3_ACCESS_KEY_ID=compose-access S3_SECRET_ACCESS_KEY=compose-secret-key \
+            docker compose --profile object-storage config --quiet
 
   desktop-release:
     name: Desktop bundle (${{ matrix.os }})

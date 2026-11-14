@@ -42,6 +42,7 @@ export class Conduit {
     if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
     }
+    if (options.rawBody !== undefined) headers.set('Content-Type', options.contentType || 'application/octet-stream');
 
     if (options.auth) {
       const accessToken = this.session.payload.keys?.accessToken;
@@ -54,7 +55,7 @@ export class Conduit {
       headers.set('Authorization', `Bearer ${accessToken}`);
     }
 
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? this.timeoutMs);
     const abort = () => controller.abort();
     options.signal?.addEventListener('abort', abort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -63,7 +64,7 @@ export class Conduit {
       const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
         method: options.method || 'GET',
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        body: options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
         signal: controller.signal,
       });
       if (options.stream && response.ok) {

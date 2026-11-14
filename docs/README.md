@@ -8,11 +8,13 @@
 |---|---|
 | [Installation and usage](usage.md) | Start the stack, create an account, publish/save calls, troubleshoot, and understand persisted data |
 | [Configuration](configuration.md) | Configure API, SMTP, database, origins, limits, ports, and packaged clients |
-| [Deployment and operations](deployment.md) | Migrate safely, check health, collect logs, and operate PostgreSQL and SMTP |
-| [Desktop and mobile](mobile.md) | Build native clients with the right API URL and platform toolchains |
+| [Deployment and operations](deployment.md) | Deploy anywhere (Compose, container hosts, Kubernetes), use managed PostgreSQL and S3-compatible storage, migrate safely, check health, and collect logs |
+| [Desktop and mobile](mobile.md) | Build native clients with the right API URL and platform toolchains, and obtain mobile CI packages |
 | [Release artifacts](releases.md) | Build/checksum native installers and obtain CI development bundles |
 | [API reference](api.md) | Integrate discovery, accounts, images, projects, messages, notifications, analytics, and live events |
 | [Messaging security and administration](messaging-security.md) | Understand E2EE/recovery limits, reports, admin roles, moderation and platform analytics |
+| [Organizations](organizations.md) | Understand band, venue, organizer, agency and label pages, memberships, permissions and claims |
+| [Monetization](monetization.md) | Set up Stripe plans and points packs, understand points, promotions, sponsored cards, fees and app-store limits |
 
 ## Developing Every.music
 

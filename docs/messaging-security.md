@@ -133,6 +133,12 @@ contents. Open reports remain for review; resolved report details/evidence expir
 after 90 days. Audit metadata expires after 365 days. Operator backup retention
 and any applicable deletion duties must be managed separately.
 
+Self-service account deletion removes the account's conversations for both
+participants, its messages, keys and encrypted key backups, and every report
+filed by or about it. Audit entries keep their action and time; the deleted
+actor becomes blank and target IDs no longer resolve to an account. See
+[deleting your account](usage.md#delete-your-account).
+
 ## Administrator provisioning
 
 There is no default admin and no public role-assignment endpoint. An operator
@@ -168,3 +174,45 @@ totals for the owner's content. Earlier anonymous contributions to somebody
 else's aggregates cannot be traced back and selectively removed because actor
 identities are not stored. Disabling personal analytics also disables platform
 analytics. Operational access logs are separate and may contain client IPs.
+
+## Band chat
+
+Each band page has one group chat for its active members. It reuses the
+account messaging identities above; there is no separate group key.
+
+| Purpose | Profile |
+|---|---|
+| Message record | Typed signed JWT (`everymusic.group-message.v1+jwt`, ES256) binding the sender, the band chat, the client ID, the sender key ID and fingerprint, the sorted recipient key IDs, the body (0-4,000 characters) and each attachment's media ID, type, file name, size and SHA-256 digest |
+| Message encryption | General JSON JWE (`everymusic.group-message.v1+jwe`): a fresh A256GCM content key per message, wrapped with ECDH-ES+A256KW for every current member key, the sender's included |
+| Envelope content | `{ jwt, keys }`, where `keys` holds a random 256-bit AES-GCM key per attachment |
+| Attachments | Encrypted on the device with AES-256-GCM and a random 96-bit IV, uploaded as opaque `/realm/media/blobs` bytes |
+
+The server checks that the envelope addresses exactly the current key of
+every active member who has published one (up to 100) and rejects stale
+recipient lists; it never receives plaintext, attachment keys or unencrypted
+files. Members without a published key are listed as unable to receive until
+they set one up; messages sent before then stay unreadable to them. Clients
+verify every recipient's identity proof and apply the same first-use
+fingerprint pins as direct messages: a changed fingerprint blocks sending and
+reading until it is compared. Receivers verify the signature, the chat, the
+exact recipient list and the attachment list before showing anything, and
+check each downloaded attachment against its signed digest before decrypting.
+
+Chat membership follows band membership. A member's access starts with a new
+period when they join and ends when they leave or are removed; rejoining starts
+a new period. The API only returns messages and attachment bytes from the
+current period, and those messages are not encrypted to keys of members who
+joined later, so earlier history is unreadable to them. Removed members keep
+whatever they already decrypted or downloaded. Messages are not re-encrypted
+when someone joins or leaves, and the same limits as direct messages apply: no
+ratchet, forward secrecy or post-compromise security.
+
+Reporting a band message discloses its decrypted text and the sender-signed
+record to administrators. Attachment keys travel outside the signed record and
+are never part of a report, so administrators see only how many attachments
+the message had, not their contents. The host still stores the encrypted
+attachment bytes until the message is removed. Removing a message, by its
+sender or by moderation, deletes its envelope and attachment references; the
+unreferenced encrypted blobs are deleted by the hourly media cleanup once they
+are more than a day old. Band chat notifications and live events never include
+message text.

@@ -1,13 +1,16 @@
 import { identityRepository } from '../repositories/identity-repository.js';
 import { musicianRepository } from '../repositories/musician-repository.js';
+import { onboardingRepository } from '../repositories/onboarding-repository.js';
 import { realmConnector } from '../repositories/realm-connector.js';
 import { cipherEngine } from '../engines/cipher-engine.js';
 import { mailDispatcher } from '../engines/mail-dispatcher.js';
 import { googleIdentityBridge } from '../engines/google-identity-bridge.js';
+import { twoFactorDelivery } from './two-factor-delivery.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { realmConfig } from '../../config/realm.js';
 import { requestError } from '../engines/request-error.js';
+import { referralRepository } from '../repositories/referral-repository.js';
 
 function sendValidationError(reply, details) {
   return reply.code(400).send({
@@ -60,6 +63,16 @@ export class AuthenticationConductor {
       return sendValidationError(reply, validations);
     }
 
+    const termsVersion = realmConfig.legal.termsVersion;
+    if (body.acceptedTermsVersion !== termsVersion) {
+      return reply.code(body.acceptedTermsVersion ? 409 : 400).send({
+        success: false,
+        error: body.acceptedTermsVersion
+          ? { code: 'TERMS_VERSION_CHANGED', message: 'The Terms of Use changed. Review the current version and accept it again.' }
+          : { code: 'TERMS_NOT_ACCEPTED', message: 'Accept the Terms of Use to create an account' },
+      });
+    }
+
     try {
       const existingIdentity = await identityRepository.findByEmail(email);
       if (existingIdentity) {
@@ -83,6 +96,8 @@ export class AuthenticationConductor {
           executor,
         );
         await musicianRepository.createProfile(identity.id, {}, executor);
+        await onboardingRepository.acceptTerms(executor, identity.id, termsVersion, 'registration');
+        identity.inviteRecorded = await referralRepository.recordSignup(executor, identity.id, body.inviteCode);
         return identity;
       });
       const verificationEmailSent = await mailDispatcher.dispatchVerification(
@@ -96,6 +111,7 @@ export class AuthenticationConductor {
           userId: newIdentity.id,
           email: newIdentity.email,
           emailVerified: newIdentity.email_verified,
+          inviteRecorded: newIdentity.inviteRecorded,
           verificationEmailSent,
           message: verificationEmailSent
             ? 'Registration successful. Check your email to verify your account.'
@@ -199,6 +215,9 @@ export class AuthenticationConductor {
         });
       }
 
+      const challenge = await twoFactorDelivery.beginLogin(identity);
+      if (challenge) return reply.code(200).send({ success: true, data: challenge });
+
       const session = await realmConnector.transaction(async (executor) => {
         await identityRepository.updateLastLogin(identity.id, executor);
         return this.issueSession(identity, executor);
@@ -206,6 +225,7 @@ export class AuthenticationConductor {
 
       return reply.code(200).send({ success: true, data: session });
     } catch (error) {
+      if (error.statusCode) throw error;
       request.log.error({ err: error }, 'Login failed');
       return reply.code(500).send({
         success: false,
@@ -287,6 +307,9 @@ export class AuthenticationConductor {
         });
       }
 
+      const challenge = isNewUser ? null : await twoFactorDelivery.beginLogin(identity);
+      if (challenge) return reply.code(200).send({ success: true, data: { ...challenge, isNewUser } });
+
       const session = await realmConnector.transaction(async (executor) => {
         await identityRepository.updateLastLogin(identity.id, executor);
         return this.issueSession(identity, executor);
@@ -337,6 +360,12 @@ export class AuthenticationConductor {
             message: 'Verification token is invalid or expired',
           },
         });
+      }
+
+      try {
+        await referralRepository.rewardVerified(identity.id);
+      } catch (error) {
+        request.log.error({ err: error }, 'Referral reward after email verification failed; the monetization job retries it');
       }
 
       return reply.code(200).send({

@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { t } from '../lib/i18n.js';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -27,11 +28,11 @@ class ErrorBoundary extends Component {
     return (
       <main className="container-narrow center-content" id="main-content" tabIndex="-1">
         <div className="card" role="alert">
-          <p className="eyebrow">Something went wrong</p>
-          <h1 className="heading-lg">The amp cut out</h1>
-          <p className="body-muted">The interface hit an unexpected error. Your account data is still safe.</p>
+          <p className="eyebrow">{t('app.crash.eyebrow')}</p>
+          <h1 className="heading-lg">{t('app.crash.title')}</h1>
+          <p className="body-muted">{t('app.crash.message')}</p>
           <button className="btn btn-primary" type="button" onClick={this.handleReset}>
-            Return to the feed
+            {t('app.crash.action')}
           </button>
         </div>
       </main>

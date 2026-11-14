@@ -1,0 +1,15 @@
+export default {
+  title: 'Mobile devices',
+  description: 'Phones and tablets running the Every.music app can receive push notifications. Notifications only contain a generic summary, never message text.',
+  loading: 'Loading mobile devices',
+  loadError: 'Could not load your mobile devices',
+  notConfigured: 'Mobile push is not configured on this server. These devices will not receive notifications until it is.',
+  empty: 'No mobile devices are registered for push notifications.',
+  platform: { android: 'Android device', ios: 'iPhone or iPad' },
+  registered: 'Registered {date}',
+  updated: 'Last confirmed {date}',
+  remove: 'Remove',
+  removing: 'Removing...',
+  removeLabel: 'Remove {device} registered {date}',
+  removed: '{device} removed. It will no longer receive push notifications.',
+};

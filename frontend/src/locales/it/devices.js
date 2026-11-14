@@ -1,0 +1,15 @@
+export default {
+  title: 'Dispositivi mobili',
+  description: "Telefoni e tablet con l'app Every.music possono ricevere notifiche push. Le notifiche contengono solo un riepilogo generico, mai il testo dei messaggi.",
+  loading: 'Caricamento dei dispositivi mobili',
+  loadError: 'Impossibile caricare i tuoi dispositivi mobili',
+  notConfigured: 'Le notifiche push per dispositivi mobili non sono configurate su questo server. Questi dispositivi non riceveranno notifiche finché non lo saranno.',
+  empty: 'Nessun dispositivo mobile è registrato per le notifiche push.',
+  platform: { android: 'Dispositivo Android', ios: 'iPhone o iPad' },
+  registered: 'Registrato il {date}',
+  updated: 'Ultima conferma il {date}',
+  remove: 'Rimuovi',
+  removing: 'Rimozione in corso...',
+  removeLabel: 'Rimuovi {device} registrato il {date}',
+  removed: '{device} rimosso. Non riceverà più notifiche push.',
+};

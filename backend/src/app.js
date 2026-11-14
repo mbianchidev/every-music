@@ -10,10 +10,26 @@ import { catalogOrchestrator } from './orchestrators/catalog-orchestrator.js';
 import { communityOrchestrator } from './orchestrators/community-orchestrator.js';
 import { encryptionOrchestrator } from './orchestrators/encryption-orchestrator.js';
 import { administrationOrchestrator } from './orchestrators/administration-orchestrator.js';
+import { entitlementOrchestrator } from './orchestrators/entitlement-orchestrator.js';
+import { notificationOrchestrator } from './orchestrators/notification-orchestrator.js';
+import { applicationOrchestrator } from './orchestrators/application-orchestrator.js';
+import { marketplaceOrchestrator } from './orchestrators/marketplace-orchestrator.js';
+import { accountTrustOrchestrator } from './orchestrators/account-trust-orchestrator.js';
+import { placeOrchestrator } from './orchestrators/place-orchestrator.js';
+import { discoveryOrchestrator } from './orchestrators/discovery-orchestrator.js';
+import { helpOrchestrator } from './orchestrators/help-orchestrator.js';
+import { infrastructureOrchestrator } from './orchestrators/infrastructure-orchestrator.js';
+import { configureMediaStorage } from './engines/media-storage.js';
+import { organizationOrchestrator } from './orchestrators/organization-orchestrator.js';
+import { monetizationOrchestrator } from './orchestrators/monetization-orchestrator.js';
+import { eventOrchestrator } from './orchestrators/event-orchestrator.js';
+import { bandCollabOrchestrator } from './orchestrators/band-collab-orchestrator.js';
+import { OrganizationFeedImporter } from './engines/organization-feed-importer.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
 import { RequestError } from './engines/request-error.js';
+import { NotificationJobs } from './engines/notification-jobs.js';
 
 function applySecurityHeaders(reply) {
   reply
@@ -30,6 +46,7 @@ export async function buildNexus({
   logger,
   backgroundJobs = true,
 } = {}) {
+  const storage = configureMediaStorage(config.mediaStorage);
   const nexus = Fastify({
     ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
     logger: logger ?? {
@@ -124,9 +141,15 @@ export async function buildNexus({
   const readinessHandler = async (request, reply) => {
     try {
       await connector.execute('SELECT 1 AS heartbeat');
+      const storageStatus = await storage.status();
+      const dependencies = { database: 'connected', ...(storageStatus ? { storage: storageStatus } : {}) };
+      if (storageStatus === 'unavailable') {
+        request.log.error('Readiness check failed: object storage is unreachable');
+        return reply.code(503).send({ status: 'not_ready', dependencies, timestamp: new Date().toISOString() });
+      }
       return {
         status: 'ready',
-        dependencies: { database: 'connected' },
+        dependencies,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -155,9 +178,24 @@ export async function buildNexus({
   await nexus.register(communityOrchestrator, { prefix: '/realm', config });
   await nexus.register(encryptionOrchestrator, { prefix: '/realm/encryption' });
   await nexus.register(administrationOrchestrator, { prefix: '/realm' });
+  await nexus.register(entitlementOrchestrator, { prefix: '/realm' });
+  await nexus.register(notificationOrchestrator, { prefix: '/realm', config });
+  await nexus.register(applicationOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
+  await nexus.register(marketplaceOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
+  await nexus.register(accountTrustOrchestrator, { prefix: '/realm', config });
+  await nexus.register(placeOrchestrator, { prefix: '/realm/catalog' });
+  await nexus.register(discoveryOrchestrator, { prefix: '/realm' });
+  await nexus.register(helpOrchestrator, { prefix: '/realm', config, backgroundJobs });
+  await nexus.register(infrastructureOrchestrator, { prefix: '/realm', config });
+  await nexus.register(organizationOrchestrator, { prefix: '/realm' });
+  await nexus.register(monetizationOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
+  await nexus.register(eventOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
+  await nexus.register(bandCollabOrchestrator, { prefix: '/realm', config, connector, backgroundJobs });
 
   const hub = new RealtimeHub(connector, nexus.log);
-  const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });
+  const dispatcher = new PushDispatcher({
+    config: config.push, connector, logger: nexus.log, nativePush: config.nativePush, storage,
+  });
   nexus.get('/realm/events', { preHandler: identityGuard }, async (request, reply) => {
     const stream = await hub.subscribe(request.authenticatedUser);
     reply.raw.on('close', () => stream.destroy());
@@ -168,6 +206,12 @@ export async function buildNexus({
   });
   nexus.addHook('onListen', async () => { if (backgroundJobs) dispatcher.start(); });
   nexus.addHook('preClose', async () => { await hub.close(); await dispatcher.stop(); });
+  const notificationJobs = new NotificationJobs({ config, connector, logger: nexus.log });
+  nexus.addHook('onListen', async () => { if (backgroundJobs) notificationJobs.start(); });
+  nexus.addHook('preClose', async () => { await notificationJobs.stop(); });
+  const feedImporter = new OrganizationFeedImporter({ config: config.organizations, connector, logger: nexus.log });
+  nexus.addHook('onListen', async () => { if (backgroundJobs) feedImporter.start(); });
+  nexus.addHook('preClose', async () => feedImporter.stop());
 
   return nexus;
 }

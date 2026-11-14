@@ -11,13 +11,22 @@ independently deployed business microservices.
 Browser -> Vite (development) or nginx (Compose) -> Fastify /realm -> PostgreSQL
 Tauri WebView ---------------------------------> absolute API URL -> PostgreSQL
 Fastify -> SMTP (verification/reset mail)
+Fastify -> SMTP (opt-in notification email outbox, idle without SMTP)
 Fastify -> Google identity verification (optional web sign-in)
 Fastify -> Web Push services (optional, generic notification payloads)
+Fastify -> SMS provider, Twilio adapter (optional two-step codes)
+Fastify -> FCM / APNs (optional native mobile push, generic payloads)
+Fastify -> S3-compatible object storage (optional media bytes, private bucket)
+Fastify -> https://www.youtube.com/feeds/videos.xml (optional band video import)
+Fastify -> Stripe API (optional checkout, customer portal, customer deletion)
+Stripe -> Fastify /realm/billing/webhook (signed subscription and payment events)
 PostgreSQL NOTIFY -> each API process -> authenticated fetch/SSE clients
 ```
 
-Compose names the services `spectrum-web`, `realm-nexus`, and `realm-store`.
-The API container runs tracked migrations before accepting traffic. A fresh
+Compose names the services `spectrum-web`, `realm-nexus`, and `realm-store`,
+plus the optional SeaweedFS `object-store` in the `object-storage` profile.
+The API container runs tracked migrations before accepting traffic; an advisory
+lock makes replicas that start together apply each migration once. A fresh
 PostgreSQL volume is initialized with the schema and instrument/genre catalogs.
 The volume `everymusic-realm-volume` is persistent and is not removed by a
 normal `docker compose down`.
@@ -31,7 +40,9 @@ normal `docker compose down`.
 - `src/conductors/`: input validation, authorization decisions, workflows, and
   HTTP response transformations.
 - `src/repositories/`: PostgreSQL queries and transaction execution.
-- `src/engines/`: token signing/hashing, SMTP, and Google identity integration.
+- `src/engines/`: token signing/hashing, SMTP, Google identity integration,
+  media storage drivers (`media-storage.js`), media access registries
+  (`media-references.js`), and push providers (`push-dispatcher.js`, `native-push.js`).
 - `src/validators/`: shared input and pagination validation.
 
 Database work that must be atomic uses `realmConnector.transaction` and its
@@ -53,7 +64,18 @@ One shared shell owns desktop/sidebar and mobile/bottom navigation, theme,
 connection status, installation, and the live-update connection.
 Screens use shared components and `lib/conduit.js` for API requests.
 `lib/nucleus.js` stores the current persona and tokens in `sessionStorage`,
-not permanent local storage. Theme preference alone uses `localStorage`.
+not permanent local storage. `localStorage` holds only preferences and
+device records: theme, language, verified messaging fingerprints, the tour
+completion fallback, and the dismissed update notice. The Cookie policy page
+lists every key; the app sets no cookies of its own.
+
+All interface text comes from `src/locales/<locale>/<namespace>.js` through
+`lib/i18n.js`. `lib/locale-preference.js` keeps the signed-out device language
+(`localStorage`) apart from the signed-in account language (server preference,
+cached per account in `sessionStorage`) and updates `<html lang>`. The shell
+re-renders when the language changes, so screens switch without a reload.
+`lib/error-text.js` turns `ApiError` codes into localized messages and falls
+back to the server's message for codes it does not know.
 
 The default fetch transport is bound to the browser global receiver. Tests can
 inject a custom transport. Requests time out after 12 seconds and produce typed
@@ -71,6 +93,17 @@ results and refresh responses, preventing one account's late response from
 overwriting the next account. Route changes move focus to main content at the
 React commit, not a delayed frame that could interrupt a newly focused input;
 background refreshes do not steal focus.
+
+`components/ShellGate.jsx` wraps every routed screen. It checks
+`/realm/app/version` against the build version injected from
+`frontend/package.json` (blocking screen below the minimum, dismissible notice
+below the latest), shows the terms acceptance prompt for signed-in accounts
+whose accepted version differs from `TERMS_VERSION`, and mounts the welcome tour
+(`components/ProductTour.jsx`), a native modal dialog that spotlights sidebar or
+mobile navigation targets. Help and legal routes stay reachable through both
+gates. `components/BackButton.jsx` uses the Navigation API to go back only to
+an earlier in-app entry, otherwise to a parent route. A footer with help and
+legal links follows every screen.
 
 The UI includes discovery/filter/sort/page controls, profile/catalog/project
 editors, full detail and announcement editing/comment/reaction actions,
@@ -113,6 +146,29 @@ Matching email alone never links a password account. Google users may use
 verified password recovery to add password sign-in without losing Google login,
 including for native clients where embedded Google sign-in is disabled.
 
+## Account trust
+
+Two-step verification sits between the first factor and session issuance:
+password and Google sign-in call `two-factor-delivery.js` before creating
+tokens, and only `/auth/two-factor/verify` issues the session, inside the same
+transaction that consumes the hashed challenge. Re-authentication for
+sensitive changes commits failed attempts before returning the error so
+attempt limits hold. `users.sessions_revoked_at` lets the identity guard reject
+access tokens issued before "sign out of all devices"; refresh tokens are
+revoked in the same transaction. TOTP secrets and SMS numbers are sealed by
+`secret-box.js`; SMS goes through the provider interface in `sms-gateway.js`.
+Per-account throttles use `account_rate_events`, so they hold across processes.
+
+Account deletion deletes the `users` row and relies on cascades for owned
+records, after removing the account from other projects' collaborator lists
+and before recomputing reaction counters. The export runs in one repeatable-read
+transaction. Contact discovery stores an email hash only for opted-in accounts
+and never stores submitted hashes. Verification requests are keyed by
+`subject_type`/`subject_id`; their images use the private `verification` media
+purpose, are served to administrators only through an audited route, survive
+the unreferenced-media cleanup while referenced, and are purged by the hourly
+maintenance after the retention period. See `docs/api.md` for contracts.
+
 ## Community persistence and delivery
 
 Migration `003_community.sql` is additive and idempotent. It adds media,
@@ -140,11 +196,20 @@ no safe downgrade to plaintext once encrypted messages exist: keep the key
 tables/backups and use a reviewed forward fix rather than dropping columns.
 
 Managed image uploads are decoded by Sharp, constrained by bytes/pixels/frame
-count, stripped of metadata, and encoded as bounded WebP. Bytes live in
-PostgreSQL, with owner/purpose checks when attached to a profile/announcement.
-Private or unattached images require uploader authentication. Published images
-can be cached by browsers; removing a reference does not recall copies already
-downloaded.
+count, stripped of metadata, and encoded as bounded WebP. Encrypted attachment
+blobs are stored as opaque bytes. Each `media` row records its purpose, MIME
+type, and size, and holds either the bytes (`MEDIA_STORAGE=postgres`) or the key
+of an object in a private S3-compatible bucket (`MEDIA_STORAGE=s3`). Every read
+goes through `/realm/media/:id`: owners always pass, other viewers need a
+`publicMediaReferences` match (never for attachments) or an
+`authorizedMediaReferences` match for that viewer. Owner/purpose checks apply when
+media is attached to content. Published images can be cached by browsers;
+removing a reference does not recall copies already downloaded.
+
+A database trigger queues the object key whenever an object-stored row is
+deleted, including account-deletion cascades. The background worker removes
+queued objects with leased, retried jobs, so PostgreSQL stays the source of truth
+and no transaction waits on object storage.
 
 Small PostgreSQL notifications are emitted through the transaction executor,
 so clients only see committed changes. Each API process holds one dedicated
@@ -155,11 +220,43 @@ Reconnect reloads authoritative HTTP state; there is no event-history promise.
 
 Notification records and user preferences are persisted with their triggering
 mutations. Workers atomically lease pending push rows using `SKIP LOCKED` and
-retry up to three times. Browser endpoints/keys are validated and restricted
-to supported push providers. Payloads are generic; gone subscriptions are
+retry up to three times. Each job is delivered to the user's browsers (Web Push)
+and registered mobile devices (FCM for Android, APNs for iOS). Browser
+endpoints/keys are validated and restricted to supported push providers. Payloads are generic text in the recipient's language, built
+from the same templates as notification email (`engines/notification-email.js`); gone subscriptions are
 deleted. Notifications created while push is off are not replayed on opt-in.
-Hourly maintenance removes expired challenges, unreferenced media after a day,
+Hourly maintenance removes expired challenges, unreferenced media after a day
+(media matching `retainedMediaReferences` or `publicMediaReferences` is kept),
 notifications after 90 days, and aggregates outside the 30-day reporting window.
+A separate help job (`engines/help-jobs.js`) deletes answered/closed support
+requests 365 days after their last update. On listen it records `APP_VERSION`
+in `app_releases` under a transaction advisory lock and fans out a single
+`app_update_major` or `app_update_minor` notification per active account when
+the major or minor number increases.
+
+Migration `010_help_onboarding.sql` adds `support_requests`,
+`terms_acceptances` (one row per accepted version), `user_onboarding` (tour
+status), `app_releases`, and `app_ratings` (unique per account and version, with
+`rewarded_at` for a later rewards worker). Support requests, acceptances,
+onboarding, and ratings are removed with their account row.
+
+Per-kind channel choices live in `notification_channel_preferences`; a missing
+row or `NULL` column means the catalog default. `notificationRepository` decides
+in-app, push, and email delivery in one insert, so every feature that creates
+notifications honors them. Email uses an outbox on the notification row, drained
+by `NotificationEmailWorker` with `SKIP LOCKED` leases and up to three attempts
+through the shared SMTP transport. `NotificationScheduler` creates weekly
+statistics digests, come-back reminders and invite nudges; a lease row in
+`notification_job_runs` keeps each job to one API process per interval, and
+event keys make reruns idempotent. Both start and stop with the other
+background jobs (`NotificationJobs`).
+
+Announcement applications (migration `011_announcement_applications.sql`)
+live in `application-orchestrator.js`, `application-repository.js`, and the
+`application-rules.js` engine. Replies are plaintext by design and visible to
+the owner only. Their own hourly `ApplicationMaintenance` job records when a
+call closes, clears that mark when it reopens, and deletes applications after
+the configured retention period.
 
 Analytics requires both actor and content owner opt-in and excludes self-views.
 Only daily resource/kind counts are retained, not actor identity or message
@@ -171,10 +268,149 @@ Platform totals use a separate collection requiring both parties' additional
 platform consent; existing personal totals are never retroactively exposed.
 Reported content expires 90 days after review, audit metadata after 365 days.
 
+## Marketplace persistence and jobs
+
+Migration `013_marketplace.sql` adds marketplace listings, ordered listing
+photos (references to managed `listing` media), instrument/genre tags, saved
+listings, and an optional `listing_id` on user reports. The category catalog
+is defined in `backend/src/engines/marketplace-catalog.js` and served to
+clients, which localize its keys. Prices are integer minor units plus an ISO
+4217 code; locations are plain text and coordinate columns. Listing reports
+reuse the user report queue, while moderation removal is a soft delete that
+keeps the row for the owner and administrators. Each API process runs an hourly
+job that leases expiring listings with `SKIP LOCKED`, creates one
+`listing_expiring` notification per expiry date, and purges listings expired
+or removed more than a year ago. Media maintenance keeps attached listing
+photos. Payments are not processed; contact uses encrypted messaging.
+
+## Places, discovery and plan limits
+
+Migration `008_profiles_ads_discovery.sql` adds a `places` table loaded from a
+committed GeoNames seed by the migration runner (`scripts/places-dataset.js`).
+Profiles and announcements reference a place and copy its city, region,
+country and coordinates, so legacy free-text cities keep working. Distance
+search is portable SQL: a bounding box on the indexed latitude/longitude
+columns (split at the antimeridian) followed by a haversine check
+(`engines/geo.js`). Browser coordinates for "near me" are request-only.
+
+Freemium caps are enforced in the writing transaction under the user's row
+lock (`repositories/quota-repository.js`) with limits from
+`entitlementRepository`. Saved searches are matched inside the transaction
+that publishes an announcement, so notifications commit atomically with the
+publication; JSON filters are evaluated in SQL and fan out through
+`notificationRepository.createMany` with per-announcement keys. Blocks
+(`blocked_users`) are excluded in both directions from search, saved-search
+matching, follows and contact visibility. Profile visits are written only
+with the visitor's consent and expire after 30 days.
+
+## Organizations
+
+Bands, venues, organizers, booking agencies, and labels share the
+`organizations` table with membership periods, follows, relations, releases,
+update posts, and venue claims (migration `012_organizations.sql`). Routes live
+in `organization-orchestrator.js`, validation in `organization-conductor.js`,
+and SQL in `organization-repository.js` and `organization-content-repository.js`.
+Every organization-scoped write authorizes through
+`organizationRepository.requireMember` inside its transaction. Each API
+process runs `OrganizationFeedImporter`, which leases due bands with
+`SKIP LOCKED`, fetches their public YouTube feeds outside transactions with a
+fixed host, timeout, and size cap, and stores new videos and follower
+notifications atomically. The client loads organization screens on demand
+through `lib/lazy-screen.jsx`; the service worker precaches those chunks with
+the shell. See the [organization model](organizations.md).
+
+## Monetization
+
+Migration `014_monetization.sql` adds Stripe customers, checkout sessions,
+subscriptions and processed webhook event IDs, an append-only `points_ledger`
+(a trigger rejects edits) with `points_balances`, invite codes and referrals,
+promotions, sponsored cards with aggregate daily statistics, rewarded video
+view tokens, the sponsored-card preference, and offer broadcasts. Routes live
+in `monetization-orchestrator.js`; `billing-conductor.js` handles Stripe and
+`monetization-conductor.js` the rest. `engines/payment-gateway.js` wraps the
+official Stripe SDK (tests inject a stand-in client) and maps subscription
+objects to plans and periods. The webhook route is registered in its own
+encapsulated Fastify scope whose JSON parser keeps the raw bytes for signature
+verification; no other route accepts raw JSON. Each event ID is inserted in the
+same transaction that applies it, so retries and concurrent deliveries apply
+once. Subscriptions become `user_entitlements` rows with source `stripe` and the
+subscription ID as reference; points Premium days use source `points`.
+
+`pointsRepository.adjust` locks the member's balance row, ignores a reference
+it already recorded, rejects negative balances, and appends the ledger entry
+in the caller's transaction. `engines/discovery-placements.js` runs after the
+organic announcement and profile searches: it ranks live promotions (area pins
+matched with the same haversine SQL as distance search, then boosts), re-runs
+them through the same search function and filters restricted to their IDs,
+keeps a per-page slice, and adds targeted sponsored cards with their positions,
+incrementing aggregate impression counters. `MonetizationJobs` runs every
+`MONETIZATION_JOB_INTERVAL_MINUTES` in each API process: rating rewards (rows
+leased with `SKIP LOCKED`), missed referral rewards, deletion in Stripe of
+customers whose account was deleted (`billing_customers.user_id` is set to
+null by the account deletion), and purging old webhook events and view tokens.
+Registration records an `inviteCode`, and email verification rewards the
+referral, with the job as a fallback.
+
+## Events
+
+Migration `015_events.sql` adds `events` with organizers, an ordered lineup
+(band page, artist account, or free text), genres, images (managed `event`
+media), https ticket links, attendance, reminders, the attendee discussion
+(`event_posts`), and official communications, plus `event_id`/`event_post_id`
+on user reports and `organization` subjects (with a `request_note`) for
+verification requests. Routes live in `event-orchestrator.js` under
+`/realm/gigs` (the SSE stream already owns `/realm/events`), validation and
+calendar helpers in `engines/event-model.js`, and SQL in `event-repository.js`,
+`event-discussion-repository.js`, and `organization-verification-repository.js`.
+
+Times are stored as UTC instants with the event's IANA zone; the API accepts
+and returns local wall-clock values converted with `Intl`, so no time zone
+database is needed in PostgreSQL. Status `completed` is derived from the end
+time, never stored. Coordinates come from the event, then its venue, then its
+city, and distance search reuses `engines/geo.js`. Writes authorize editors
+through `organizationRepository.requireMember(..., 'manage_calendar')` inside
+the transaction; read paths use an equivalent SQL predicate that also guards
+draft images in `authorizedMediaReferences`. Publishing, lineup additions,
+communications, and reminders create notifications in the same transaction.
+Each API process runs `EventReminderJob`, which leases due reminders with
+`FOR UPDATE SKIP LOCKED`, so replicas never send one twice. Account deletion
+hands events co-organized by pages to those pages before cascading the rest.
+
+## Band collaboration
+
+Migration `016_band_collaboration.sql` adds calendars (`calendar_entries`,
+`calendar_participants`, `calendar_reminders`, `calendar_feed_tokens`), the band
+chat (`band_chat_members`, `band_chat_messages`, `band_chat_attachments`, and
+`user_reports.band_message_id`), and reviews and ratings (`profile_reviews`,
+`profile_ratings`, `profile_rating_stats`). Routes live in
+`band-collab-orchestrator.js` and `band-collab-conductor.js`; SQL in
+`calendar-repository.js`, `band-chat-repository.js`, and
+`review-repository.js`. `engines/calendar-time.js` converts wall-clock times in
+IANA zones with the runtime's ICU data and `engines/ics.js` writes RFC 5545
+output. Band calendar writes authorize through
+`organizationRepository.requireMember(..., 'manage_calendar')`.
+
+`BandCollabJobs` runs in every API process: each interval it leases due
+reminders with `SKIP LOCKED` and creates their notifications in the same
+transaction, and once a day (leased through `notification_job_runs`) it
+republishes the anonymous rating aggregates. Individual ratings are only
+readable by their rater.
+
+Band chat periods are reconciled with active `organization_members` rows inside
+each chat transaction; sends share-lock the organization row, which membership
+changes lock for update, so the recipient check sees a consistent member list.
+Envelopes are validated in `engines/message-security.js` and produced and
+verified by `frontend/src/lib/message-crypto.js`. Attachment bytes go through
+`/realm/media/blobs`; `authorizedMediaReferences` grants them to current
+members whose period began before the message, and `retainedMediaReferences`
+keeps them while a message references them. Account deletion relies on
+cascades: personal entries, chat rows, reviews, and ratings are removed, while
+band entries keep the band and lose their creator.
+
 ## Operational boundaries and extension points
 
-`/health/live` reports process liveness; `/health/ready` checks PostgreSQL and
-returns 503 when unavailable. `/pulse` is the readiness compatibility alias.
+`/health/live` reports process liveness; `/health/ready` checks PostgreSQL (and
+the media bucket when `MEDIA_STORAGE=s3`) and returns 503 when unavailable. `/pulse` is the readiness compatibility alias.
 Readiness does not validate SMTP or complete user workflows.
 
 Production logs go to stdout/stderr as structured JSON. See

@@ -55,6 +55,9 @@ class MessagingKeyRepository {
         FROM (
           SELECT DISTINCT other.user_id FROM conversation_members own
           JOIN conversation_members other ON other.conversation_id = own.conversation_id WHERE own.user_id = $1
+          UNION SELECT other.user_id FROM band_chat_members own
+          JOIN band_chat_members other ON other.organization_id = own.organization_id AND other.left_at IS NULL
+          WHERE own.user_id = $1 AND own.left_at IS NULL
           UNION SELECT $1::uuid
         ) person`, [userId]);
       return ownKey(rows[0]);

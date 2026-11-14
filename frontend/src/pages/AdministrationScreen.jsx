@@ -7,10 +7,22 @@ import ErrorState from '../components/ErrorState.jsx';
 import FormField from '../components/FormField.jsx';
 import Pagination from '../components/Pagination.jsx';
 import ActivityReport from '../components/ActivityReport.jsx';
+import MarketplaceModeration from '../components/marketplace/MarketplaceModeration.jsx';
+import VerificationReviewQueue from '../components/VerificationReviewQueue.jsx';
+import HelpDesk from '../components/HelpDesk.jsx';
+import OrganizationClaimReview from '../components/OrganizationClaimReview.jsx';
+import OrganizationVerificationAdmin from '../components/OrganizationVerificationAdmin.jsx';
+import MonetizationConsole from '../components/monetization/MonetizationConsole.jsx';
+import { hasTranslation, useI18n } from '../lib/i18n.js';
+import { errorText } from '../lib/error-text.js';
+import { reportCategory, reportStatus } from '../lib/report-labels.js';
 
-const operations = { review: 'Mark reviewed', dismiss: 'Dismiss report', remove_message: 'Remove reported message', suspend_user: 'Suspend reported account' };
+const operations = ['review', 'dismiss', 'remove_message', 'suspend_user'];
+const totals = ['accounts', 'activeAccounts', 'administrators', 'platformOptIns', 'openReports'];
 
 export default function AdministrationScreen({ route }) {
+  const { t, formatDate, formatNumber } = useI18n();
+  const auditAction = action => (hasTranslation(`admin.audit.actions.${action}`) ? t(`admin.audit.actions.${action}`) : action.replaceAll('_', ' '));
   const tab = ['overview', 'reports', 'audit'].includes(route.query.get('tab')) ? route.query.get('tab') : 'overview';
   const id = route.query.get('id');
   const [page, setPage] = useState(1);
@@ -25,73 +37,80 @@ export default function AdministrationScreen({ route }) {
   const data = resource.data;
   const resolve = async event => {
     event.preventDefault();
-    if (['remove_message', 'suspend_user'].includes(action) && !window.confirm(`${operations[action]} for ${data.reportedName}? This action is recorded in the administrator audit log.`)) return;
+    if (['remove_message', 'suspend_user'].includes(action) && !window.confirm(t('admin.report.confirm', { action: t(`admin.operations.${action}`), name: data.reportedName }))) return;
     setBusy(true); setError('');
     try {
       await conduit.transmit(`/admin/reports/${id}`, { method: 'PATCH', auth: true, body: { action, note } });
       window.location.hash = '#admin?tab=reports';
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
   return <div className="container">
-    <PageHeader eyebrow="Administration" title="Platform and safety" subtitle="Aggregate activity and report-based moderation. Private conversations are not available for browsing." />
-    <nav className="discovery-tabs" aria-label="Administration sections">
-      {Object.entries({ overview: 'Overview', reports: 'Reports', audit: 'Audit log' }).map(([value, label]) =>
-        <a key={value} href={`#admin?tab=${value}`} aria-current={tab === value ? 'page' : undefined}>{label}</a>)}
+    <PageHeader eyebrow={t('app.routes.admin')} title={t('admin.title')} subtitle={t('admin.subtitle')} />
+    <nav className="discovery-tabs" aria-label={t('admin.sections')}>
+      {['overview', 'reports', 'audit'].map(value =>
+        <a key={value} href={`#admin?tab=${value}`} aria-current={tab === value ? 'page' : undefined}>{t(`admin.tabs.${value}`)}</a>)}
     </nav>
     {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
     {error && <p className="error" role="alert">{error}</p>}
-    {tab === 'reports' && !id && <FormField id="admin-report-status" label="Report status"><select className="input" value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}>
-      <option value="open">Open</option><option value="reviewed">Reviewed</option><option value="actioned">Action taken</option><option value="dismissed">Dismissed</option><option value="">All statuses</option>
+    {tab === 'reports' && !id && <FormField id="admin-report-status" label={t('admin.reports.status')}><select className="input" value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}>
+      {['open', 'reviewed', 'actioned', 'dismissed'].map(value => <option key={value} value={value}>{t(`admin.reports.statusOptions.${value}`)}</option>)}
+      <option value="">{t('admin.reports.allStatuses')}</option>
     </select></FormField>}
-    {!data && !resource.error ? <Spinner label="Loading administration" /> : data && <>
+    {!data && !resource.error ? <Spinner label={t('admin.loading')} /> : data && <>
       {tab === 'overview' && <>
-        <h2 className="heading-md">Operational account totals</h2>
-        <dl className="metric-grid">{Object.entries({ accounts: 'Accounts', activeAccounts: 'Active accounts', administrators: 'Administrators', platformOptIns: 'Platform analytics opt-ins', openReports: 'Open reports' }).map(([key, label]) =>
-          <div className="card" key={key}><dt>{label}</dt><dd>{data.totals[key]}</dd></div>)}</dl>
-        <h2 className="heading-md">Consented platform activity</h2>
-        <p className="body-muted">Activity appears only when both participants separately opt in to platform aggregates. Counts are not unique visitors or all platform traffic. No visitor identities or message text are included. Historical personal analytics is not imported.</p>
-        <ActivityReport daily={data.daily} content={data.content} caption="Reach of opted-in public calls (last 30 days)" />
+        <h2 className="heading-md">{t('admin.overview.totals')}</h2>
+        <dl className="metric-grid">{totals.map(key =>
+          <div className="card" key={key}><dt>{t(`admin.overview.metrics.${key}`)}</dt><dd>{formatNumber(data.totals[key])}</dd></div>)}</dl>
+        <h2 className="heading-md">{t('admin.overview.activity')}</h2>
+        <p className="body-muted">{t('admin.overview.activityNote')}</p>
+        <ActivityReport daily={data.daily} content={data.content} caption={t('admin.overview.reach')} />
       </>}
       {tab === 'reports' && !id && <>
-        {!data.reports.length ? <p className="detail-section">No reports match this status.</p> : <div className="table-wrap"><table>
-          <caption>Report queue</caption>
-          <thead><tr><th scope="col">Musician</th><th scope="col">Reason</th><th scope="col">Content</th><th scope="col">Status</th><th scope="col">Review</th></tr></thead>
+        {!data.reports.length ? <p className="detail-section">{t('admin.reports.none')}</p> : <div className="table-wrap"><table>
+          <caption>{t('admin.reports.queue')}</caption>
+          <thead><tr><th scope="col">{t('app.routes.musician')}</th><th scope="col">{t('ui.report.reason')}</th><th scope="col">{t('admin.reports.content')}</th><th scope="col">{t('admin.reports.statusColumn')}</th><th scope="col">{t('admin.reports.review')}</th></tr></thead>
           <tbody>{data.reports.map(report => <tr key={report.id}>
-            <th scope="row">{report.reportedName}</th><td>{report.category}</td><td>{report.hasMessage ? 'Selected message' : 'Profile concern'}</td><td>{report.status}</td>
-            <td><a href={`#admin?tab=reports&id=${report.id}`} aria-label={`Review report about ${report.reportedName}`}>Review</a></td>
+            <th scope="row">{report.reportedName}</th><td>{reportCategory(report.category)}</td><td>{report.hasMessage ? t('admin.reports.selectedMessage') : t('admin.reports.profileConcern')}</td><td>{reportStatus(report.status)}</td>
+            <td><a href={`#admin?tab=reports&id=${report.id}`} aria-label={t('admin.reports.reviewNamed', { name: report.reportedName })}>{t('admin.reports.review')}</a></td>
           </tr>)}</tbody>
         </table></div>}
-        <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label="Moderation pages" />
+        <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label={t('admin.reports.pages')} />
+        <MarketplaceModeration />
       </>}
       {tab === 'reports' && id && <article className="card report-detail">
-        <h2 className="heading-md">Report about {data.reportedName}</h2>
-        <p><strong>Status: {data.status}</strong> / {data.category}</p>
-        <h3>Reporter-provided details</h3><p className="detail-text">{data.details}</p>
+        <h2 className="heading-md">{t('admin.report.title', { name: data.reportedName })}</h2>
+        <p><strong>{t('reports.statusLine', { status: reportStatus(data.status) })}</strong> / {reportCategory(data.category)}</p>
+        <h3>{t('admin.report.details')}</h3><p className="detail-text">{data.details}</p>
         {data.evidence && <>
-          <h3>Selected message shared by the reporter</h3><blockquote className="reported-excerpt">{data.evidence}</blockquote>
-          <p className="field-hint">{data.evidenceVerified ? 'The signature matches the sender key recorded for this message. This does not independently verify a real-world identity.' : 'Legacy server-stored message. No end-to-end sender signature is available.'}</p>
+          <h3>{t('admin.report.evidence')}</h3><blockquote className="reported-excerpt">{data.evidence}</blockquote>
+          <p className="field-hint">{data.evidenceVerified ? t('admin.report.signed') : t('admin.report.legacy')}</p>
         </>}
-        <p className="field-hint">Viewing this report is audited. No other messages are disclosed.</p>
+        <p className="field-hint">{t('admin.report.audited')}</p>
         {data.status === 'open' ? <form className="form-stack detail-section" onSubmit={resolve}>
-          <FormField id="moderation-action" label="Decision" required><select className="input" value={action} onChange={event => setAction(event.target.value)} disabled={busy}>
-            {Object.entries(operations).filter(([key]) => key !== 'remove_message' || data.messageId).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+          <FormField id="moderation-action" label={t('admin.report.decision')} required><select className="input" value={action} onChange={event => setAction(event.target.value)} disabled={busy}>
+            {operations.filter(key => key !== 'remove_message' || data.messageId).map(key => <option value={key} key={key}>{t(`admin.operations.${key}`)}</option>)}
           </select></FormField>
-          <FormField id="moderation-note" label="Internal decision note" hint="This note is visible to administrators, not the reporter." required>
+          <FormField id="moderation-note" label={t('admin.report.note')} hint={t('admin.report.noteHint')} required>
             <textarea className="input" value={note} onChange={event => setNote(event.target.value)} minLength="5" maxLength="2000" disabled={busy} />
           </FormField>
-          <button className="btn btn-primary" type="submit" disabled={busy || note.trim().length < 5}>{busy ? 'Recording decision...' : 'Record decision'}</button>
+          <button className="btn btn-primary" type="submit" disabled={busy || note.trim().length < 5}>{busy ? t('admin.report.recording') : t('admin.report.record')}</button>
         </form> : <p className="detail-text">{data.moderatorNote}</p>}
       </article>}
       {tab === 'audit' && <>
-        <p className="body-muted">Role changes, report access, and moderation decisions. Message contents and report details are not copied into this log. A blank actor means the operator CLI.</p>
+        <p className="body-muted">{t('admin.audit.intro')}</p>
         <div className="table-wrap"><table>
-          <caption>Administrator audit log</caption>
-          <thead><tr><th scope="col">Date</th><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Target</th></tr></thead>
-          <tbody>{data.entries.map(entry => <tr key={entry.id}><th scope="row">{new Date(entry.createdAt).toLocaleString()}</th><td>{entry.action.replaceAll('_', ' ')}</td><td className="identifier">{entry.actorId || 'Operator CLI'}</td><td className="identifier">{entry.targetId || 'None'}</td></tr>)}</tbody>
+          <caption>{t('admin.audit.caption')}</caption>
+          <thead><tr><th scope="col">{t('ui.activity.date')}</th><th scope="col">{t('admin.audit.action')}</th><th scope="col">{t('admin.audit.actor')}</th><th scope="col">{t('admin.audit.target')}</th></tr></thead>
+          <tbody>{data.entries.map(entry => <tr key={entry.id}><th scope="row">{formatDate(entry.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</th><td>{auditAction(entry.action)}</td><td className="identifier">{entry.actorId || t('admin.audit.cli')}</td><td className="identifier">{entry.targetId || t('admin.audit.none')}</td></tr>)}</tbody>
         </table></div>
-        <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label="Audit pages" />
+        <Pagination pagination={data.pagination} disabled={resource.loading} onPage={setPage} label={t('admin.audit.pages')} />
       </>}
     </>}
+    {tab === 'overview' && data && <VerificationReviewQueue />}
+    <HelpDesk route={route} />
+    {tab === 'overview' && data && <OrganizationClaimReview />}
+    {tab === 'overview' && data && <OrganizationVerificationAdmin />}
+    {tab === 'overview' && data && <MonetizationConsole />}
   </div>;
 }

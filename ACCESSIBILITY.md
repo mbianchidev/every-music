@@ -61,6 +61,50 @@ return focus when a verified message replaces its warning control. Reports must
 explain exactly what is disclosed before the required consent checkbox.
 Administrator overview/queue/audit/detail states and decision confirmations need
 the same keyboard, contrast, narrow-screen and screen-reader checks.
+Marketplace tabs, filters, listing photo ordering, status changes, report and
+removal dialogs, and price/rate announcements need the same checks.
+
+Two-step sign-in moves focus to its heading, returns focus to the code field
+after an error, and offers a recovery-code alternative; check both with a
+screen reader. The QR code has a text alternative and a typed setup key.
+Recovery codes, account deletion, contact search results, and the verification
+request/review queue need the same keyboard, zoom, and announcement checks.
+
+The welcome tour is a modal dialog: check its announcements per step, Escape to
+skip, focus return, reduced motion, and that spotlighted targets stay visible at
+320px. Also check the terms prompt, update screens, help forms (including the
+diagnostics consent text), star rating radios, Back controls, and footer links.
+
+Organization pages add member editors and permission checkboxes, invitation
+and request responses, the venue claim dialog, search-as-you-type pickers,
+and the admin claim and verification tools; check them the same way.
+
+Monetization adds the store's plan comparison table, Promote and Premium-days
+dialogs (cost updates are announced politely), the rewarded video dialog (the
+video description doubles as a transcript; claiming is a button, not a timer
+that acts on its own), the invite link and copy feedback, text "Promoted" and
+"Sponsored" labels that never rely on color, and the admin monetization
+console; check them the same way, including 320px reflow and dark mode.
+
+Events add discovery filters with pickers, the lineup editor (ordering, roles,
+set times), date and time zone fields, the capacity text and bar (the text
+carries the value; the bar is decorative), going/interested toggle buttons
+with `aria-pressed`, reminder checkboxes, the calendar download, the status
+dialog, official updates, and the discussion; check them the same way.
+
+Band calendars add date, time and time zone fields, RSVP radios, reminder
+checkboxes and the subscription link; the band chat adds file pickers, picture
+alternatives, audio players and the band message report dialog; profiles add
+review approval controls and star radios. Check them the same way, including
+that encrypted attachments announce their loading and failure states.
+
+Languages: the document's `lang` attribute always matches the interface
+language (English, Dutch, or Italian) and changes together with it, so screen
+readers switch pronunciation. Language names in the picker carry their own
+`lang` attribute. Member-written content has no language metadata and is read
+with the interface language. Check the sign-in and Settings language pickers,
+longer Dutch and Italian labels at 200% zoom and 320px, and that status and
+error announcements arrive in the chosen language.
 
 ## Known limitations and reporting
 

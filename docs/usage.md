@@ -2,6 +2,10 @@
 
 [Documentation index](README.md) | [Configuration](configuration.md) | [Operations](deployment.md)
 
+Screenshots in this guide show synthetic demo accounts and content, not real
+members. See [documentation screenshots](development.md#documentation-screenshots)
+to regenerate them.
+
 ## Choose a setup
 
 - **Web/self-hosted:** use the [README quickstart](../README.md#quick-start-with-docker-compose).
@@ -52,6 +56,8 @@ migrations when the API container starts.
 
 1. Choose **Create an account**. Use an email address that can receive verification
    mail. Passwords need at least eight characters, uppercase, lowercase, and a number.
+   Read the Terms of Use and Privacy policy (they open in a new tab) and accept
+   the terms before creating the account.
 2. Follow the email verification link, then sign in. If it expires or delivery
    fails, attempt sign-in and use **Resend verification email**.
 3. Open **Profile**, then **Complete profile** or **Edit profile**. Fill in your
@@ -64,11 +70,50 @@ migrations when the API container starts.
    revisit or remove it. **My calls** lets you edit or delete your announcements.
 6. Use **Profile > Sign out** to end the session.
 
+The first time a new account opens the app, a short welcome tour highlights
+Feed, Musicians, Post, Messages, Profile, Settings, and Help. Use **Next**,
+**Back**, Enter, or Escape (skip) from the keyboard; it respects reduced motion.
+Your account remembers that you finished or skipped it, and **Help > Replay the
+welcome tour** shows it again. When the operator publishes new Terms of Use,
+existing accounts are asked once after sign-in to read and accept them; Help
+and the legal pages stay readable while that prompt is open.
+
+### Help, legal pages, and updates
+
+Open **Help** from the navigation, or **Help center** in the footer of every
+screen, including sign-in and registration. You can report a bug, contact the
+team, or apply through **Work with us** without signing in; visitors must give
+an email address for the answer. Bug reports include the app version, platform,
+language, and browser identification only when you select **Include technical
+details**. Requests sent while signed in appear under **Your support requests**,
+and you get an in-app notification when the team replies. Sending is limited to
+six requests per hour per network address and ten per account per day.
+
+The footer and Help link to About, Work with us, Your data rights (GDPR),
+Privacy policy, Cookie policy, and Terms of Use. These are templates: the
+operator fills in their name, contact, jurisdiction, and dates through
+[configuration](configuration.md#help-center-legal-pages-and-app-versions) and must
+review the text. Account deletion and data export live in Settings.
+
+Nested screens (announcement and musician details, edit screens, Help forms,
+and legal pages) show **Back**. It returns to the previous Every.music page,
+or to the parent screen when you opened the page directly.
+
+If a newer app version is available, a dismissible notice links to update
+instructions for your platform. When the operator stops supporting your
+version, the app shows an **Update required** screen with the same instructions
+until you update. Signed-in members can rate each app version once from
+**Help > Rate Every.music** (1-5 stars and an optional comment).
+
+[![Help center with Report a bug, Contact us, and Work with us, account shortcuts such as Replay the welcome tour, policy links, and the app version](images/help-center.png)](images/help-center.png)
+
 ### Discover and collaborate
 
 Desktop navigation lives in the left sidebar. On mobile, Feed, Musicians,
 Post, and Messages stay in the bottom bar; **More** opens the remaining sections.
 Close that menu with its close button, Escape, or the backdrop.
+
+<a href="images/mobile-feed.png"><img src="images/mobile-feed.png" width="390" alt="Feed on a 390 pixel wide phone screen with the search box, filters, a promoted call from a synthetic musician, and the bottom bar with Feed, Musicians, Post, Messages, and More"></a>
 
 Feed and Musicians have keyword, city, instrument, genre, date, and sorting controls.
 Open **Filters and sorting** to show the advanced controls on any screen size.
@@ -89,10 +134,254 @@ return to the requested detail after sign-in.
 
 In Edit profile, the separate **Musical projects** form creates, edits, and
 removes projects with music links, collaborator search, and individual roles.
+Under **Instruments played**, choose up to 10 instruments from **Add an
+instrument** and remove them with **Remove ... from this project**; your profile
+lists them on each project card.
 Projects save independently of the profile form. Profile and announcement
 images accept JPEG/PNG up to 2 MiB and 16 megapixels. Preview before saving;
 uploads are rotated, resized to at most 1280 pixels, converted to WebP, and
 stripped of metadata. Published images are public.
+
+[![Synthetic musician profile with a Verified profile badge, Open to new projects, Telegram and Signal contacts, music and social links, instruments with skill levels, genres, and a musical project listing the instruments played and its collaborators](images/musician-profile.png)](images/musician-profile.png)
+
+### Reply to calls and review applicants
+
+On someone else's open call, **Apply to this call** opens a reply form. Write a
+message, optionally tick the instruments from the call you can cover, and add up
+to five links to demos or your website. The form says it plainly: the owner sees
+your message, and it is stored on Every.music without end-to-end encryption.
+Use Messages for anything private. You can send one active reply per call;
+**Withdraw application** removes it from the owner's view and lets you reply
+again while the call is open. Blocked musicians cannot reply to each other.
+
+**Applications** in the navigation has two views. **Sent** lists your replies
+with their status: Sent, Shortlisted, Accepted, Declined, Withdrawn, or Closed
+when the call was deleted, unpublished, or expired. **Received** is the owner
+dashboard across all your calls. Filter by call, status, or the instrument an
+applicant can cover, and sort by newest or oldest. Each applicant shows their
+name, picture, city, and profile instruments, plus their message and links.
+Change the status, keep a private note only you can see, or choose
+**Message applicant** to open the encrypted conversation. Open the dashboard
+for one call from **Applicants** in **My calls** or **Review applications** on
+your announcement page. Applicants are notified when you shortlist, accept, or
+decline them, and you are notified about each new reply.
+
+[![An open call published on behalf of a verified band page, with the Reply to this call form filled in: a message, Bass Guitar ticked as an instrument the applicant can cover, and a SoundCloud link](images/announcement-apply.png)](images/announcement-apply.png)
+
+[![Received applications dashboard with call, status, instrument and order filters, status counts, and applicants showing their instruments, message, links, status, private note, and Message applicant](images/applications-dashboard.png)](images/applications-dashboard.png)
+
+When a call closes, its applications stay readable to you for 90 days by
+default (`APPLICATION_RETENTION_DAYS`); the dashboard shows the exact date.
+Status changes are off for closed calls, but notes still work. After the
+retention period the applications are deleted automatically.
+
+### Places, contacts, plans and saved searches
+
+**City** fields suggest cities as you type, including common local names such
+as "Milano" or "Den Haag"; use the arrow keys and Enter, or click a
+suggestion. Choosing a city also records its region, country and approximate
+coordinates. You can still type a town that is not listed; it is shown as
+written but cannot be found by distance, region or country.
+
+Edit profile also has **Age**, **Open to new projects**, contact details
+(Telegram, WhatsApp, Signal, phone and a personal website) with a **Who can
+see your contacts** choice, and up to 20 music and social links. Contacts are
+never shown to people who are not signed in. Your profile also shows as open
+to new projects automatically while you have an active published call. On the
+free plan other musicians see your first three links and three projects; you
+always see everything, with a note when something is hidden.
+
+The call editor has an **Expiration date**. The free plan keeps a call online
+for up to 30 days and fills that date in for you; Premium can leave it empty.
+It also shows how many active calls you have. The free plan allows five active
+calls and ten saved calls at a time; the editor and Saved list show what is
+left, and a clear message explains when a limit is reached. **My calls** has
+**Publish** and **Unpublish** buttons so you can pause a call instead of
+deleting it.
+
+In **Filters and sorting**, choose **Near city** and a **Distance**, or a
+**Country** and **Region**, then sort by **Nearest first**. Calls also filter
+by **Cover band**, and musicians by **Availability** (open to new projects).
+To search near your current position, first turn on **Use my location for
+nearby searches** in Settings, then choose **Use my location**. Your browser
+asks for permission; the position is rounded to about 1 km, used only for
+those results and never saved.
+
+[![Find musicians with Filters and sorting open: Near city set to Milan, Within 50 km, and Nearest first, with six synthetic musicians showing their distance in km, instruments, genres, and a promoted profile first](images/musicians-distance-search.png)](images/musicians-distance-search.png)
+
+**Save this search** keeps the current feed filters in **Saved searches** and
+notifies you when a newly published call matches. A saved "near me" search
+stores the nearest city, not your position. The free plan keeps one saved
+search; turn its notifications off or delete it from Saved searches.
+
+Only you see the likes, dislikes and statistics of your own calls; other
+members see only their own reaction. Views, saves and the **Analytics** screen
+need Premium; the free plan explains this instead. **Who visited your profile**
+on your profile lists, with Premium, members who visited in the last 30 days
+and chose to be shown. That choice is **Show me to musicians whose profiles I
+visit** in Settings, off by default; turning it off deletes your recorded
+visits.
+
+**Block musician** on a profile hides each of you from the other's search
+results, removes follows between you, and hides your calls from them. Manage
+blocked musicians in Settings. Reports also accept **Inappropriate language**
+and **Fake profile using other people's photos**. City data comes from
+[GeoNames](https://www.geonames.org/) under CC BY 4.0.
+
+### Bands, venues, and other pages
+
+Open **Bands and venues** to search bands, venues, organizers, booking
+agencies, and labels by name, type, genre, and location. **Your pages** lists
+the pages you belong to, invitations, requests for your bands, and updates
+from pages you follow. Choose **Create a page**, pick the kind, and fill in
+what applies: bands add formation year, what they are open to (tours, live
+shows, support acts, endorsements), and an optional YouTube channel ID;
+venues add type, capacity, parking, directions, and coordinates for an
+OpenStreetMap link. You become the page leader. Venue, organizer, agency, and
+label pages may need a partner plan when the operator enables
+`PARTNER_PLAN_REQUIRED`; bands are always free.
+
+On a page, **Members** invites musicians, sets titles (such as "Lead guitar"),
+join/leave dates, and permissions, and transfers leadership. Invitees accept
+or decline in **Your pages**. Former members stay in the page history.
+Members allowed to post can publish updates, and **Post an announcement**
+publishes an open call on behalf of the page. Bands list releases and similar
+bands ("For fans of", with explained suggestions); agencies and labels ask
+bands to join their roster or label, and the band must accept. **Follow** a
+page to be notified about its updates, releases, new YouTube videos, and
+announcements. Spotify and other services are not imported automatically.
+
+[![Synthetic band page with a Verified badge, followers, formation year, Open to, contacts, line-up with titles and join dates, releases, updates, an open announcement for the page, its label, For fans of and suggested similar bands, a photo, and its next event](images/band-page.png)](images/band-page.png)
+
+If a venue has no page, add it as community-maintained: only you can edit it
+until the venue's operator uses **Claim this venue** and an administrator
+approves the claim. Administrators review claims and verify pages from the
+Administration overview; verified pages show a badge. Use **Report this page**
+for abusive pages. See the [organization model](organizations.md) for the full
+permission rules.
+
+In **Edit profile**, choose **Music lover** if you do not play: instruments
+and projects are hidden and your profile shows your bio, contacts, and the
+bands and artists you follow. **Settings > Profile visibility** hides those
+follow lists from other people.
+
+### Events, tickets, and reminders
+
+Open **Events** to find concerts and festivals. Search by event, band, artist,
+or venue name, choose **Upcoming**, **Past**, or **All dates**, and sort by
+date, band name, organizer name, or location. **More filters** narrows by
+date range, type, genre, band playing, organizer, venue, or a city and
+distance. Each card shows the date in the event's own time zone, the
+headliners, the place, the organizers, and how many people are going.
+
+[![Events discovery with search, When and Sort by controls, More filters, and six synthetic concerts and festivals with poster images, dates, venues, organizers, attendance, Sold out and You are going labels](images/events-discovery.png)](images/events-discovery.png)
+
+An event page lists the date and time in the event's time zone (and in yours
+when it differs), doors-open time, the venue and address with OpenStreetMap
+**Open map** and **Directions** links, who organizes it, and the lineup
+grouped into headliners, openers, support, and others, with links to band
+pages and artist profiles and optional set times. **Tickets** shows the share
+of the capacity already sold and **Buy tickets on ...** links to the external
+ticket sellers; Every.music does not sell tickets. Official updates from the
+organizers (doors open, lineup changes, refunds, postponements, and
+cancellations) appear at the top.
+
+[![Synthetic event page with an official doors open update, the poster, start, doors and end times in the event time zone, venue with map and directions links, verified organizer, 612 of 800 tickets sold with links to two ticket sellers, the lineup by role with set times, and Going selected under Are you going?](images/event-page.png)](images/event-page.png)
+
+Choose **Going** or **Interested** to reply. Going events appear on your
+profile under **Next events** and **Past events** unless you clear **Show this
+event on my profile**. **Download calendar file (.ics)** and **Add to Google
+Calendar** add the event to your calendar, and **Reminders** sends a
+notification from 15 minutes to a week before the start. People going or
+interested can read and post in the **Discussion**; report messages with
+**Report message from ...** and the event itself with **Report event**.
+**My events** lists the events you reply to and the ones you organize.
+
+[![The same event page in the Dark theme: lineup, Going and Interested replies, Show this event on my profile, calendar download, Google Calendar link, reminders, and the attendee discussion](images/event-page-dark.png)](images/event-page-dark.png)
+
+To organize, choose **New event**. Artists can organize on their own; pages
+you manage (as leader, admin, or member with the calendar permission) appear
+under **Organized by**, and their other managers can then edit the event too.
+Enter every time as the local time at the event and pick its time zone, choose
+a venue page or a city and address, build the lineup from band pages, artist
+profiles, or plain names, and add capacity, tickets sold, ticket links,
+genres, and images. Save as a draft or publish: publishing notifies the
+followers of the organizers, bands, venue, and artists, and tells the
+performers they are on the lineup. On the event page, organizers send official
+updates, use **Change status** to postpone or cancel (attendees are notified),
+moderate the discussion, and delete drafts, cancelled, or past events. A
+listed artist or band manager can use **Remove ... from this lineup**.
+
+Page leaders can ask for a verified badge in **Page verification** on their
+page: add the daily code to the official website or a social bio, explain how
+to confirm the page, and optionally attach a document that only administrators
+see. Administrators decide in the same verification queue as profiles.
+
+### Band calendar and band chat
+
+Band members see **Band calendar** and **Band chat** on their band's page.
+Members with the calendar permission (leaders and admins always) choose
+**Schedule a rehearsal or gig**: pick the type, title, start and end, time
+zone, city, address, notes, your reminders, and optionally invite artists from
+outside the band, such as a session musician. Everyone sees times in the
+entry's time zone and in their own. The entry page shows map links
+(OpenStreetMap and Google Maps), **Download .ics file**, **Add to Google
+Calendar**, the people involved and their answers. Answer **Going**, **Maybe**,
+or **Not going**, and choose up to three personal reminders (from "At the
+start" to "1 week before"). Organizers can edit, invite more people, cancel or
+restore, and delete entries; members and invitees are notified about changes.
+Invitees can leave an entry.
+
+[![Band recording session entry with time and time zone, place, address, band, organizer, OpenStreetMap and Google Maps links, notes, .ics download, Google Calendar link, Going selected, personal reminders, and band members and invited artists with their answers](images/calendar-entry.png)](images/calendar-entry.png)
+
+**My calendar** in the navigation lists upcoming and past entries from all
+your bands plus your personal plans, and lets you schedule personal entries
+(or band entries, when you manage a band calendar). To see everything in
+Google Calendar or Apple Calendar, open **Settings > Calendar subscription**,
+choose **Create subscription link**, and add the link to your calendar app
+(**Add to Google Calendar** or **Open in Apple Calendar**). The link is shown
+only once and works without signing in, so keep it secret; **Replace link**
+invalidates the old one and **Turn off link** removes it. Google Calendar can
+subscribe only when the server is reachable from the internet over HTTPS.
+
+[![My calendar with upcoming Glass Harbor rehearsals, a recording session, a tour planning call, the release show, and a personal entry, each with its time, place, and your answer](images/band-calendar.png)](images/band-calendar.png)
+
+**Band chat** is end-to-end encrypted for the current members, like direct
+messages: set up or unlock your messaging recovery key in the chat's
+**Encrypted messaging** panel. **Who can read new messages** lists members, the
+ones who cannot receive yet because they have not set up encrypted messaging,
+and fingerprints to compare. Attach up to four audio files (MP3, M4A, AAC,
+OGG, WAV, WebM, FLAC) or pictures (JPEG, PNG, WebP, GIF) per message, each up
+to the server's attachment limit (10 MB by default); they are encrypted before
+upload. Pictures open in the chat; choose **Play audio** to decrypt a track.
+New members cannot read messages from before they joined, and leaving the
+band ends access. Use **Report message** to send one decrypted message to
+administrators; attachments are not shared with the report.
+
+Unread band chat messages show as a count next to **Your pages** in the
+navigation. **Your pages** also lists **Band chats** with the unread messages
+of each band and an **Open the ... chat** link; reading a chat clears its count.
+
+### Reviews and anonymous ratings
+
+Artist profiles show **Reviews** and **Anonymous rating**. While you and an
+artist follow each other, you can write one review with 1-5 stars and text.
+It stays private until the artist approves it in their profile's **Waiting for
+your approval** list; editing it needs approval again. Artists can approve,
+hide, or delete reviews, and authors can edit or delete their own. The profile
+shows approved reviews with your name and their average.
+
+Any signed-in member can leave one anonymous 1-5 star rating per artist
+profile, change it, or remove it. Only you can see your own rating; the artist,
+other members, administrators, and data exports see only the number of ratings
+and their average. To make individual ratings harder to infer, totals are
+republished once a day and the average stays hidden until at least three
+people have rated. These measures have limits: an artist who knows that only
+one person could have rated on a given day, or who sees the count move after
+a small change, may still guess who rated, and one person can create several
+accounts. Reviews are not anonymous.
+
+[![Reviews section with an average of 4.7 out of 5 from three approved synthetic reviews, and the Anonymous rating section with the published average from nine ratings and the viewer's own rating, visible only to them](images/musician-reviews.png)](images/musician-reviews.png)
 
 ### Messages and notifications
 
@@ -124,12 +413,156 @@ member accounts, and have an audited report-access/action log. Admin roles are
 operator-managed, with no default administrator or private-chat browsing.
 
 **Follow musician** opts into their new-announcement alerts, subject to your
-notification preferences. Notifications also include messages, comments,
+notification preferences, and notifies the musician once. Profiles show
+follower and following counts. Notifications also include messages, comments,
 reactions, and optional daily profile-view alerts. The notification center has
 read controls and pagination. Settings controls categories and optional
 browser push; permission is requested only when you choose to enable it.
-Push is generic and excludes message text. Configure the
+Push uses short generic text in your chosen language and excludes message
+text, names, and other private content. Configure the
 [optional providers](configuration.md#browser-push-and-live-updates) first.
+
+[![Notification center with Mark all read, Manage notification settings, unread new follower, points, and calendar invitation notifications, and older read event updates](images/notifications.png)](images/notifications.png)
+
+Under **Notification channels** in Settings (or **Manage notification settings**
+in the notification center), choose for each type of notification whether it
+appears in the app, as browser push, or by email. Some types are not available
+on every channel; those options are disabled and marked "not available". The
+category switches above the channels still turn a whole category off. Email goes
+to your verified account address, is written in your chosen language, and
+never contains message text or other private content; every email links back to
+these settings. Optional weekly statistics digests need analytics consent and a
+plan that includes statistics. Inactive accounts may get a few "we miss you"
+reminders by email, and new accounts get one in-app reminder to invite friends.
+Choices apply to notifications created after you save them.
+
+[![Notification channels in Settings: for each type of notification, In app, Push, and Email checkboxes, grouped by Messages, Your announcements and profile, Musicians you follow, and Statistics, with unavailable options marked not available](images/notification-settings.png)](images/notification-settings.png)
+
+### Marketplace, lessons, and hiring
+
+Open **Marketplace** in the navigation (on mobile, under **More**). Its tabs
+separate **Gear** (instruments and equipment for sale or wanted), **Lessons**
+(lessons and coaching), **Services and hire** (sound engineers, drivers,
+security, tour managers, light technicians, booking agencies, designers, video
+makers, social media managers, coaches, or what you want to hire), and
+**Endorsements** (sponsorship and endorsement offers from instrument
+companies). Search by keyword and open **Filters and sorting** for type,
+category, condition, price range and currency, location, remote/online,
+shipping, instrument, genre, and sort order. The URL keeps filters and page.
+
+[![Marketplace Gear tab with New listing, My listings, Saved listings, search, filters, and six synthetic listings with generated pictures of instruments, prices, categories, conditions, locations, and shipping](images/marketplace.png)](images/marketplace.png)
+
+Choose **New listing**, pick what you are listing, its category, title,
+description, and price: a fixed amount, a negotiable amount, free, or contact
+for price, in any ISO 4217 currency. Lessons and services also state whether
+the amount is per hour, session, day, or project. Add an optional location and
+map coordinates, remote/online or shipping availability, up to eight photos
+(the first is the cover; reorder or remove them before saving), and instrument
+or genre tags. Listings stay up for 60 days by default.
+
+On a listing, **Contact** opens an end-to-end encrypted conversation with the
+lister and pre-fills a draft that links to the listing. **Save** adds it to
+**Saved listings**, and **Report listing** sends a concern to administrators;
+its status appears in **Your reports**. **My listings** shows all your
+listings, including expired and moderated ones. From a listing you own you can
+edit it, mark it reserved, sold (gear for sale) or closed, reopen it, renew it
+for another listing period, or delete it. Sold, closed, and expired listings
+leave search results; you get a notification a few days before a listing
+expires.
+
+[![Synthetic acoustic guitar listing with a cover picture and a second photo, price, status, shipping, seller, Contact, Saved, Report listing, description and details, and the safety tips beside it](images/marketplace-listing.png)](images/marketplace-listing.png)
+
+Every.music does not process marketplace payments, hold money, offer buyer
+protection, or resolve disputes. Agree on payment, delivery, and terms directly,
+follow the safety tips shown on every listing, and report suspicious listings.
+Administrators can remove a listing from the marketplace report queue (in
+**Administration > Reports**) or from the listing itself; removals are
+recorded in the audit log and notify the lister and reporters.
+
+**Settings > Mobile devices** lists phones and tablets registered for native
+push (Android through Firebase Cloud Messaging, iOS through Apple Push
+Notification service) with their registration dates. Select **Remove** to stop
+push on a device you no longer use; **Disable push on all devices** also removes
+every mobile device. The section is hidden when the server has no
+[mobile push provider](configuration.md#native-mobile-push) and no device is
+registered. Device tokens are never shown.
+
+### Premium, points, and promotions
+
+Open **Premium and points** in the navigation (on mobile, under **More**). It
+shows your current plan and when it renews or ends, a comparison of what the
+Free, Premium, and Partner plans include, and, when the server has
+[payments configured](monetization.md), **Subscribe** buttons and points packs.
+Paying opens Stripe's secure checkout; after paying you return to the store,
+which updates as soon as Stripe confirms the payment. **Manage billing** opens
+Stripe's portal to change plan, update your card, see invoices, or cancel.
+Without payments the page says so and points still work.
+
+[![Premium and points store on the Free plan with Subscribe to Premium and Subscribe to Partner, the plan comparison table, a 500 points pack, and ways to spend points, using synthetic test prices](images/store.png)](images/store.png)
+
+Points never expire. Earn them by inviting friends, rating the app once
+(**Help > Rate the app**), watching sponsored music videos (a few a day), and
+at special events. **Points wallet** shows your balance, ways to earn, the
+sponsored videos you can watch, your promotions, and your points history.
+To earn from a video, select **Watch**, play the video to the end, then
+**Claim** once the short waiting time has passed.
+
+[![Points wallet with a 570 points balance, ways to earn, a sponsored music video with Watch, an active profile boost, and the points history](images/wallet.png)](images/wallet.png)
+
+Spend points from the store or wallet on **Premium days**, from **Profile** on
+**Boost my profile**, and from **My calls** with **Promote** on a published
+call: a **boost** lifts the call in matching feed searches everywhere, and a
+**pin** puts it first for people searching in a city and radius you choose
+(wider areas cost more). The dialog shows the cost and your balance before you
+spend. Promoted results are always labelled **Promoted** and only take the top
+few places of a page; promotions end on their own.
+
+**Invite friends** shows your invite link and code. Copy or share the link;
+when a friend creates an account with it and verifies their email, you both
+get points. A friend who signed up without the link (for example with Google)
+can enter your code on their **Invite friends** page during their first week.
+Invite rewards are limited per month.
+
+Feeds and musician search can include a **Sponsored** card: a music-related
+offer chosen by Every.music, never from an ad network, and without tracking.
+Members on a paid plan can turn on **Settings > Sponsored cards > Hide
+sponsored cards**. Offers from Every.music arrive as **Offers** notifications,
+which you can turn off in the notification channels.
+
+Administrators find a **Monetization** console in **Administration**: totals
+(no revenue figures), sponsored cards with targeting, schedule, and an
+optional rewarded video (a linked `https` video file or an upload), offer
+broadcasts, and points grants for events. Card changes, uploads, offers, and
+grants are recorded in the audit log.
+
+### Language
+
+The interface is available in English, Dutch (Nederlands), and Italian
+(Italiano). Choose a language with the **Language** control at the top of the
+sign-in and registration screens, or under **Settings > Language** after
+signing in. The change applies at once, without reloading, and screen readers
+pronounce each language name correctly in the list. Dates, times, and numbers
+follow the chosen language. What members write (announcements, messages,
+reviews, listings) is shown as written and is not translated.
+
+[![The feed in Italian: Annunci aperti near Bologna sorted by distance, with the navigation, filters, and labels such as In evidenza and Salva translated, while synthetic calls stay in the language their authors wrote them in](images/feed-italian.png)](images/feed-italian.png)
+
+Before you sign in, the choice is kept on this device (or taken from your
+browser language the first time). After you sign in, the language belongs to
+your account and is saved on the server, so it follows you to every device:
+
+- If your account already has a language, it replaces the one on the sign-in
+  screen.
+- If it has none yet, the language you used to sign in is saved to it once.
+- Signing out returns the sign-in screen to this device's own choice, so the
+  next person who signs in on a shared device does not inherit your language.
+
+Notification emails use the same account language; push notifications still
+show the server's English summary. Errors returned by the server are shown in
+your language when the app knows the error; otherwise the server's own
+(English) explanation is shown rather than hiding it. If the language cannot be
+saved to your account, Settings says so and the change still applies on this
+device.
 
 ### Themes, analytics, and installation
 
@@ -167,6 +600,93 @@ Signing out clears saved feed results and unsubscribes this browser from push.
 An **Update app** control appears when a newer shell is ready; finish editing
 before choosing it, because accepting an update reloads the app.
 
+### Security, privacy, and verification
+
+Open **Settings** and scroll to **Security**:
+
+- **Two-step verification** adds a second sign-in step for email/password and
+  Google sign-in. Choose **Set up two-step verification**, pick a method, and
+  confirm with your current password (accounts without a password receive an
+  emailed confirmation code). For an **Authenticator app**, scan the QR code or
+  type the setup key, then enter the 6-digit code. **Email code** appears when
+  the server can send mail and **Text message (SMS)** when an SMS provider is
+  configured; your phone number is stored only while SMS is on. Save the ten
+  recovery codes you are shown: each signs you in once if you lose your second
+  step, and they are never shown again. Creating new recovery codes or turning
+  two-step verification off asks for your password and a current code.
+- At sign-in, enter the code from your app, email, or text message, or choose
+  **Use a recovery code instead**. **Send a new code** resends email/SMS codes.
+  A sign-in attempt expires after 10 minutes or five wrong codes; ten wrong
+  codes in 15 minutes pause two-step sign-in for that account for 15 minutes.
+  Password recovery does not bypass the second step.
+- **Sign out of all devices** ends every session, including this browser, and
+  turns off push notifications everywhere.
+- **Download my data** saves a JSON file with your account, profile,
+  announcements, comments, reactions, follows, notifications, reports you filed,
+  and activity. It leaves out other people's private data and encrypted message
+  contents, which only your devices can read. You can download it three times
+  per hour.
+
+Under **Privacy**, **Let people who have my email address find me** is off by
+default. **Find people you know** accepts pasted email addresses, or contacts
+chosen with your browser's contact picker where available. Your browser sends
+only SHA-256 hashes of the addresses; matches are limited to people who opted
+in, and nothing you search for is stored. Phone numbers are not used. Camera and
+file access is used only when you pick an image to upload; image metadata is
+removed and nothing else on your device is read.
+
+To get the blue tick, open **Profile** and find **Verification**. Write the
+code shown for today on paper, take a selfie holding it, add an optional
+document scan, and choose **Request verification**. The photos are visible
+only to you and administrators. An administrator compares them with your
+profile, then approves or rejects the request with a note you can read. Photos
+are deleted a few days after the decision (seven by default) or right away if
+you cancel. Verified profiles show a blue tick on profile pages, musician cards,
+and announcements. There is no automated face recognition or third-party
+identity check, so the tick means an administrator reviewed the photos, not
+that a legal identity was proven. Administrators review requests under
+**Administration > Overview > Verification requests**; opening photos is
+recorded in the audit log.
+
+[![Administration overview with operational account totals including open reports, consented platform activity, the verification queue with a page verification request and a profile request, and the help desk inbox with a bug report, a contact request, and a Work with us request](images/admin-overview.png)](images/admin-overview.png)
+
+### Delete your account
+
+**Settings > Security > Delete account** permanently deletes your account after
+you confirm with your password (or an emailed code if you sign in only with
+Google) and a two-step code when that is on. It cannot be undone, and all your
+sessions end immediately. A confirmation email is sent when mail is configured.
+
+- Deleted: your account, profile, projects, announcements, comments, reactions,
+  saved items, follows, blocks, notifications, preferences, analytics totals,
+  uploaded images, messaging keys and backups, two-step settings, and
+  verification requests.
+- Conversations: each conversation belongs to exactly two people, so your
+  conversations and all their messages are removed for both participants.
+  Copies already decrypted or exported on the other person's device cannot be
+  recalled.
+- Other people's content: you are removed from their project collaborator
+  lists, and their like counters are recalculated.
+- Pages you lead: leadership passes to the longest-serving active admin, or
+  else member, who is notified. A page with no other active member is retired.
+  Pages you created but do not lead stay with their members.
+- Events: events you organized on your own, your replies, reminders,
+  discussion messages, and lineup entries are deleted. Events co-organized by
+  pages stay with those pages; official updates you sent stay without your
+  name.
+
+- Calendars, band chat, reviews, and ratings: your personal calendar entries,
+  answers, reminders, subscription link, band chat messages and attachments,
+  the reviews you wrote or received, and the ratings you left are deleted.
+  Band calendar entries you created stay with the band without your name.
+  Rating totals change at the next daily update.
+- Reports filed by you or about you are removed. Administrator audit entries
+  keep only the action and time; their actor or target IDs no longer lead to an
+  account. They expire after 365 days.
+- Anonymous aggregate counts you contributed to other people's analytics stay,
+  because they cannot be traced back to you. Operator backups expire on their
+  normal schedule.
+
 ## Sessions and password recovery
 
 The client stores its session in browser `sessionStorage`. A page reload can
@@ -195,11 +715,14 @@ reset revokes the account's refresh sessions. Never share reset links or tokens.
 | Push is unavailable | Check HTTPS, production build/service worker, VAPID keys, browser support and permission; iOS needs Home Screen installation |
 | Google button is missing or fails | Configure the web client ID and exact authorized origins; use Retry Google sign-in after the five-minute challenge expires |
 | Uploaded image is rejected | Use a real JPEG/PNG under 2 MiB/16 megapixels; animated and renamed non-image files are rejected |
+| Uploads or images fail with `MEDIA_STORAGE_UNAVAILABLE` | Check the S3 endpoint, bucket, credentials, and `storage` in API readiness; see [media storage](configuration.md#media-storage) |
 | No offline feed copy is available | Reopen the last matching feed in the same signed-in tab, or reconnect; private APIs and other search pages are not cached |
 | Changes to `.env` do not apply | Run `docker compose up -d` to recreate changed services; `restart` alone does not reload container environment |
+| Two-step code is rejected | Check the device clock for authenticator apps, request a new email/SMS code, or use a recovery code; codes cannot be reused |
+| Lost two-step device and recovery codes | Contact the operator, who can reset two-step verification after confirming your identity |
 
-API readiness only checks PostgreSQL. It does not prove SMTP, external identity
-providers, or a client connection works. See [operations](deployment.md) for
+API readiness checks PostgreSQL and, with `MEDIA_STORAGE=s3`, the media bucket.
+It does not prove SMTP, push or identity providers, or a client connection works. See [operations](deployment.md) for
 health checks and structured logging.
 
 ## Upgrades, stopping, and uninstalling
@@ -213,10 +736,10 @@ docker compose down
 ```
 
 This stops/removes this Compose stack's containers and network, not its data.
-The named volume `everymusic-realm-volume` remains and is reused on the next
-start. Do not remove it or use volume-removal flags unless you deliberately
+The named volume `everymusic-realm-volume` (and `everymusic-object-volume` when
+the `object-storage` profile was used) remains and is reused on the next start. Do not remove it or use volume-removal flags unless you deliberately
 intend to erase the database and have a verified backup.
 
 Uninstalling a native client does not remove server-side profiles or
-announcements. The current UI has no account-deletion workflow. Hosts are
-responsible for database retention, backups, and any data-removal process.
+announcements. Members can delete their accounts in Settings; hosts remain
+responsible for database retention and backups.

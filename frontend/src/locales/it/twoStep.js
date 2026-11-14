@@ -1,0 +1,20 @@
+export default {
+  title: 'Verifica in due passaggi',
+  intro: {
+    totp: 'Inserisci il codice di 6 cifre della tua app di autenticazione.',
+    email: 'Abbiamo inviato un codice di 6 cifre a {destination}.',
+    sms: 'Abbiamo inviato un codice di 6 cifre via SMS a {destination}.',
+  },
+  notSent: 'Non è stato possibile inviare il codice. Richiedine uno nuovo o usa un codice di recupero.',
+  codeLabel: 'Codice di verifica',
+  codeHint: 'Le 6 cifre ricevute dalla app, via email o via SMS.',
+  recoveryLabel: 'Codice di recupero',
+  recoveryHint: 'Uno dei codici di recupero che hai salvato, ad esempio ABCDE-FGHJK. Ogni codice funziona una sola volta.',
+  useRecovery: 'Usa invece un codice di recupero',
+  useCode: 'Usa invece un codice di verifica',
+  submit: 'Verifica e accedi',
+  submitting: 'Verifica in corso...',
+  resend: 'Invia un nuovo codice',
+  resent: 'È stato inviato un nuovo codice.',
+  cancel: 'Ricomincia',
+};

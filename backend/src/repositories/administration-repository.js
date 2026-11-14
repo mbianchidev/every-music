@@ -3,6 +3,7 @@ import { communityRepository } from './community-repository.js';
 import { publishEvent, publishAdminEvent } from './event-publisher.js';
 import { requestError } from '../engines/request-error.js';
 import { verifyReportedMessage } from '../engines/message-security.js';
+import { bandChatRepository } from './band-chat-repository.js';
 
 class AdministrationRepository {
   async requireAdmin(executor, actorId) {
@@ -40,6 +41,7 @@ class AdministrationRepository {
 
   async evidence(executor, report) {
     if (!report.signed_evidence) return { body: report.legacy_evidence, verified: false };
+    if (report.band_message_id) return bandChatRepository.reportEvidence(executor, report);
     const message = (await executor.execute('SELECT * FROM messages WHERE id = $1', [report.message_id])).rows[0];
     if (!message) throw requestError(409, 'EVIDENCE_UNAVAILABLE', 'The original message metadata is unavailable');
     const keys = await executor.execute('SELECT * FROM messaging_keys WHERE id = ANY($1::uuid[])', [[message.sender_key_id, message.recipient_key_id]]);
@@ -61,7 +63,7 @@ class AdministrationRepository {
       if (recent.rows[0].count >= 10) throw requestError(429, 'REPORT_LIMIT', 'At most ten reports can be submitted per day');
       const duplicate = await executor.execute(`
         SELECT id FROM user_reports WHERE reporter_id = $1 AND reported_user_id = $2 AND status = 'open'
-          AND message_id IS NOT DISTINCT FROM $3::uuid`, [userId, targetId, input.messageId ?? null]);
+          AND message_id IS NOT DISTINCT FROM $3::uuid AND band_message_id IS NULL`, [userId, targetId, input.messageId ?? null]);
       if (duplicate.rows.length) throw requestError(409, 'REPORT_EXISTS', 'An open report already exists for this concern');
       let legacyEvidence = null;
       let evidenceKeyId = null;
@@ -134,7 +136,7 @@ class AdministrationRepository {
     return this.withAdmin(actorId, async executor => {
       const { rows } = await executor.execute(`
         SELECT r.id, r.category, r.status, r.created_at AS "createdAt", r.reported_user_id AS "reportedUserId",
-          COALESCE(p.artist_name, 'Musician') AS "reportedName", r.message_id IS NOT NULL AS "hasMessage"
+          COALESCE(p.artist_name, 'Musician') AS "reportedName", (r.message_id IS NOT NULL OR r.band_message_id IS NOT NULL) AS "hasMessage"
         FROM user_reports r LEFT JOIN profiles p ON p.user_id = r.reported_user_id
         WHERE ($1::text IS NULL OR r.status = $1) ORDER BY r.created_at DESC, r.id DESC LIMIT $2 OFFSET $3`,
       [status || null, pageSize + 1, (page - 1) * pageSize]);
@@ -155,7 +157,7 @@ class AdministrationRepository {
       return {
         id: report.id, category: report.category, details: report.details, status: report.status,
         reportedUserId: report.reported_user_id, reportedName: report.reported_name,
-        messageId: report.message_id, evidence: evidence.body, evidenceVerified: evidence.verified,
+        messageId: report.message_id ?? report.band_message_id, evidence: evidence.body, evidenceVerified: evidence.verified,
         createdAt: report.created_at, reviewedAt: report.reviewed_at, moderatorNote: report.moderator_note,
       };
     });
@@ -171,7 +173,10 @@ class AdministrationRepository {
       if (report.status !== 'open') throw requestError(409, 'REPORT_RESOLVED', 'This report was already reviewed. Reload the queue.');
       let status = action === 'dismiss' ? 'dismissed' : 'reviewed';
       let auditAction = action === 'dismiss' ? 'report_dismissed' : 'report_reviewed';
-      if (action === 'remove_message') {
+      if (action === 'remove_message' && report.band_message_id) {
+        await bandChatRepository.removeByModeration(executor, report.band_message_id);
+        status = 'actioned'; auditAction = 'message_removed';
+      } else if (action === 'remove_message') {
         if (!report.message_id) throw requestError(400, 'NO_REPORTED_MESSAGE', 'Only an attached reported message can be removed');
         const removed = await executor.execute(`
           UPDATE messages SET body = NULL, ciphertext = NULL, is_deleted = TRUE, removed_by_moderation = TRUE
@@ -188,6 +193,7 @@ class AdministrationRepository {
         await executor.execute('UPDATE users SET is_active = FALSE WHERE id = $1', [report.reported_user_id]);
         await executor.execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1', [report.reported_user_id]);
         await executor.execute('DELETE FROM push_subscriptions WHERE user_id = $1', [report.reported_user_id]);
+        await executor.execute('DELETE FROM push_devices WHERE user_id = $1', [report.reported_user_id]);
         await executor.execute('UPDATE notifications SET push_sent = TRUE WHERE user_id = $1', [report.reported_user_id]);
         await publishEvent(executor, 'account.changed', { userId: report.reported_user_id });
         await publishEvent(executor, 'profiles.changed', { id: report.reported_user_id });
@@ -197,7 +203,7 @@ class AdministrationRepository {
       await executor.execute(`
         UPDATE user_reports SET status = $2, moderator_id = $3, moderator_note = $4, reviewed_at = NOW() WHERE id = $1`,
       [id, status, actorId, note.trim()]);
-      await this.audit(executor, actorId, auditAction, action === 'remove_message' ? report.message_id : report.reported_user_id, id);
+      await this.audit(executor, actorId, auditAction, action === 'remove_message' ? report.message_id ?? report.band_message_id : report.reported_user_id, id);
       await communityRepository.notify(executor, {
         userId: report.reporter_id, kind: 'report_reviewed', title: 'An administrator reviewed your report', link: '#reports', key: `report-reviewed:${id}`,
       });

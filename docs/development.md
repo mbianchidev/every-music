@@ -112,18 +112,28 @@ above. Dependencies must be installed in both packages.
 (cd frontend && npm run test:e2e)
 ```
 
+`test:integration` runs `integration/community.js` and every file under
+`integration/features/`, one file at a time. Add feature suites there.
+`features/infrastructure.js` exercises both media storage drivers against an
+in-process S3-compatible endpoint (no external service), encrypted attachment
+access rules, object cleanup, and native push devices with stubbed providers. Set
+`E2E_API_PORT` and `E2E_WEB_PORT` to run browser tests on ports other than the
+default 55474 and 4179.
+
 `test:integration` exercises real Fastify authentication, PostgreSQL
 transactions, relation edits, case-normalized identifiers, visibility,
 concurrent reactions, media decoding/ownership, conversation retries/blocking,
-notification preferences, analytics consent, live HTTP streams, and push job
+notification preferences, per-kind notification channels, the email outbox and
+scheduled notification jobs, analytics consent, live HTTP streams, and push job
 retry/cleanup. Google credential verification and outbound push transport are
 narrow synthetic provider stubs; no real account, SMTP delivery, or push
 provider is contacted.
 
 `test:migrations` needs a role with `CREATEDB` on that isolated instance and a
 local Git ref for the previous schema. It creates two uniquely named temporary
-databases, runs the actual migration runner against fresh/prior schemas,
-replays migrations 003/004, compares columns/indexes/constraints, checks legacy
+databases, runs the actual migration runner (twice concurrently, then again)
+against fresh/prior schemas,
+replays migrations 003/004/008, compares columns/indexes/constraints, checks legacy
 projects/messages/tombstones, member-role and consent defaults, then drops only
 the databases it created.
 CI fetches both merge parents and uses `HEAD^1` as the base.
@@ -149,13 +159,75 @@ in a second isolated context, submits selected signed report evidence, grants
 the other actor admin using the real operator CLI, and verifies report removal,
 suspension, audit entries and aggregate analytics. It does not weaken auth limits.
 Do not treat its browser checks as a native screen-reader certification.
+`e2e/profiles-ads.spec.js` covers the place picker, contacts and link limits,
+expiry and active-call caps, distance/cover-band/region/open-to filters, saved
+search alerts, private reactions, blocks, report categories, Premium
+statistics and profile visits, and "near me" with a granted, synthetic browser
+geolocation. It mints sessions for synthetic users with the browser fixture's
+test signing keys, so it does not use the password sign-in rate limit.
+
+`e2e/help-onboarding.spec.js` covers signed-out help and legal pages, bug
+reports without consented diagnostics, terms acceptance at registration and
+after a terms change, the keyboard and narrow-screen welcome tour, the admin
+help desk reply notification, ratings, version notices (with a stubbed
+`/realm/app/version` response), and back navigation. It mints sessions with the
+browser server's synthetic signing keys instead of signing in, so it does not
+consume the shared sign-in rate limit used by `community.spec.js`. The browser
+server treats SQL-seeded fixture accounts that have no terms record as having
+accepted the current terms, so other suites are not interrupted by the terms
+prompt; seed an older `terms_acceptances` row to exercise the prompt. Seeded
+accounts also have no pending tour unless a `user_onboarding` row is inserted.
+
+The organizations suite (`e2e/organizations.spec.js`) covers band creation,
+invitations, updates, releases, announcements for a page, discovery,
+music-lover profiles, venue claims and verification, with axe and 320px
+checks. Because sign-in is limited to five attempts per IP, it issues real
+refresh sessions with the browser API's synthetic signing keys instead of
+using the sign-in form.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
 to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+`e2e/events.spec.js` covers publishing a festival with a venue, lineup, tickets
+and an image, discovery filters, replies, reminders, the calendar download,
+the discussion, official updates and cancellation, page events, and page
+verification, with axe and 320px checks. It issues sessions with the browser
+API's synthetic keys instead of using the sign-in form.
+`e2e/marketplace.spec.js` mints browser sessions with the synthetic browser
+API signing key instead of using the sign-in form, so it does not consume the
+per-IP login limit that the community suite exercises in the same API process.
+`e2e/monetization.spec.js` covers the store, Stripe Checkout return and
+webhook-driven plan and points updates, points spending dialogs, promoted and
+sponsored results, the invite page, the admin monetization console, rewarded
+videos, and hiding sponsored cards. The browser API runs with synthetic
+`STRIPE_*` settings: `integration/browser-server.js` replaces the Stripe API
+client with the stand-in from `integration/synthetic-stripe.js`, whose checkout
+URL returns straight to the store, while webhooks are still verified by the
+real SDK with the synthetic signing secret. No Stripe request leaves the
+machine. `integration/features/monetization.js` uses the same stand-in.
 Do not run `npm run check` / `npm run compile` in the same frontend checkout
 while browser tests run: both builds replace `dist`, and the browser build
 embeds its isolated API origin. Backend checks can run independently.
+The account-trust browser journeys (`e2e/w2-account-trust.spec.js`) enroll an
+authenticator with the rendered QR/setup key, use recovery codes, export and
+delete an account, search hashed contacts, and approve a verification request.
+They start fixture sessions directly and synthesize only the first sign-in
+step's challenge response, so they stay within the shared per-IP sign-in
+limits; the second step, and every other request, uses the real API. The
+first step itself is covered by `integration/features/w2-account-trust.js`.
+`e2e/w10-band-collab.spec.js` schedules a band rehearsal with an outside
+invitee, answers and sets reminders, downloads its `.ics` file, subscribes to
+and revokes a private feed, exchanges end-to-end encrypted band chat messages
+with a picture and an audio file between two real browser identities, reports
+a message with signed evidence, and approves a review and saves an anonymous
+rating, with axe and 320px checks. It mints sessions with the browser server's
+synthetic keys and seeds the published rating snapshot directly.
+`e2e/polish-backend.spec.js` picks and removes the instruments played in a
+musical project and checks them on the public profile, reads localized
+notification titles and preference labels in an Italian browser, and checks
+the unread band chat count next to **Your pages**, with axe and 320px checks.
+It seeds opaque synthetic band chat ciphertext only to count unread messages
+and mints sessions instead of using the sign-in form.
 The Google browser server is a loopback-only integration entrypoint requiring
 `REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
 not the production server and must never be exposed as one.
@@ -251,6 +323,33 @@ sessions, and defaults analytics/push off. Application rollback can leave these
 extra tables/columns in place; do not drop messages or media as an automatic
 rollback. Use a reviewed forward fix or deliberately restore a verified backup.
 
+Migration `013_marketplace.sql` adds marketplace listings, photos, tags,
+saved listings, and the optional report `listing_id`. It is additive and
+idempotent; rolling back the application leaves these tables unused.
+
+Migration `014_monetization.sql` adds Stripe billing records, the append-only
+points ledger and balances, referrals, promotions, sponsored cards and their
+daily totals, rewarded video views, sponsored-card preferences, and offer
+broadcasts. It is additive and idempotent. Keep the ledger and billing tables
+on rollback: they are the record of what members paid for and earned.
+
+Migration `015_events.sql` adds events and their organizers, lineup, genres,
+images, ticket links, attendance, reminders, discussion and communications,
+the optional report `event_id`/`event_post_id`, and `organization` verification
+subjects with a `request_note`. It is additive and idempotent; rolling back
+the application leaves these tables unused and organization requests in the
+queue.
+
+Migration `016_band_collaboration.sql` adds band and personal calendars,
+band chat tables, `user_reports.band_message_id`, reviews, and anonymous
+ratings. It is additive and idempotent; rolling back the application leaves
+the tables unused. Do not drop band chat messages or attachments as an
+automatic rollback.
+
+Migration `017_project_instruments.sql` adds `project_instruments`, the
+catalog instruments played in each musical project. It is additive and
+idempotent; rolling back the application leaves the table unused.
+
 Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
 fields, reports/audit records and separately consented platform aggregates.
 Legacy plaintext is retained and labelled; deleted tombstones are cleared.
@@ -259,7 +358,72 @@ after encrypted writes, dropping these fields is not a safe rollback.
 See the [messaging security guide](messaging-security.md) for recovery, trust,
 retention, provisioning and cryptographic limitations.
 
+Migration `008_profiles_ads_discovery.sql` adds the `places` and
+`place_datasets` tables, place links on profiles and announcements, profile
+contact visibility, open-to-projects and content links, saved searches,
+consented profile visits and the `inappropriate_language`/`fake_profile`
+report categories. It is additive; legacy free-text cities stay readable.
+
+### Places dataset
+
+`backend/database/seeds/places.tsv.gz` holds the GeoNames `cities15000`
+export (cities above 15,000 people, without historical or abandoned places)
+joined with admin1 region and country names, plus Latin-script exonyms for
+search. `places.manifest.json` records the input checksums, row count and
+content checksum. GeoNames data is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); keep the attribution
+in the client Settings, `frontend/public/third-party-notices.txt` and these docs.
+
+`npm run bootstrap` and every `npm run migrate` (including container startup)
+load the seed after the SQL migrations. Loading upserts by GeoNames ID under an
+advisory lock, never deletes places that profiles or calls may reference, and
+is skipped when the stored content checksum matches. To refresh the dataset:
+
+```bash
+cd backend
+node scripts/generate-places.mjs                       # download current exports
+node scripts/generate-places.mjs --source DIR          # or reuse pinned copies of
+                                                        # cities15000.zip, admin1CodesASCII.txt, countryInfo.txt
+npm run migrate
+```
+
+The generator is deterministic for the same inputs. Commit the regenerated
+seed and manifest together.
+
 ## Coding conventions
+
+- Put user-facing client text in `frontend/src/locales/<locale>/<namespace>.js`
+  for `en`, `nl`, and `it`, and render it with `t('<namespace>.<key>')` or
+  `useI18n()` from `lib/i18n.js`. Vite discovers new namespace files
+  automatically; missing translations fall back to English. See
+  [Interface languages](#interface-languages).
+- Create notifications with `notificationRepository` and a kind from
+  `backend/src/engines/notification-catalog.js`; pass `params` so clients can
+  localize them. A new kind also needs a `label`, `title`, and `detail` in
+  `frontend/src/locales/*/notifications.js` (with a group in
+  `frontend/src/lib/notification-text.js`) and an email and push `subject` and
+  `body` in `backend/src/engines/notification-email.js` for `en`, `nl`, and
+  `it`; backend and frontend unit tests fail until all of them exist. Email and
+  push text may use numeric params and the enumerated params in
+  `NOTIFICATION_SELECTORS`, never names, titles, or message text.
+- Check plan limits with `entitlementRepository` instead of hard-coding them.
+- Register publicly visible managed images in
+  `backend/src/engines/media-references.js`.
+- Grant specific signed-in users access to non-public media (attachment blobs,
+  verification evidence, member-only content) by appending a predicate to
+  `authorizedMediaReferences` in the same file. Predicates are SQL with `$2`
+  bound to the media URL (`/realm/media/<id>`) and `$3` to the viewer's user ID;
+  check the viewer's current right to the referencing content, for example:
+  `EXISTS(SELECT 1 FROM group_messages gm JOIN group_members m ON m.group_id = gm.group_id
+  WHERE gm.attachment_url = $2 AND m.user_id = $3)`. Owners can always read their
+  media, attachments are never served through `publicMediaReferences`, and granted
+  responses are `private, no-store`. Add a `retainedMediaReferences` predicate
+  (`$2` only) when drafts or private content reference media, or the hourly cleanup
+  deletes those uploads after a day. Read and write media through
+  `mediaRepository` so the configured storage driver is used.
+- Add every table that stores personal data to the account export registry
+  (`backend/src/engines/export-sections.js`), returning only the user's own
+  data, and make sure account deletion removes or detaches its rows.
 
 - Keep HTTP envelopes consistent: `{ "success": true, "data": ... }` or `{ "success": false, "error": ... }`.
 - Use repository executors supplied by `realmConnector.transaction`; calling the global pool from inside a transaction is not atomic.
@@ -267,8 +431,107 @@ retention, provisioning and cryptographic limitations.
 - Surface recoverable UI errors and provide retry actions. Do not turn request failures into empty states.
 - Prefer native HTML semantics before ARIA.
 
+## Interface languages
+
+Every string a person can see or hear goes through a catalog: visible text,
+`aria-label`, `alt`, `title`, placeholders, `window.confirm()` prompts,
+document titles (route `title` getters in `main.jsx`), and messages of errors
+thrown in the client. Product and brand names (Every.music, Google, Stripe,
+Premium, Partner) stay untranslated.
+
+- **Keys.** Use `t('<namespace>.<path>')` with a literal key whenever you can,
+  so the catalog test can check it. Dynamic keys are fine for server enums
+  (`` t(`reports.status.${status}`) ``); fall back to the raw value with
+  `hasTranslation()` when the server may send values the client does not know.
+- **Parameters and plurals.** Interpolate with `{name}` and pass plural counts
+  as `count` to a `{ one, other }` object. Never build sentences by
+  concatenating translated fragments; when a sentence contains a link or a
+  `<time>`, use `richText()` from `lib/rich-text.jsx` with a template such as
+  `'Posted by {name} on {date}'`.
+- **Dates and numbers.** Use `formatDate` and `formatNumber` from `useI18n()`
+  (or the module exports) instead of `toLocaleString()`.
+- **Components.** Function components use `useI18n()`. Class components and
+  plain modules may call `t()`; the shell re-renders the whole tree when the
+  language changes.
+- **Errors.** Show request failures with `errorText(error)` from
+  `lib/error-text.js`. It maps known `ApiError` codes to `errors.codes.*`,
+  keeps the server message for unknown codes, and keeps the message of
+  client-side errors, which must already be created with `t()`. Add a code to
+  all three `errors.js` catalogs when a new server error is common enough to
+  deserve its own wording.
+- **Translations.** Write natural Dutch and Italian with the informal
+  "je"/"tu", matching existing terminology (oproep/annuncio for announcements,
+  pagina for organization pages).
+
+`frontend/test/locale-catalogs.test.js` runs with `npm test` and fails when:
+
+- a namespace or key exists in one locale but not in another,
+- a translation drops or adds an `{placeholder}` (plural forms may leave
+  `{count}` implicit),
+- a plural object lacks its `one` or `other` form, or
+- a literal `t('...')` key (or the static prefix of a template key) used in
+  `frontend/src` is missing from the English catalog.
+
+To add a language:
+
+1. Add `{ code, label }` to `SUPPORTED_LOCALES` in `frontend/src/lib/i18n.js`,
+   with the label written in that language.
+2. Copy `frontend/src/locales/en/` to `frontend/src/locales/<code>/` and
+   translate every file; the catalog test reports anything missing.
+3. Allow the code in the `user_preferences.locale` check constraint
+   (`schema.sql` plus a new migration) and in the `locale` enum of
+   `PUT /realm/preferences` (`backend/src/orchestrators/community-orchestrator.js`),
+   and add email templates in `backend/src/engines/notification-email.js`.
+4. Update the language list in [usage](usage.md#language) and extend
+   `frontend/e2e/i18n-ui.spec.js`.
+
+`e2e/i18n-ui.spec.js` switches the language on the sign-in screen and in
+Settings, checks the Dutch and Italian feed, musicians, settings, events,
+marketplace and store screens (headings, document titles, `<html lang>`, axe),
+and confirms the choice survives reloads and sign-in without leaking to the
+next account on the same device. Other browser suites keep running in English.
+
 ## Documentation and releases
 
 Keep [usage](usage.md), [configuration](configuration.md), and [API contracts](api.md)
 aligned with changes. Follow [releases](releases.md) for packaging and
 [AGENTS.md](../AGENTS.md) for repository-specific agent constraints.
+
+### Documentation screenshots
+
+The PNG files in `docs/images/` are generated, not edited by hand. Regenerate
+them after a visible UI change:
+
+```bash
+cd frontend
+REALM_ENV=test \
+REALM_CONNECTION=postgresql://USER:PASSWORD@127.0.0.1:5432/everymusic_docs \
+npm run docs:screenshots
+```
+
+The requirements match the browser tests: an isolated, bootstrapped and
+migrated database that holds only synthetic fixtures (never a shared or
+production database), installed backend and frontend dependencies, and
+Playwright's Chromium. `playwright.docs.config.js` reuses the browser test
+servers from `playwright.config.js`: the test API in
+`backend/integration/browser-server.js` with the synthetic Stripe settings (so
+the store shows plans) on `E2E_API_PORT` (default 55474) and a production
+preview on `E2E_WEB_PORT` (default 4179). Both ports must be free. The run rebuilds
+`dist` for that API, so do not run `npm run check` or `npm run compile` in the
+same checkout at the same time. `npm run test:e2e` does not include these
+captures.
+
+`docs-screenshots/capture.spec.js` seeds a synthetic cast through the real API,
+using sessions minted with the test signing keys instead of the sign-in form:
+`docs-screenshots-*@example.test` accounts with fictional names, band, venue,
+organizer, and label pages, open calls, applications, events, calendar entries,
+marketplace listings, reviews, points, and verification and help desk requests.
+Pictures are abstract artwork drawn with `sharp` in `docs-screenshots/artwork.js`
+(gradients and shapes, never photos, faces, or logos). A few timestamps are
+backdated in the database so lists look lived-in, and dates are relative to the
+day of the run. The run deletes everything it created when it finishes, and
+removes leftovers of an interrupted run before seeding again. Captures use a
+1280 pixel wide desktop viewport (the README feed stays 1280x1200; the phone
+capture is 390x844 at twice the pixel density), wait for data, images, and
+animations, never show the welcome tour, and are saved as palette PNGs to keep
+each file small. Review every image before committing it.

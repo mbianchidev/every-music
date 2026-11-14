@@ -62,6 +62,78 @@ services:
       RATE_WINDOW_MS: ${RATE_WINDOW_MS:-900000}
       RATE_THRESHOLD: ${RATE_THRESHOLD:-150}
       UPLOAD_BYTE_LIMIT: ${UPLOAD_BYTE_LIMIT:-5242880}
+      NOTIFICATION_JOB_INTERVAL_MINUTES: ${NOTIFICATION_JOB_INTERVAL_MINUTES:-60}
+      STATS_DIGEST_WEEKDAY: ${STATS_DIGEST_WEEKDAY:-1}
+      STATS_DIGEST_MIN_EVENTS: ${STATS_DIGEST_MIN_EVENTS:-1}
+      COME_BACK_AFTER_DAYS: ${COME_BACK_AFTER_DAYS:-30}
+      COME_BACK_MAX_REMINDERS: ${COME_BACK_MAX_REMINDERS:-3}
+      INVITE_NUDGE_AFTER_DAYS: ${INVITE_NUDGE_AFTER_DAYS:-7}
+      APPLICATION_RETENTION_DAYS: ${APPLICATION_RETENTION_DAYS:-90}
+      MARKETPLACE_LISTING_DAYS: ${MARKETPLACE_LISTING_DAYS:-60}
+      MARKETPLACE_EXPIRY_REMINDER_DAYS: ${MARKETPLACE_EXPIRY_REMINDER_DAYS:-3}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:-}
+      VERIFICATION_MEDIA_RETENTION_DAYS: ${VERIFICATION_MEDIA_RETENTION_DAYS:-7}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      TWILIO_MESSAGING_SERVICE_SID: ${TWILIO_MESSAGING_SERVICE_SID:-}
+      APP_VERSION: ${APP_VERSION:-1.0.0}
+      OPERATOR_NAME: ${OPERATOR_NAME:-}
+      OPERATOR_CONTACT_EMAIL: ${OPERATOR_CONTACT_EMAIL:-}
+      OPERATOR_JURISDICTION: ${OPERATOR_JURISDICTION:-}
+      LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:-}
+      TERMS_VERSION: ${TERMS_VERSION:-1}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      CLIENT_MIN_VERSION: ${CLIENT_MIN_VERSION:-}
+      CLIENT_LATEST_VERSION: ${CLIENT_LATEST_VERSION:-}
+      CLIENT_UPDATE_URL: ${CLIENT_UPDATE_URL:-}
+      ATTACHMENT_BYTE_LIMIT: ${ATTACHMENT_BYTE_LIMIT:-10485760}
+      MEDIA_STORAGE: ${MEDIA_STORAGE:-postgres}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://object-store:8333}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-everymusic-media}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
+      FCM_CLIENT_EMAIL: ${FCM_CLIENT_EMAIL:-}
+      FCM_PRIVATE_KEY: ${FCM_PRIVATE_KEY:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      APNS_TOPIC: ${APNS_TOPIC:-}
+      APNS_ENVIRONMENT: ${APNS_ENVIRONMENT:-production}
+      YOUTUBE_FEED_INTERVAL_MINUTES: ${YOUTUBE_FEED_INTERVAL_MINUTES:-60}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID:-}
+      STRIPE_PARTNER_PRICE_ID: ${STRIPE_PARTNER_PRICE_ID:-}
+      STRIPE_POINTS_PACKS: ${STRIPE_POINTS_PACKS:-}
+      BILLING_CURRENCY: ${BILLING_CURRENCY:-EUR}
+      PREMIUM_MONTHLY_PRICE_MINOR: ${PREMIUM_MONTHLY_PRICE_MINOR:-399}
+      PARTNER_MONTHLY_PRICE_MINOR: ${PARTNER_MONTHLY_PRICE_MINOR:-1999}
+      POINTS_PREMIUM_DAY_COST: ${POINTS_PREMIUM_DAY_COST:-}
+      POINTS_PREMIUM_DURATIONS_DAYS: ${POINTS_PREMIUM_DURATIONS_DAYS:-}
+      POINTS_PROFILE_BOOST_DAY_COST: ${POINTS_PROFILE_BOOST_DAY_COST:-}
+      POINTS_ANNOUNCEMENT_BOOST_DAY_COST: ${POINTS_ANNOUNCEMENT_BOOST_DAY_COST:-}
+      POINTS_PIN_DAY_BASE_COST: ${POINTS_PIN_DAY_BASE_COST:-}
+      POINTS_PIN_DAY_COST_PER_10_KM: ${POINTS_PIN_DAY_COST_PER_10_KM:-}
+      POINTS_PIN_MAX_RADIUS_KM: ${POINTS_PIN_MAX_RADIUS_KM:-}
+      POINTS_PROMOTION_DURATIONS_DAYS: ${POINTS_PROMOTION_DURATIONS_DAYS:-}
+      POINTS_REFERRAL_INVITER: ${POINTS_REFERRAL_INVITER:-}
+      POINTS_REFERRAL_INVITEE: ${POINTS_REFERRAL_INVITEE:-}
+      REFERRAL_MONTHLY_CAP: ${REFERRAL_MONTHLY_CAP:-}
+      REFERRAL_CLAIM_DAYS: ${REFERRAL_CLAIM_DAYS:-}
+      POINTS_APP_RATING: ${POINTS_APP_RATING:-}
+      POINTS_REWARDED_VIDEO: ${POINTS_REWARDED_VIDEO:-}
+      REWARDED_VIDEO_DAILY_CAP: ${REWARDED_VIDEO_DAILY_CAP:-}
+      REWARDED_VIDEO_MIN_SECONDS: ${REWARDED_VIDEO_MIN_SECONDS:-}
+      PROMOTED_RESULTS_PER_PAGE: ${PROMOTED_RESULTS_PER_PAGE:-}
+      SPONSORED_CARDS_PER_PAGE: ${SPONSORED_CARDS_PER_PAGE:-}
+      SPONSORED_VIDEO_BYTE_LIMIT: ${SPONSORED_VIDEO_BYTE_LIMIT:-}
+      MONETIZATION_JOB_INTERVAL_MINUTES: ${MONETIZATION_JOB_INTERVAL_MINUTES:-}
+      EVENT_REMINDER_INTERVAL_SECONDS: ${EVENT_REMINDER_INTERVAL_SECONDS:-60}
+      CALENDAR_REMINDER_INTERVAL_SECONDS: ${CALENDAR_REMINDER_INTERVAL_SECONDS:-60}
     ports:
       - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
     depends_on:
@@ -78,6 +150,48 @@ services:
       - /tmp
     cap_drop:
       - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - everymusic
+
+  # Optional S3-compatible object storage for uploaded media. Enable with
+  # `docker compose --profile object-storage up` (or COMPOSE_PROFILES) and set
+  # MEDIA_STORAGE=s3 plus S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY.
+  object-store:
+    image: chrislusf/seaweedfs:4.53
+    profiles: ["object-storage"]
+    restart: unless-stopped
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-everymusic-media}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        if [ -z "$${S3_ACCESS_KEY_ID}" ] || [ -z "$${S3_SECRET_ACCESS_KEY}" ]; then
+          echo "Set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY to enable the object-storage profile" >&2
+          exit 1
+        fi
+        umask 077
+        printf '{"identities":[{"name":"everymusic","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' \
+          "$${S3_ACCESS_KEY_ID}" "$${S3_SECRET_ACCESS_KEY}" > /tmp/s3.json
+        chown seaweed:seaweed /tmp/s3.json
+        exec /entrypoint.sh mini -dir=/data -bucket="$${S3_BUCKET}" -s3.config=/tmp/s3.json \
+          -admin.ui=false -webdav=false -s3.port.iceberg=0 -s3.port.lance=0
+    volumes:
+      - object-data:/data
+    ports:
+      - "${OBJECT_STORE_BIND_ADDRESS:-127.0.0.1}:${OBJECT_STORE_PORT:-8333}:8333"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp
     security_opt:
       - no-new-privileges:true
     networks:
@@ -116,6 +230,8 @@ services:
 volumes:
   realm-data:
     name: everymusic-realm-volume
+  object-data:
+    name: everymusic-object-volume
 
 networks:
   everymusic:

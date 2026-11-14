@@ -1,7 +1,11 @@
 import { realmConnector } from './realm-connector.js';
+import { placeJoinColumns } from './place-repository.js';
+import { blockedBetween } from './social-repository.js';
+import { proximity } from '../engines/geo.js';
 
 const summaryColumns = `
   p.artist_name AS creator_name, p.profile_picture_url AS creator_picture_url,
+  p.verified_at AS creator_verified_at,
   (SELECT jsonb_agg(jsonb_build_object(
     'instrument_id', ai.instrument_id, 'name', i.name, 'category', i.category
   ) ORDER BY i.name) FROM announcement_instruments ai JOIN instruments i ON i.id = ai.instrument_id
@@ -9,7 +13,9 @@ const summaryColumns = `
   (SELECT jsonb_agg(jsonb_build_object(
     'genre_id', ag.genre_id, 'name', g.name
   ) ORDER BY g.name) FROM announcement_genres ag JOIN genres g ON g.id = ag.genre_id
-    WHERE ag.announcement_id = a.id) AS genres
+    WHERE ag.announcement_id = a.id) AS genres,
+  (SELECT jsonb_build_object('id', o.id, 'name', o.name, 'kind', o.kind, 'verified', o.verified_at IS NOT NULL)
+    FROM organizations o WHERE o.id = a.organization_id AND o.is_deleted = FALSE) AS organization
 `;
 
 export class OpportunityRepository {
@@ -17,9 +23,9 @@ export class OpportunityRepository {
     const query = `
       INSERT INTO announcements (
         user_id, title, description, picture_url, city, state, country,
-        latitude, longitude, is_remote, is_cover_band, expires_at, is_published
+        latitude, longitude, is_remote, is_cover_band, expires_at, is_published, place_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
     const result = await executor.execute(query, [
@@ -36,6 +42,7 @@ export class OpportunityRepository {
       announcementData.isCoverBand || false,
       announcementData.expiresAt || null,
       announcementData.isPublished !== undefined ? announcementData.isPublished : true,
+      announcementData.placeId ?? null,
     ]);
     return result.rows[0];
   }
@@ -46,9 +53,13 @@ export class OpportunityRepository {
              EXISTS(SELECT 1 FROM saved_announcements sa WHERE sa.announcement_id = a.id AND sa.user_id = $2) AS is_saved,
              (SELECT reaction_type FROM announcement_reactions ar WHERE ar.announcement_id = a.id AND ar.user_id = $2) AS my_reaction,
              (SELECT jsonb_agg(jsonb_build_object('link_type', al.link_type, 'url', al.url) ORDER BY al.id)
-               FROM announcement_links al WHERE al.announcement_id = a.id) AS links
+               FROM announcement_links al WHERE al.announcement_id = a.id) AS links,
+             (SELECT COUNT(*)::int FROM saved_announcements sc WHERE sc.announcement_id = a.id) AS saves_count,
+             EXISTS(SELECT 1 FROM blocked_users b WHERE b.user_id = a.user_id AND b.blocked_user_id = $2) AS blocks_viewer,
+             ${placeJoinColumns('pl')}
       FROM announcements a
       LEFT JOIN profiles p ON a.user_id = p.user_id
+      LEFT JOIN places pl ON pl.id = a.place_id
       WHERE a.id = $1 AND a.is_deleted = false
         AND EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)
     `;
@@ -58,9 +69,11 @@ export class OpportunityRepository {
 
   async findByUserId(userId, { page = 1, pageSize = 20, limit = pageSize } = {}) {
     const query = `
-      SELECT a.*, ${summaryColumns}
+      SELECT a.*, ${summaryColumns}, ${placeJoinColumns('pl')},
+             (SELECT COUNT(*)::int FROM saved_announcements sc WHERE sc.announcement_id = a.id) AS saves_count
       FROM announcements a
       LEFT JOIN profiles p ON p.user_id = a.user_id
+      LEFT JOIN places pl ON pl.id = a.place_id
       WHERE a.user_id = $1 AND a.is_deleted = false
       ORDER BY a.created_at DESC, a.id
       LIMIT $2 OFFSET $3
@@ -74,6 +87,27 @@ export class OpportunityRepository {
       'EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)'];
     const params = [];
     let paramIndex = 1;
+    const add = (value) => {
+      params.push(value);
+      paramIndex = params.length + 1;
+      return `$${params.length}`;
+    };
+
+    if (filters.userId) {
+      whereConditions.push(`NOT ${blockedBetween(`${add(filters.userId)}::uuid`, 'a.user_id')}`);
+    }
+    if (filters.ids) whereConditions.push(`a.id = ANY(${add(filters.ids)}::uuid[])`);
+    const location = filters.location || {};
+    if (location.country) whereConditions.push(`pl.country_code = ${add(location.country)}`);
+    if (location.region) whereConditions.push(`pl.region_code = ${add(location.region)}`);
+    let distance = null;
+    if (location.center) {
+      const nearby = proximity({
+        latitudeColumn: 'a.latitude', longitudeColumn: 'a.longitude', center: location.center, radiusKm: location.radiusKm,
+      }, add);
+      distance = nearby.distance;
+      whereConditions.push(...nearby.conditions);
+    }
 
     if (filters.instrumentId) {
       whereConditions.push(`EXISTS (
@@ -124,16 +158,22 @@ export class OpportunityRepository {
     const viewerIndex = paramIndex++;
     params.push(filters.userId || null);
 
-    const sorts = { newest: 'a.created_at DESC', oldest: 'a.created_at ASC', title: 'a.title ASC', city: "COALESCE(a.city, '') ASC", popular: 'a.likes_count DESC' };
+    const sorts = {
+      newest: 'a.created_at DESC', oldest: 'a.created_at ASC', title: 'a.title ASC', city: "COALESCE(a.city, '') ASC",
+      popular: '(a.likes_count - a.dislikes_count) DESC, a.likes_count DESC', expiring: 'a.expires_at ASC NULLS LAST, a.created_at DESC',
+    };
+    if (distance) sorts.distance = `${distance} ASC NULLS LAST, a.created_at DESC`;
     const query = `
       SELECT a.id, a.user_id, a.title, a.description, a.picture_url,
              a.city, a.state, a.country, a.is_remote, a.is_cover_band, a.is_published,
              a.views_count, a.likes_count, a.dislikes_count,
-             a.created_at, a.expires_at, ${summaryColumns},
+             a.created_at, a.expires_at, ${summaryColumns}, ${placeJoinColumns('pl')},
+             ${distance ? `CASE WHEN a.latitude IS NULL THEN NULL ELSE ${distance} END` : 'NULL::float8'} AS distance_km,
              EXISTS(SELECT 1 FROM saved_announcements sa
                WHERE sa.announcement_id = a.id AND sa.user_id = $${viewerIndex}) AS is_saved
       FROM announcements a
       LEFT JOIN profiles p ON p.user_id = a.user_id
+      LEFT JOIN places pl ON pl.id = a.place_id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY ${sorts[filters.sort] || sorts.newest}, a.id
       LIMIT $${paramIndex++} OFFSET $${paramIndex}
@@ -162,6 +202,7 @@ export class OpportunityRepository {
       isCoverBand: 'is_cover_band',
       expiresAt: 'expires_at',
       isPublished: 'is_published',
+      placeId: 'place_id',
     };
 
     for (const [jsField, dbField] of Object.entries(fieldMapping)) {
@@ -329,11 +370,12 @@ export class OpportunityRepository {
     const offset = ((pagination.page || 1) - 1) * pageSize;
 
     const query = `
-      SELECT a.*, sa.created_at as saved_at, TRUE AS is_saved, ${summaryColumns}
+      SELECT a.*, sa.created_at as saved_at, TRUE AS is_saved, ${summaryColumns}, ${placeJoinColumns('pl')}
       FROM saved_announcements sa
       JOIN announcements a ON sa.announcement_id = a.id
       LEFT JOIN profiles p ON p.user_id = a.user_id
-      WHERE sa.user_id = $1
+      LEFT JOIN places pl ON pl.id = a.place_id
+      WHERE sa.user_id = $1 AND NOT ${blockedBetween('$1::uuid', 'a.user_id')}
         AND EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)
         AND a.is_deleted = false
         AND a.is_published = true

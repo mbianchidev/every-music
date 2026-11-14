@@ -7,8 +7,13 @@ import EmptyState from '../components/EmptyState.jsx';
 import AnnouncementCard from '../components/AnnouncementCard.jsx';
 import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import Pagination from '../components/Pagination.jsx';
+import ApplicantsLink from '../components/ApplicantsLink.jsx';
+import QuotaNotice from '../components/QuotaNotice.jsx';
+import { useI18n } from '../lib/i18n.js';
+import { PromoteButton } from '../components/monetization/SpendDialog.jsx';
 
 export default function AnnouncementListScreen({ mode }) {
+  const { t } = useI18n();
   const [page, setPage] = useState(1);
   const saved = mode === 'saved';
   const resource = useResource(`/announcements/${saved ? 'saved' : 'me'}?page=${page}&pageSize=12`, { events: 'announcements.changed,saved.changed,profiles.changed' });
@@ -19,17 +24,18 @@ export default function AnnouncementListScreen({ mode }) {
   const changePage = value => { setPage(value); document.getElementById('main-content')?.focus(); };
   return (
     <div className="container">
-      <PageHeader eyebrow="Your space" title={saved ? 'Saved calls' : 'My calls'} subtitle={saved ? 'Good possibilities. Keep them close.' : 'Your published calls and private drafts, all in one place.'}
-        actions={!saved && <a className="btn btn-primary" href="#create">Post a call</a>} />
+      <PageHeader eyebrow={t('app.nav.sections.yourSpace')} title={t(`feed.list.${mode}.title`)} subtitle={t(`feed.list.${mode}.subtitle`)}
+        actions={!saved && <a className="btn btn-primary" href="#create">{t('app.nav.postCall')}</a>} />
+      <div className="compact-actions"><QuotaNotice kind={saved ? 'savedAnnouncements' : 'activeAnnouncements'} />{saved && <a href="#saved-searches">{t('discoveryExtras.saved.title')}</a>}</div>
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
-      {!resource.data && !resource.error ? <Spinner label="Loading announcements" /> : rows.length ? (
+      {!resource.data && !resource.error ? <Spinner label={t('feed.list.loading')} /> : rows.length ? (
         <>
           <div className="grid" aria-busy={resource.loading}>
-            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />} />)}
+            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<><AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />{!saved && <ApplicantsLink post={post} />}{!saved && post.isPublished && <PromoteButton mode="announcement" announcement={post} />}</>} />)}
           </div>
           <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={resource.loading} />
         </>
-      ) : !resource.error && <EmptyState title={saved ? 'Nothing saved yet' : 'No announcements yet'} message={saved ? 'Save an announcement from the feed.' : 'Publish what you are looking for.'} actionLabel={saved ? 'Go to feed' : 'Create announcement'} actionHash={saved ? '#feed' : '#create'} />}
+      ) : !resource.error && <EmptyState title={t(`feed.list.${mode}.emptyTitle`)} message={t(`feed.list.${mode}.emptyMessage`)} actionLabel={t(`feed.list.${mode}.emptyAction`)} actionHash={saved ? '#feed' : '#create'} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createIdentity, generateRecoveryKey, unlockIdentity, encryptMessage } from '../src/lib/message-crypto.js';
+import { apiOrigin, webOrigin } from './origins.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
@@ -83,6 +84,8 @@ test.beforeAll(async () => {
       rows[0].id, artistName, 'Synthetic City', 'A fictional demo musician. Original songs, shared ideas, and room for a new collaboration.',
     ]);
   }
+  // The analytics journey needs announcementStats; profiles-ads.spec.js covers the free plan.
+  await pool.query("INSERT INTO user_entitlements (user_id, plan, source) VALUES ($1, 'premium', 'admin')", [people[0].id]);
   for (let i = 0; i < 15; i += 1) {
     const [title, instrumentName, genreName] = demoCalls[i];
     const { rows } = await pool.query("INSERT INTO announcements (user_id, title, description, city, is_remote, created_at) VALUES ($1, $2, $3, $4, $5, NOW() - $6 * INTERVAL '1 day') RETURNING id", [
@@ -295,9 +298,9 @@ test('musicians complete profiles, collaborate, publish media, and engage throug
     try {
       await syntheticGoogle(fresh);
       const sessionB = await b.evaluate(() => JSON.parse(sessionStorage.getItem('everymusic.session.v1')));
-      await fresh.addInitScript(session => {
-        if (location.origin === 'http://127.0.0.1:4179') sessionStorage.setItem('everymusic.session.v1', JSON.stringify(session));
-      }, sessionB);
+      await fresh.addInitScript(({ session, origin }) => {
+        if (location.origin === origin) sessionStorage.setItem('everymusic.session.v1', JSON.stringify(session));
+      }, { session: sessionB, origin: webOrigin });
       const restored = await fresh.newPage();
       await restored.goto(`/#messages?id=${threadId}`);
       await unlockMessages(restored, recoveryB);
@@ -348,7 +351,7 @@ test('musicians complete profiles, collaborate, publish media, and engage throug
     const updatedId = new URLSearchParams(new URL(a.url()).hash.split('?')[1]).get('id');
     const accessToken = await a.evaluate(() => JSON.parse(sessionStorage.getItem('everymusic.session.v1')).keys.accessToken);
     const setPublished = async isPublished => {
-      const response = await a.request.put(`http://127.0.0.1:55474/realm/announcements/${updatedId}`, {
+      const response = await a.request.put(`${apiOrigin}/realm/announcements/${updatedId}`, {
         headers: { Authorization: `Bearer ${accessToken}` }, data: { isPublished },
       });
       expect(response.ok()).toBe(true);
@@ -667,11 +670,11 @@ test('Google signup and returning deep links preserve account isolation through 
 async function exerciseReportAdministration(administrator, browser, reporterSession, testInfo) {
   const reporterContext = await browser.newContext();
   await syntheticGoogle(reporterContext);
-  await reporterContext.addInitScript(session => {
-    if (location.origin === 'http://127.0.0.1:4179' && !sessionStorage.getItem('everymusic.session.v1')) {
+  await reporterContext.addInitScript(({ session, origin }) => {
+    if (location.origin === origin && !sessionStorage.getItem('everymusic.session.v1')) {
       sessionStorage.setItem('everymusic.session.v1', JSON.stringify(session));
     }
-  }, reporterSession);
+  }, { session: reporterSession, origin: webOrigin });
   const reporter = await reporterContext.newPage();
   administrator.on('dialog', dialog => dialog.accept());
   try {
@@ -683,7 +686,7 @@ async function exerciseReportAdministration(administrator, browser, reporterSess
     await expect(reporter.getByRole('status').filter({ hasText: 'Preferences saved.' })).toBeVisible();
     const reporterId = reporterSession.persona.userId;
     const access = reporterSession.keys.accessToken;
-    const keyResponse = await reporter.request.get(`http://127.0.0.1:55474/realm/encryption/users/${reporterId}`, { headers: { Authorization: `Bearer ${access}` } });
+    const keyResponse = await reporter.request.get(`${apiOrigin}/realm/encryption/users/${reporterId}`, { headers: { Authorization: `Bearer ${access}` } });
     expect(keyResponse.ok()).toBe(true);
     const recipient = (await keyResponse.json()).data.key;
     const targetId = (await pool.query('INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [`${marker}-reported@example.test`])).rows[0].id;
@@ -724,7 +727,7 @@ async function exerciseReportAdministration(administrator, browser, reporterSess
     expect((await new AxeBuilder({ page: reporter }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
     await report.getByRole('button', { name: 'Submit report', exact: true }).click();
     await expect(reporter.getByRole('status').filter({ hasText: 'Report submitted.' })).toBeVisible();
-    expect((await reporter.request.get('http://127.0.0.1:55474/realm/admin/analytics', { headers: { Authorization: `Bearer ${access}` } })).status()).toBe(403);
+    expect((await reporter.request.get(`${apiOrigin}/realm/admin/analytics`, { headers: { Authorization: `Bearer ${access}` } })).status()).toBe(403);
     const roleScript = fileURLToPath(new URL('../../backend/scripts/admin-role.mjs', import.meta.url));
     await promisify(execFile)(process.execPath, [roleScript, '--user', `${marker}-google@example.test`, '--grant'], {
       env: { ...process.env, REALM_ENV: 'test' }, timeout: 10000,
