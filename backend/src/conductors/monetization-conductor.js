@@ -15,10 +15,11 @@ import { requestError } from '../engines/request-error.js';
 import { ok, pageOf, pagination } from './response-helpers.js';
 
 const OFFER_BATCH = 1000;
-const VIDEO_TYPES = new Map([
-  ['video/mp4', bytes => bytes.length > 12 && bytes.toString('latin1', 4, 8) === 'ftyp'],
-  ['video/webm', bytes => bytes.length > 4 && bytes.readUInt32BE(0) === 0x1a45dfa3],
-]);
+function isVideo(mimeType, bytes) {
+  if (mimeType === 'video/mp4') return bytes.length > 12 && bytes.toString('latin1', 4, 8) === 'ftyp';
+  if (mimeType === 'video/webm') return bytes.length > 4 && bytes.readUInt32BE(0) === 0x1a45dfa3;
+  return false;
+}
 
 // Parses a single "bytes=start-end" range; multiple ranges are not supported.
 export function parseRange(header, size) {
@@ -165,8 +166,7 @@ export class MonetizationConductor {
     const { data, mimeType } = request.body;
     const limit = this.config.monetization.sponsoredVideoBytes;
     const bytes = /^[A-Za-z0-9+/]+={0,2}$/.test(data) && data.length % 4 === 0 ? Buffer.from(data, 'base64') : null;
-    const matchesType = VIDEO_TYPES.get(mimeType);
-    if (!bytes?.length || bytes.length > limit || !matchesType || !matchesType(bytes)) {
+    if (!bytes?.length || bytes.length > limit || !isVideo(mimeType, bytes)) {
       throw requestError(400, 'INVALID_VIDEO', `Choose an MP4 or WebM video up to ${Math.floor(limit / 1048576)} MiB`);
     }
     const actorId = request.authenticatedUser.userId;

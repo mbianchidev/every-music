@@ -3,9 +3,6 @@ import FormField from './FormField.jsx';
 import ManagedImage from './ManagedImage.jsx';
 import { useI18n } from '../lib/i18n.js';
 
-// Previews only ever use object URLs created from the chosen file.
-const blobUrl = value => (/^blob:/.test(value) ? value : '');
-
 export default function ImageInput({ value, onChange, onFile, disabled, id = 'image-upload', label }) {
   const { t } = useI18n();
   const [preview, setPreview] = useState('');
@@ -44,7 +41,7 @@ export default function ImageInput({ value, onChange, onFile, disabled, id = 'im
       </FormField>
       {(preview || value) && (
         <div className="image-preview">
-          {preview ? <img src={blobUrl(preview)} alt={t('ui.image.preview')} width="240" height="160" />
+          {preview ? <img src={preview} alt={t('ui.image.preview')} width="240" height="160" />
             : <ManagedImage src={value} authenticated alt={t('ui.image.preview')} width="240" height="160" />}
           <button className="text-link" type="button" onClick={remove} disabled={disabled}>{t('ui.image.remove')}</button>
         </div>

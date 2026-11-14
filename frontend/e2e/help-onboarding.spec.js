@@ -360,7 +360,9 @@ test('back controls follow in-app history or fall back to the parent screen', as
     await direct.goto(`/#musician?id=${people.returning.id}`);
     await expect(direct.getByRole('heading', { name: 'Demo Returning Member', level: 1 })).toBeVisible();
     await direct.getByRole('link', { name: 'Back', exact: true }).click();
-    await expect(direct).toHaveURL(/#musicians$/);
+    // The search screen may canonicalize its query string after the fallback lands.
+    await expect(direct).toHaveURL(/#musicians(?:\?|$)/);
+    await expect(direct.getByRole('heading', { name: 'Find musicians', level: 1 })).toBeVisible();
     await direct.goto('/#edit-profile');
     await expect(direct.getByRole('link', { name: 'Back', exact: true })).toHaveAttribute('href', '#profile');
     await direct.goto('/#feed');
