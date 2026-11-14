@@ -11,6 +11,7 @@ test('sign-in restores safe report/admin deep links without accepting external r
     for (const [destination, expected] of [
       ['#admin?tab=reports&id=synthetic', '#admin?tab=reports&id=synthetic'],
       ['#reports', '#reports'],
+      ['#applications?announcement=synthetic', '#applications?announcement=synthetic'],
       ['https://example.test/untrusted', '#feed'],
       ['#admin-malformed?next=https://example.test', '#feed'],
     ]) {

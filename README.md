@@ -119,6 +119,7 @@ not packaged by desktop CI.
 - **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
 - **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
+- **Applications:** reply to calls in app, then track replies; owners get a per-call and all-calls applicant dashboard with statuses, private notes, and messaging.
 - **Collaboration:** end-to-end encrypted new messages, recovery keys/fingerprints, read/archive/block controls, and notifications with optional browser push.
 - **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
 - **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.

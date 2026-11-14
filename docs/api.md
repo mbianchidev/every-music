@@ -219,6 +219,77 @@ The uploader can fetch private/unattached items with Bearer authentication;
 unauthorized or missing items return 404. Unreferenced uploads are cleaned up
 after a day. Uploaded bytes are stored in PostgreSQL and included in backups.
 
+## Announcement applications
+
+| Method | Path | Contract |
+|---|---|---|
+| POST | `/realm/announcements/:announcementId/applications` | Apply to a visible call; 201 with the applicant view |
+| GET | `/realm/announcements/:announcementId/applications/me` | `{ "application": <applicant view> }`, or `null` without an active reply |
+| GET | `/realm/applications/me` | Caller's replies, newest first, paginated as `applications` |
+| DELETE | `/realm/applications/:applicationId` | Applicant withdraws; 200 `{ "id": "<uuid>", "status": "withdrawn" }` |
+| GET | `/realm/applications/received` | Owner dashboard: paginated `applications`, `counts`, and `announcement` |
+| GET | `/realm/applications/announcements` | Owner's calls with per-status counts, paginated as `announcements` |
+| PATCH | `/realm/applications/:applicationId` | Owner `{ "status": "...", "ownerNote": "..." }` (either or both); 200 |
+
+All routes require authentication. Apply with:
+
+```json
+{
+  "message": "<1-4000 characters>",
+  "instrumentIds": ["<instrument listed on the announcement>"],
+  "links": [{ "linkType": "youtube", "url": "https://example.test/demo" }]
+}
+```
+
+`instrumentIds` (at most 20) must be instruments of that announcement, or the
+request returns 400 `INVALID_INSTRUMENTS`. `links` are at most 5 HTTP/S URLs
+with the announcement `linkType` values. The message is stored as plaintext
+and shown to the announcement owner; it is not end-to-end encrypted. Use
+[conversations](#comments-and-messages) for private follow-up.
+
+Only published, unexpired announcements of active owners accept replies
+(otherwise 404). Owners get 403 `OWN_ANNOUNCEMENT`; a block in either direction
+returns 403 `APPLICATION_UNAVAILABLE`. One active reply per user and call is
+allowed (409 `ALREADY_APPLIED`); a withdrawn reply can be replaced. Each account
+can send 20 replies per rolling day (429 `APPLICATION_LIMIT`, withdrawn replies
+included), and the route allows 20 requests per client per hour.
+
+The applicant view has `id`, `status`, `message`, `instruments`
+(`instrumentId`, `name`), `links`, `createdAt`, `updatedAt`, `withdrawnAt`,
+and `announcement` (`id`, `title`, `isOpen`, `ownerId`, `ownerName`). Its
+`status` is `new`, `shortlisted`, `accepted`, `declined`, `withdrawn`, or
+`closed` once the call stops accepting replies. Owner notes are never included.
+Withdrawing clears the message, instruments, and links and hides the reply from
+the owner.
+
+`received` accepts `announcementId`, `status` (`new`, `shortlisted`,
+`accepted`, `declined`), `instrumentId` (a selected instrument), `sort`
+(`newest` or `oldest`), and pagination. `counts` has `total`, `new`,
+`shortlisted`, `accepted`, and `declined` for the announcement/instrument
+scope, ignoring the status filter. `announcement` is `null` unless filtered; a
+foreign or unknown call returns 404. Owner views add `ownerNote`,
+`statusChangedAt`, `canMessage` (false when either user blocked the other),
+`announcement.retentionEndsAt`, and `applicant` (`userId`, `profileId`,
+`artistName`, `pictureUrl`, `city`, and profile `instruments` with
+`skillLevel` and `yearsExperience`). Suspended and deleted applicants are hidden.
+Start an encrypted conversation with `POST /realm/conversations` and the
+applicant's `userId`.
+
+PATCH `ownerNote` takes 0-2000 characters; blank clears it. Status changes to
+`shortlisted`, `accepted`, or `declined` notify the applicant once per status
+(`application_status` with `applicationId`, `announcementId`, `title`, and
+`status`). New replies notify the owner (`application_received` with
+`applicationId`, `announcementId`, `title`, and `applicantName`). Changes emit
+`applications.changed` live events to the owner and applicant.
+
+A call is closed when it is deleted, unpublished, expired, or its owner is
+inactive. Its applications stay readable to the owner for
+`APPLICATION_RETENTION_DAYS` (default 90) after closure; only private notes can
+change and status updates return 409 `ANNOUNCEMENT_CLOSED`. An hourly job
+records closure, clears it when a call reopens, and deletes applications whose
+retention ended, withdrawn replies older than the retention period, and replies
+from deleted accounts. See [configuration](configuration.md#api-settings).
+
 ## Comments and messages
 
 | Method | Path | Contract |

@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState.jsx';
 import AnnouncementCard from '../components/AnnouncementCard.jsx';
 import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import Pagination from '../components/Pagination.jsx';
+import ApplicantsLink from '../components/ApplicantsLink.jsx';
 
 export default function AnnouncementListScreen({ mode }) {
   const [page, setPage] = useState(1);
@@ -25,7 +26,7 @@ export default function AnnouncementListScreen({ mode }) {
       {!resource.data && !resource.error ? <Spinner label="Loading announcements" /> : rows.length ? (
         <>
           <div className="grid" aria-busy={resource.loading}>
-            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />} />)}
+            {rows.map(post => <AnnouncementCard key={post.id} post={post} actions={<><AnnouncementActions post={post} mode={saved ? 'saved' : 'own'} onChanged={resource.reload} />{!saved && <ApplicantsLink post={post} />}</>} />)}
           </div>
           <Pagination pagination={resource.data?.pagination} onPage={changePage} disabled={resource.loading} />
         </>

@@ -20,6 +20,7 @@ const paths = {
   filter: ['M4 7h16M7 12h10M10 17h4'],
   arrow: ['M5 12h14m-5-5 5 5-5 5'],
   theme: ['M12 3v18', 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0'],
+  inbox: ['M3 13h5l2 3h4l2-3h5', 'M6 4h12l3 9v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z'],
 };
 
 export default function Icon({ name, size = 20, className = '' }) {

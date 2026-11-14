@@ -173,6 +173,13 @@ statistics digests, come-back reminders and invite nudges; a lease row in
 event keys make reruns idempotent. Both start and stop with the other
 background jobs (`NotificationJobs`).
 
+Announcement applications (migration `011_announcement_applications.sql`)
+live in `application-orchestrator.js`, `application-repository.js`, and the
+`application-rules.js` engine. Replies are plaintext by design and visible to
+the owner only. Their own hourly `ApplicationMaintenance` job records when a
+call closes, clears that mark when it reopens, and deletes applications after
+the configured retention period.
+
 Analytics requires both actor and content owner opt-in and excludes self-views.
 Only daily resource/kind counts are retained, not actor identity or message
 content. Message counts are not linked to conversations. Preference row locks
