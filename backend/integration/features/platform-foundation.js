@@ -66,9 +66,15 @@ test('platform foundation: plans, localized notifications, and locale preference
       assert.equal(await notificationRepository.create(executor, {
         userId: users[1], kind: 'new_follower', title: 'Duplicate', link: '#profile', key: `${marker}:follow`,
       }), null);
-      assert.equal(await notificationRepository.create(executor, {
+      const comeBack = await notificationRepository.create(executor, {
         userId: users[1], kind: 'come_back', title: 'We miss you', link: '#feed', key: `${marker}:come-back`,
-      }), null, 'come_back has no in-app channel and push is off for this user');
+      });
+      assert.ok(comeBack, 'come_back has no in-app channel, but email is on by default for verified accounts');
+      const { rows: [stored] } = await executor.execute('SELECT in_app, email_status FROM notifications WHERE id = $1', [comeBack]);
+      assert.deepEqual(stored, { in_app: false, email_status: 'pending' });
+      assert.equal(await notificationRepository.create(executor, {
+        userId: users[1], kind: 'profile_stats', title: 'Weekly stats', link: '#analytics', key: `${marker}:stats`,
+      }), null, 'profile_stats has no in-app channel and its optional channels are off');
       const fanned = await notificationRepository.createMany(executor, [users[0], users[1]], {
         kind: 'offers', title: 'Synthetic offer', link: '#feed', keyPrefix: `${marker}:offer`,
       });

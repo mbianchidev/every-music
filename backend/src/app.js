@@ -11,10 +11,12 @@ import { communityOrchestrator } from './orchestrators/community-orchestrator.js
 import { encryptionOrchestrator } from './orchestrators/encryption-orchestrator.js';
 import { administrationOrchestrator } from './orchestrators/administration-orchestrator.js';
 import { entitlementOrchestrator } from './orchestrators/entitlement-orchestrator.js';
+import { notificationOrchestrator } from './orchestrators/notification-orchestrator.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
 import { RequestError } from './engines/request-error.js';
+import { NotificationJobs } from './engines/notification-jobs.js';
 
 function applySecurityHeaders(reply) {
   reply
@@ -157,6 +159,7 @@ export async function buildNexus({
   await nexus.register(encryptionOrchestrator, { prefix: '/realm/encryption' });
   await nexus.register(administrationOrchestrator, { prefix: '/realm' });
   await nexus.register(entitlementOrchestrator, { prefix: '/realm' });
+  await nexus.register(notificationOrchestrator, { prefix: '/realm', config });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });
@@ -170,6 +173,9 @@ export async function buildNexus({
   });
   nexus.addHook('onListen', async () => { if (backgroundJobs) dispatcher.start(); });
   nexus.addHook('preClose', async () => { await hub.close(); await dispatcher.stop(); });
+  const notificationJobs = new NotificationJobs({ config, connector, logger: nexus.log });
+  nexus.addHook('onListen', async () => { if (backgroundJobs) notificationJobs.start(); });
+  nexus.addHook('preClose', async () => { await notificationJobs.stop(); });
 
   return nexus;
 }

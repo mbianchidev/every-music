@@ -157,6 +157,14 @@ export function createRealmConfig(env = process.env) {
       senderAlias: env.MAIL_SENDER_ALIAS,
     },
     entitlements: createEntitlements(env),
+    notifications: {
+      jobIntervalMinutes: parseInteger(env.NOTIFICATION_JOB_INTERVAL_MINUTES, 60, 'NOTIFICATION_JOB_INTERVAL_MINUTES', { minimum: 1, maximum: 1440 }),
+      statsDigestWeekday: parseInteger(env.STATS_DIGEST_WEEKDAY, 1, 'STATS_DIGEST_WEEKDAY', { minimum: 1, maximum: 7 }),
+      statsDigestMinimum: parseInteger(env.STATS_DIGEST_MIN_EVENTS, 1, 'STATS_DIGEST_MIN_EVENTS', { minimum: 1, maximum: 100000 }),
+      comeBackAfterDays: parseInteger(env.COME_BACK_AFTER_DAYS, 30, 'COME_BACK_AFTER_DAYS', { minimum: 1, maximum: 365 }),
+      comeBackMaxReminders: parseInteger(env.COME_BACK_MAX_REMINDERS, 3, 'COME_BACK_MAX_REMINDERS', { minimum: 0, maximum: 24 }),
+      inviteNudgeAfterDays: parseInteger(env.INVITE_NUDGE_AFTER_DAYS, 7, 'INVITE_NUDGE_AFTER_DAYS', { minimum: 1, maximum: 365 }),
+    },
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
