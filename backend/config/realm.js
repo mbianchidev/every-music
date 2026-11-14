@@ -157,6 +157,9 @@ export function createRealmConfig(env = process.env) {
       senderAlias: env.MAIL_SENDER_ALIAS,
     },
     entitlements: createEntitlements(env),
+    applications: {
+      retentionDays: parseInteger(env.APPLICATION_RETENTION_DAYS, 90, 'APPLICATION_RETENTION_DAYS', { minimum: 1, maximum: 3650 }),
+    },
     boundaries: {
       portalOrigins: parseOrigins(env.PORTAL_ORIGINS || env.PORTAL_ORIGIN),
       rateWindow: parseInteger(env.RATE_WINDOW_MS, 900000, 'RATE_WINDOW_MS', { minimum: 1000 }),
