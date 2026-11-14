@@ -167,9 +167,14 @@ test('members subscribe, buy points, promote calls and profiles, and invite frie
   await expect(page.getByText('Your account already used an invite code.').or(page.getByLabel(/^Invite code/))).toBeVisible();
   await assertAccessible(page, 'Invite');
   await page.setViewportSize({ width: 320, height: 800 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  for (const route of ['#invite', '#wallet', '#store']) {
+    await page.goto(`/${route}`);
+    await expect(page.locator('.spinner')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${route} reflows at 320px`).toBe(true);
+  }
   await page.setViewportSize({ width: 1280, height: 800 });
 
+  await page.goto('/#invite');
   const code = (await link.inputValue()).split('invite=')[1];
   const guest = await page.context().browser().newPage();
   await guest.goto(`/#register?invite=${code}`);
