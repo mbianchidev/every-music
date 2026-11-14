@@ -53,6 +53,7 @@ export class MusicianConductor {
       InputValidator.validateCoordinates(updateData.latitude, updateData.longitude),
       InputValidator.validateInstruments(updateData.instruments),
       InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
+      InputValidator.validateEnum(updateData.accountKind, ['artist', 'music_lover'], 'Account kind'),
     );
 
     if (validations) {
@@ -339,6 +340,7 @@ export class MusicianConductor {
       id: profile.id,
       userId: profile.user_id,
       isFollowing: Boolean(profile.is_following),
+      accountKind: profile.account_kind || 'artist',
       artistName: profile.artist_name,
       firstName: profile.first_name,
       lastName: profile.last_name,
@@ -371,6 +373,7 @@ export class MusicianConductor {
     return {
       id: profile.id,
       userId: profile.user_id,
+      accountKind: profile.account_kind || 'artist',
       artistName: profile.artist_name,
       firstName: profile.first_name,
       lastName: profile.last_name,

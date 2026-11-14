@@ -92,6 +92,7 @@ export class MusicianRepository {
       whatsapp: 'whatsapp',
       signal: 'signal',
       websiteUrl: 'website_url',
+      accountKind: 'account_kind',
     };
 
     for (const [jsField, dbField] of Object.entries(fieldMapping)) {
@@ -160,7 +161,7 @@ export class MusicianRepository {
 
     const sorts = { newest: 'p.created_at DESC', oldest: 'p.created_at ASC', name: "COALESCE(p.artist_name, p.first_name, '') ASC", city: "COALESCE(p.city, '') ASC" };
     const query = `
-      SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name,
+      SELECT p.id, p.user_id, p.artist_name, p.first_name, p.last_name, p.account_kind,
              p.city, p.state, p.country, p.bio, p.profile_picture_url,
              p.created_at,
              (SELECT jsonb_agg(jsonb_build_object(

@@ -22,6 +22,11 @@ export const notificationKinds = {
   come_back: { inApp: 'off', push: 'optional', email: 'on' },
   app_update_minor: { inApp: 'on', push: 'off', email: 'off' },
   app_update_major: { inApp: 'on', push: 'on', email: 'on' },
+  organization_invitation: { inApp: 'on', push: 'on', email: 'optional' },
+  organization_membership: { inApp: 'on', push: 'optional', email: 'optional' },
+  organization_update: { inApp: 'on', push: 'optional', email: 'optional' },
+  organization_relation: { inApp: 'on', push: 'on', email: 'optional' },
+  organization_claim: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {

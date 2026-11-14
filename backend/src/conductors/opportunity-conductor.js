@@ -2,6 +2,7 @@ import { opportunityRepository } from '../repositories/opportunity-repository.js
 import { realmConnector } from '../repositories/realm-connector.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { communityRepository, publishEvent } from '../repositories/community-repository.js';
+import { organizationRepository } from '../repositories/organization-repository.js';
 
 export class OpportunityConductor {
   async createAnnouncement(request, reply) {
@@ -21,6 +22,7 @@ export class OpportunityConductor {
       InputValidator.validateUuidArray(announcementData.instrumentIds, 'Instrument IDs'),
       InputValidator.validateUuidArray(announcementData.genreIds, 'Genre IDs'),
       InputValidator.validateLinks(announcementData.links),
+      InputValidator.validateUuid(announcementData.organizationId, 'Organization'),
     );
 
     if (validations) {
@@ -57,6 +59,9 @@ export class OpportunityConductor {
           announcementData.links || [],
           executor,
         );
+        if (announcementData.organizationId) {
+          await organizationRepository.attachAnnouncement(executor, announcement.id, announcementData.organizationId.toLowerCase(), userId);
+        }
         const full = await opportunityRepository.findById(announcement.id, executor);
         if (full.is_published) await communityRepository.announcementPublished(executor, full);
         return full;
@@ -244,6 +249,7 @@ export class OpportunityConductor {
       InputValidator.validateUuidArray(updateData.instrumentIds, 'Instrument IDs'),
       InputValidator.validateUuidArray(updateData.genreIds, 'Genre IDs'),
       InputValidator.validateLinks(updateData.links),
+      InputValidator.validateUuid(updateData.organizationId, 'Organization'),
     );
 
     if (validations) {
@@ -287,6 +293,10 @@ export class OpportunityConductor {
 
         if (updateData.links !== undefined) {
           await opportunityRepository.attachLinks(announcementId, updateData.links, executor);
+        }
+
+        if (updateData.organizationId !== undefined && updateData.organizationId?.toLowerCase() !== previous.organization_id) {
+          await organizationRepository.attachAnnouncement(executor, announcementId, updateData.organizationId?.toLowerCase() || null, userId);
         }
 
         const full = await opportunityRepository.findById(announcementId, executor);
@@ -578,6 +588,7 @@ export class OpportunityConductor {
       isPublished: announcement.is_published,
       isSaved: Boolean(announcement.is_saved),
       myReaction: announcement.my_reaction || null,
+      organization: announcement.organization || null,
       createdAt: announcement.created_at,
       updatedAt: announcement.updated_at,
     };
@@ -609,6 +620,7 @@ export class OpportunityConductor {
         dislikes: announcement.dislikes_count,
       },
       expiresAt: announcement.expires_at,
+      organization: announcement.organization || null,
       createdAt: announcement.created_at,
     };
   }
