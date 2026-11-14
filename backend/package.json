@@ -17,6 +17,7 @@
     "populate": "node scripts/populate-realm.js",
     "admin": "node scripts/admin-role.mjs",
     "smoke": "node scripts/smoke.js",
+    "media:move-to-object-storage": "node scripts/move-media-to-object-storage.js",
     "test:integration": "node --test --test-concurrency=1 \"integration/community.js\" \"integration/features/**/*.js\"",
     "test:migrations": "node --test integration/migrations.js",
     "test": "node --test",

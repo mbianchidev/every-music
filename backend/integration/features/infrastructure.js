@@ -239,6 +239,9 @@ test('infrastructure: media storage drivers, encrypted blobs, and native push de
     assert.equal(objectStore.objects.get(key).sha256, createHash('sha256').update(objectStore.objects.get(key).body).digest('hex'));
     const downloaded = await request(`/media/${stored.id}`);
     assert.equal(downloaded.statusCode, 200);
+    const head = await request(`/media/${stored.id}`, { method: 'HEAD' });
+    assert.equal(head.statusCode, 200);
+    assert.equal(Number(head.headers['content-length']), objectStore.objects.get(key).body.length);
     assert.equal((await sharp(downloaded.rawPayload).metadata()).format, 'webp');
     assert.equal((await request(`/media/${legacyImage.id}`, { actor: 1 })).statusCode, 200, 'PostgreSQL rows stay readable');
 

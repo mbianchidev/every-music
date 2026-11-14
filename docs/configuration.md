@@ -160,6 +160,12 @@ to any S3-compatible service (AWS S3, Cloudflare R2, MinIO, SeaweedFS, and
 similar) using Signature V4 requests. Startup rejects an incomplete or invalid
 S3 configuration.
 
+To move media that is still in PostgreSQL into the bucket after switching, run
+`npm run media:move-to-object-storage` from `backend/` (or
+`node scripts/move-media-to-object-storage.js` in the API image) with the same
+settings. It uploads each item, then clears its bytes from PostgreSQL, and can
+be stopped and rerun safely. Back up the database first.
+
 Media is always served through `/realm/media/:id` with the same owner,
 public-reference, and authorized-reference checks; buckets must stay private and
 no public bucket URLs are issued. Existing PostgreSQL rows remain readable after

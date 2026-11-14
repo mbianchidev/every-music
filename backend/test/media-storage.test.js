@@ -74,3 +74,33 @@ test('registry predicates can be evaluated per media row for cleanup', () => {
   assert.equal(forEachMedia('EXISTS(SELECT 1 FROM t WHERE t.url = $2 AND t.n = $20)'),
     "EXISTS(SELECT 1 FROM t WHERE t.url = ('/realm/media/' || m.id::text) AND t.n = $20)");
 });
+
+test('moving PostgreSQL media to object storage switches each row only after its upload', async () => {
+  const { moveMediaToObjectStorage } = await import('../scripts/move-media-to-object-storage.js');
+  const pending = [
+    { id: 'a', mime_type: 'image/webp', content: Buffer.from('first') },
+    { id: 'b', mime_type: 'application/octet-stream', content: Buffer.from('second') },
+  ];
+  const updates = [];
+  const connector = {
+    execute: async (sql, values) => {
+      if (sql.includes('SELECT')) return { rows: pending.splice(0, values[0]) };
+      updates.push(values);
+      return { rowCount: values[0] === 'b' ? 0 : 1 };
+    },
+  };
+  const calls = [];
+  const storage = {
+    usesObjects: true,
+    put: async (key, body, type) => { calls.push(['put', key, body.toString(), type]); },
+    remove: async key => { calls.push(['remove', key]); },
+  };
+  assert.equal(await moveMediaToObjectStorage({ storage, connector, logger: { info() {} }, batch: 1 }), 1);
+  assert.deepEqual(calls, [
+    ['put', 'media/a', 'first', 'image/webp'],
+    ['put', 'media/b', 'second', 'application/octet-stream'],
+    ['remove', 'media/b'],
+  ]);
+  assert.deepEqual(updates, [['a', 'media/a'], ['b', 'media/b']]);
+  await assert.rejects(moveMediaToObjectStorage({ storage: { usesObjects: false }, connector }), /MEDIA_STORAGE=s3/);
+});

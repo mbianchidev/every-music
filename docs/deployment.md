@@ -155,6 +155,10 @@ so no bucket CORS, public access, or CDN is needed.
 | Google Cloud Storage (HMAC keys) | `https://storage.googleapis.com` | `auto` | `true` |
 | MinIO / SeaweedFS | `http(s)://<host>:<port>` | `us-east-1` | `true` |
 
+Existing PostgreSQL media keeps working after the switch. To move it into the
+bucket, run `node scripts/move-media-to-object-storage.js` from the API image
+with the production settings; the command is resumable.
+
 Use credentials scoped to that one bucket (get, put, delete, list/head). Enable
 encryption at rest and versioning or replication as your retention policy
 requires. Object keys are `media/<uuid>`; objects never contain account data
