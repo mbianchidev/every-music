@@ -1,5 +1,9 @@
 import { realmConnector } from './realm-connector.js';
 import { requestError } from '../engines/request-error.js';
+import { validateMessageEnvelope } from '../engines/message-security.js';
+import { messagingKeyRepository, publicMessagingKey } from './messaging-key-repository.js';
+import { publishEvent, publishAdminEvent } from './event-publisher.js';
+export { publishEvent } from './event-publisher.js';
 
 export const preferenceColumns = {
   messages: 'messages',
@@ -8,12 +12,17 @@ export const preferenceColumns = {
   profileViews: 'profile_views',
   push: 'push',
   analytics: 'analytics',
+  platformAnalytics: 'platform_analytics',
 };
 
-export async function publishEvent(executor, type, { userId, id } = {}) {
-  await executor.execute("SELECT pg_notify('everymusic_events', $1)", [
-    JSON.stringify({ type, userId, id }),
-  ]);
+export function messageView(row) {
+  return {
+    id: row.id, clientId: row.client_id, senderId: row.sender_id, createdAt: row.created_at,
+    isDeleted: row.is_deleted, removedByModeration: row.removed_by_moderation,
+    encryptionVersion: row.encryption_version, ciphertext: row.ciphertext,
+    senderKeyId: row.sender_key_id, recipientKeyId: row.recipient_key_id,
+    ...(row.encryption_version === 0 && !row.is_deleted ? { body: row.body } : {}),
+  };
 }
 
 class CommunityRepository {
@@ -24,13 +33,15 @@ class CommunityRepository {
              COALESCE(p.engagements, TRUE) AS engagements,
              COALESCE(p.profile_views, FALSE) AS "profileViews",
              COALESCE(p.push, FALSE) AS push,
-             COALESCE(p.analytics, FALSE) AS analytics
+             COALESCE(p.analytics, FALSE) AS analytics,
+             COALESCE(p.platform_analytics, FALSE) AS "platformAnalytics"
       FROM users u LEFT JOIN user_preferences p ON p.user_id = u.id
       WHERE u.id = $1`, [userId]);
     return rows[0];
   }
 
   async updatePreferences(userId, changes) {
+    if (changes.analytics === false) changes = { ...changes, platformAnalytics: false };
     return realmConnector.transaction(async (executor) => {
       await executor.execute('INSERT INTO user_preferences (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
       const entries = Object.entries(changes).filter(([key]) => Object.hasOwn(preferenceColumns, key));
@@ -42,11 +53,19 @@ class CommunityRepository {
       if (changes.analytics === false) {
         await executor.execute('DELETE FROM analytics_daily WHERE user_id = $1', [userId]);
       }
+      const current = await this.preferences(userId, executor);
+      if (current.platformAnalytics && !current.analytics) {
+        throw requestError(400, 'ANALYTICS_CONSENT_REQUIRED', 'Enable personal analytics before opting in to platform aggregates.');
+      }
+      if (changes.platformAnalytics === false) {
+        await executor.execute('DELETE FROM platform_analytics_daily WHERE user_id = $1', [userId]);
+        await publishAdminEvent(executor);
+      }
       if (changes.push === false) {
         await executor.execute('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
       }
       await publishEvent(executor, 'preferences.changed', { userId });
-      return this.preferences(userId, executor);
+      return current;
     });
   }
 
@@ -99,6 +118,16 @@ class CommunityRepository {
       ON CONFLICT (user_id, day, kind, resource_id)
       DO UPDATE SET count = analytics_daily.count + 1`,
     [actorId, ownerId, kind, resourceId]);
+    if (result.rowCount) await publishEvent(executor, 'analytics.changed', { userId: ownerId });
+    const platform = await executor.execute(`
+      INSERT INTO platform_analytics_daily (user_id, kind, resource_id)
+      SELECT $2, $3, $4 FROM user_preferences actor, user_preferences owner
+      WHERE actor.user_id = $1 AND actor.analytics = TRUE AND actor.platform_analytics = TRUE
+        AND owner.user_id = $2 AND owner.analytics = TRUE AND owner.platform_analytics = TRUE
+      ON CONFLICT (user_id, day, kind, resource_id)
+      DO UPDATE SET count = platform_analytics_daily.count + 1`,
+    [actorId, ownerId, kind, resourceId]);
+    if (platform.rowCount) await publishAdminEvent(executor);
     return result.rowCount > 0;
   }
 
@@ -138,27 +167,50 @@ class CommunityRepository {
       await executor.execute(`
         UPDATE conversation_members SET archived = FALSE
         WHERE conversation_id = $1 AND user_id = $2`, [id, userId]);
+      if (!await messagingKeyRepository.current(recipientId, executor)) await this.notify(executor, {
+        userId: recipientId, kind: 'message_request', title: 'A musician wants to start an encrypted conversation',
+        link: `#messages?id=${id}`, key: `conversation-request:${id}:${recipientId}`, preference: 'messages',
+      });
+      await publishEvent(executor, 'conversations.changed', { userId, id });
+      await publishEvent(executor, 'conversations.changed', { userId: recipientId, id });
       return { id };
     });
   }
 
-  async sendMessage(id, userId, { body, clientId }) {
+  async sendMessage(id, userId, input) {
+    const clientId = input.clientId.toLowerCase();
+    const senderKeyId = input.senderKeyId.toLowerCase();
+    const recipientKeyId = input.recipientKeyId.toLowerCase();
+    const ciphertext = await validateMessageEnvelope(input.ciphertext, senderKeyId, recipientKeyId);
     return realmConnector.transaction(async (executor) => {
       const conversation = await this.conversation(id, userId, executor, true);
       id = conversation.id;
       await this.assertCanMessage(executor, userId, conversation.recipient_id);
+      const sameMessage = row => {
+        if (row.conversation_id !== id || row.ciphertext !== ciphertext
+          || row.sender_key_id !== senderKeyId || row.recipient_key_id !== recipientKeyId) {
+          throw requestError(409, 'MESSAGE_CONFLICT', 'This message identifier was already used');
+        }
+        return row;
+      };
+      const previous = await executor.execute('SELECT * FROM messages WHERE sender_id = $1 AND client_id = $2', [userId, clientId]);
+      if (previous.rows.length) return sameMessage(previous.rows[0]);
+      const keys = await executor.execute(`
+        SELECT id, user_id FROM messaging_keys WHERE id = ANY($1::uuid[]) AND is_current = TRUE FOR SHARE`,
+      [[senderKeyId, recipientKeyId]]);
+      if (!keys.rows.some(key => key.id === senderKeyId && key.user_id === userId)
+        || !keys.rows.some(key => key.id === recipientKeyId && key.user_id === conversation.recipient_id)) {
+        throw requestError(409, 'MESSAGING_KEYS_CHANGED', 'Both participants need current messaging keys. Reload, unlock your key, and verify any changed fingerprint.');
+      }
       const { rows } = await executor.execute(`
-        INSERT INTO messages (conversation_id, sender_id, body, client_id)
-        VALUES ($1, $2, $3, $4) ON CONFLICT (sender_id, client_id) DO NOTHING RETURNING *`,
-      [id, userId, body.trim(), clientId]);
+        INSERT INTO messages (conversation_id, sender_id, client_id, ciphertext, sender_key_id, recipient_key_id, encryption_version)
+        VALUES ($1, $2, $3, $4, $5, $6, 1) ON CONFLICT (sender_id, client_id) DO NOTHING RETURNING *`,
+      [id, userId, clientId, ciphertext, senderKeyId, recipientKeyId]);
       if (!rows.length) {
         const existing = await executor.execute(
           'SELECT * FROM messages WHERE sender_id = $1 AND client_id = $2', [userId, clientId],
         );
-        if (existing.rows[0].conversation_id !== id || existing.rows[0].body !== body.trim()) {
-          throw requestError(409, 'MESSAGE_CONFLICT', 'This message identifier was already used');
-        }
-        return existing.rows[0];
+        return sameMessage(existing.rows[0]);
       }
       await executor.execute('UPDATE conversations SET updated_at = clock_timestamp() WHERE id = $1', [id]);
       await executor.execute(`
@@ -180,13 +232,14 @@ class CommunityRepository {
     const { rows } = await realmConnector.execute(`
       SELECT c.id, c.updated_at AS "updatedAt", cm.archived,
         p.user_id AS "recipientId", COALESCE(p.artist_name, 'Musician') AS "recipientName",
-        (SELECT body FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) AS "lastMessage",
+        (SELECT CASE WHEN is_deleted THEN 'Message removed' WHEN encryption_version = 1 THEN 'Encrypted message' ELSE 'Legacy message' END
+          FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) AS "lastMessage",
         (SELECT COUNT(*)::int FROM messages m WHERE m.conversation_id = c.id
           AND m.sender_id <> $1 AND m.created_at > cm.read_at) AS "unreadCount",
         EXISTS(SELECT 1 FROM blocked_users WHERE user_id = $1 AND blocked_user_id = p.user_id) AS "blockedByMe"
       FROM conversation_members cm JOIN conversations c ON cm.conversation_id = c.id
       JOIN profiles p ON p.user_id = CASE WHEN c.first_user_id = $1 THEN c.second_user_id ELSE c.first_user_id END
-      JOIN users u ON u.id = p.user_id AND u.is_active = TRUE AND u.is_deleted = FALSE
+      JOIN users u ON u.id = p.user_id
       WHERE cm.user_id = $1 AND cm.archived = $2
       ORDER BY c.updated_at DESC, c.id DESC LIMIT $3 OFFSET $4`,
     [userId, archived, pageSize + 1, (page - 1) * pageSize]);
@@ -195,15 +248,22 @@ class CommunityRepository {
 
   async getMessages(id, userId, { page, pageSize }) {
     const conversation = await this.conversation(id, userId);
+    id = conversation.id;
     const { rows: details } = await realmConnector.execute(`
       SELECT p.user_id AS "recipientId", COALESCE(p.artist_name, 'Musician') AS "recipientName",
+        (u.is_active AND NOT u.is_deleted) AS "recipientAvailable",
         EXISTS(SELECT 1 FROM blocked_users WHERE user_id = $1 AND blocked_user_id = p.user_id) AS "blockedByMe"
-      FROM profiles p WHERE p.user_id = $2`, [userId, conversation.recipient_id]);
+      FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = $2`, [userId, conversation.recipient_id]);
     const { rows } = await realmConnector.execute(`
-      SELECT id, sender_id AS "senderId", body, is_deleted AS "isDeleted", created_at AS "createdAt"
+      SELECT *
       FROM messages WHERE conversation_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [id, pageSize + 1, (page - 1) * pageSize]);
-    return { rows, conversation: { id, ...details[0] } };
+    const keyIds = [...new Set(rows.flatMap(row => [row.sender_key_id, row.recipient_key_id]).filter(Boolean))];
+    const keyRows = await realmConnector.execute('SELECT * FROM messaging_keys WHERE id = ANY($1::uuid[])', [keyIds]);
+    return {
+      rows: rows.map(messageView), keys: keyRows.rows.map(publicMessagingKey),
+      conversation: { id, ...details[0], recipientKey: await messagingKeyRepository.current(conversation.recipient_id) },
+    };
   }
 
   async updateConversation(id, userId, changes) {
@@ -224,7 +284,7 @@ class CommunityRepository {
       if (changes.read) {
         await executor.execute(`
           UPDATE notifications SET read_at = COALESCE(read_at, NOW())
-          WHERE user_id = $1 AND kind = 'message' AND link = $2`, [userId, `#messages?id=${id}`]);
+          WHERE user_id = $1 AND kind IN ('message', 'message_request') AND link = $2`, [userId, `#messages?id=${id}`]);
         await publishEvent(executor, 'notifications.changed', { userId });
       }
       await publishEvent(executor, 'conversations.changed', { userId, id });
@@ -236,7 +296,7 @@ class CommunityRepository {
     return realmConnector.transaction(async (executor) => {
       const conversation = await this.conversation(id, userId, executor, true);
       const { rowCount } = await executor.execute(`
-        UPDATE messages SET body = 'Message removed', is_deleted = TRUE
+        UPDATE messages SET body = NULL, ciphertext = NULL, is_deleted = TRUE
         WHERE id = $1 AND conversation_id = $2 AND sender_id = $3`, [messageId, id, userId]);
       if (!rowCount) throw requestError(404, 'MESSAGE_NOT_FOUND', 'Message not found or not yours');
       await publishEvent(executor, 'messages.changed', { userId, id });
@@ -270,8 +330,10 @@ class CommunityRepository {
       const { rows } = await executor.execute(kind === 'profile_view'
         ? `SELECT p.user_id FROM profiles p JOIN users u ON p.user_id = u.id
            WHERE (p.id = $1 OR p.user_id = $1) AND u.is_active = TRUE AND u.is_deleted = FALSE`
-        : `SELECT user_id FROM announcements WHERE id = $1 AND is_published = TRUE AND is_deleted = FALSE
-           AND (expires_at IS NULL OR expires_at > NOW())`, [resourceId]);
+        : `SELECT a.user_id FROM announcements a JOIN users u ON u.id = a.user_id
+           WHERE a.id = $1 AND a.is_published = TRUE AND a.is_deleted = FALSE
+           AND u.is_active = TRUE AND u.is_deleted = FALSE
+           AND (a.expires_at IS NULL OR a.expires_at > NOW())`, [resourceId]);
       if (!rows.length) throw requestError(404, 'CONTENT_NOT_FOUND', 'Content not found');
       const ownerId = rows[0].user_id;
       const recorded = await this.recordMetric(executor, actorId, ownerId, kind, resourceId);
@@ -324,6 +386,7 @@ class CommunityRepository {
   async visibleAnnouncement(executor, id, userId) {
     const { rows } = await executor.execute(`
       SELECT * FROM announcements WHERE id = $1 AND is_deleted = FALSE
+        AND EXISTS(SELECT 1 FROM users u WHERE u.id = announcements.user_id AND u.is_active AND NOT u.is_deleted)
         AND (user_id = $2 OR (is_published = TRUE AND (expires_at IS NULL OR expires_at > NOW())))`, [id, userId ?? null]);
     if (!rows.length) throw requestError(404, 'ANNOUNCEMENT_NOT_FOUND', 'Announcement not found');
     return rows[0];
@@ -393,7 +456,8 @@ class CommunityRepository {
         m.user_id = $3 OR
         EXISTS(SELECT 1 FROM profiles p JOIN users u ON u.id = p.user_id
           WHERE p.profile_picture_url = $2 AND u.is_active = TRUE AND u.is_deleted = FALSE) OR
-        EXISTS(SELECT 1 FROM announcements a WHERE a.picture_url = $2 AND a.is_published = TRUE
+        EXISTS(SELECT 1 FROM announcements a JOIN users u ON u.id = a.user_id AND u.is_active AND NOT u.is_deleted
+          WHERE a.picture_url = $2 AND a.is_published = TRUE
           AND a.is_deleted = FALSE AND (a.expires_at IS NULL OR a.expires_at > NOW()))
       )`, [id, `/realm/media/${id}`, userId ?? null]);
     if (!rows.length) throw requestError(404, 'IMAGE_NOT_FOUND', 'Image not found');

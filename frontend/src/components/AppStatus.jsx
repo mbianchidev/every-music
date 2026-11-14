@@ -16,6 +16,7 @@ export default function AppStatus({ session, routeName, pageTitle }) {
   const [update, setUpdate] = useState(null);
   const [pwaError, setPwaError] = useState('');
   const notifications = useResource(session.authorized ? '/notifications?pageSize=1' : null, { events: 'notifications.changed' });
+  const account = useResource(session.authorized ? '/account' : null, { events: 'account.changed' });
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -77,7 +78,7 @@ export default function AppStatus({ session, routeName, pageTitle }) {
   };
   return (
     <>
-    {session.authorized && <Navigation routeName={routeName} unreadCount={notifications.data?.unreadCount || 0} />}
+    {session.authorized && <Navigation routeName={routeName} unreadCount={notifications.data?.unreadCount || 0} isAdmin={account.data?.role === 'admin'} />}
     <header className="app-tools">
       <div className="header-brand"><Brand href={session.authorized ? '#feed' : '#login'} /></div>
       {session.authorized && <div className="header-context"><span>Workspace</span><Icon name="chevron" size={14} /><span>{pageTitle}</span></div>}
@@ -104,6 +105,7 @@ export default function AppStatus({ session, routeName, pageTitle }) {
       {!online && <p className="status-message" role="status">You are offline. Saved calls are read-only. Reconnect to save changes or send messages.</p>}
       {(themeError || pwaError) && <p className="field-error" role="alert">{themeError || pwaError}</p>}
       {online && session.authorized && notifications.error && <p className="field-error" role="alert">Notifications: {notifications.error} <button className="text-link" type="button" onClick={notifications.reload}>Retry notifications</button></p>}
+      {online && session.authorized && account.error && <p className="field-error" role="alert">Account permissions: {account.error} <button className="text-link" type="button" onClick={account.reload}>Retry permissions</button></p>}
     </div>
     </>
   );

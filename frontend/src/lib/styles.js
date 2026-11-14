@@ -91,7 +91,7 @@ textarea { min-height: 100px; resize: vertical; }
 .heading-lg { margin-bottom: 0; font-size: 30px; }
 .heading-md { font-size: 20px; letter-spacing: -0.02em; }
 .body-muted { color: var(--muted); }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid transparent; border-radius: 8px; font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; text-decoration: none; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid transparent; border-radius: 8px; font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; text-decoration: none; cursor: pointer; transition: border-color 120ms ease; }
 .btn:hover { text-decoration: none; }
 .btn-primary { background: var(--brand); color: var(--brand-contrast); }
 .btn-primary:hover:not(:disabled) { filter: brightness(0.94); }
@@ -180,7 +180,7 @@ input[type="file"]::file-selector-button { min-height: 40px; margin-right: 12px;
 .nav-dialog .nav-group:last-child { margin-bottom: 0; }
 .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .dialog-heading h2 { margin: 0; font-size: 18px; }
-body:has(.nav-dialog[open]) { overflow: hidden; }
+body:has(.nav-dialog[open]), body:has(.modal-dialog[open]) { overflow: hidden; }
 .app-tools { position: sticky; z-index: 30; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; padding: 12px 32px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .is-authenticated #main-content, .is-authenticated .app-tools, .is-authenticated .global-notices { margin-left: 232px; }
 .is-authenticated .header-brand { display: none; }
@@ -303,6 +303,28 @@ tbody th { font-weight: 500; }
 .empty-state { padding: 40px 24px; text-align: center; }
 .empty-state .heading-md { font-size: 20px; }
 .empty-state .body-muted { margin: 12px auto 20px; max-width: 48ch; font-size: 14px; }
+.modal-dialog { width: min(580px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--paper); box-shadow: 0 20px 70px #0005; overflow-y: auto; }
+.modal-dialog::backdrop { background: #070a1280; }
+.modal-dialog :focus-visible { scroll-margin-block: 16px; }
+.modal-dialog .form-stack { gap: 16px; }
+.encryption-panel { margin-bottom: 20px; }
+.encryption-panel .heading-md { font-size: 16px; }
+.encryption-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.encryption-summary p { flex: 1 1 260px; margin: 0; }
+.encryption-panel .form-stack { max-width: 680px; gap: 14px; }
+.key-management { margin-top: 12px; }
+.key-management summary { min-height: 36px; cursor: pointer; color: var(--brand-ink); font-size: 13px; font-weight: 600; }
+.key-management .field { margin: 14px 0; max-width: 600px; }
+.key-management > .text-link { margin-right: 20px; }
+.fingerprint, .identifier { overflow-wrap: anywhere; word-break: break-word; }
+.fingerprint-block { display: block; margin: 8px 0 18px; padding: 12px; border-radius: 8px; background: var(--surface-raised); color: var(--paper); font-size: 14px; }
+.recovery-value { font-family: ui-monospace, monospace; }
+.conversation-security { padding: 12px 0; border-top: 1px solid var(--line); }
+.conversation-security > p { margin-bottom: 4px; }
+.legacy-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; }
+.reported-excerpt { margin: 12px 0 20px; padding: 14px 16px; border-left: 3px solid var(--brand-ink); background: var(--surface-raised); white-space: pre-wrap; overflow-wrap: anywhere; }
+.report-detail { max-width: 900px; }
+.report-detail h3 { margin-top: 24px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (min-width: 1250px) {
   .filters { grid-template-columns: repeat(6, minmax(0, 1fr)); }

@@ -123,8 +123,9 @@ provider is contacted.
 `test:migrations` needs a role with `CREATEDB` on that isolated instance and a
 local Git ref for the previous schema. It creates two uniquely named temporary
 databases, runs the actual migration runner against fresh/prior schemas,
-replays migration 003, compares columns/indexes/constraints, checks legacy
-rows and consent defaults, then drops only the databases it created.
+replays migrations 003/004, compares columns/indexes/constraints, checks legacy
+projects/messages/tombstones, member-role and consent defaults, then drops only
+the databases it created.
 CI fetches both merge parents and uses `HEAD^1` as the base.
 
 `test:e2e` starts its own API on 55474 and a production Vite preview on 4179;
@@ -139,11 +140,20 @@ links, and pending-request account isolation use the real app/API/database with
 only the external Google SDK and credential verification replaced by synthetic
 provider fixtures. Install/share browser adapters are also controlled so tests
 do not install software or change the host clipboard.
+Messaging journeys generate real client keys, send actual signed/encrypted
+envelopes, unlock after reload, and retain drafts/read/focus behavior.
+The Google account journey also restores a genuine earlier first-party session
+in a second isolated context, submits selected signed report evidence, grants
+the other actor admin using the real operator CLI, and verifies report removal,
+suspension, audit entries and aggregate analytics. It does not weaken auth limits.
 Do not treat its browser checks as a native screen-reader certification.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
 to isolate fixtures from the shared-IP rate limit; authentication limits remain.
+Do not run `npm run check` / `npm run compile` in the same frontend checkout
+while browser tests run: both builds replace `dist`, and the browser build
+embeds its isolated API origin. Backend checks can run independently.
 The Google browser server is a loopback-only integration entrypoint requiring
 `REALM_ENV=test`, an explicit database URL, and the synthetic client ID. It is
 not the production server and must never be exposed as one.
@@ -238,6 +248,14 @@ window for large installations. It is additive, preserves existing records and
 sessions, and defaults analytics/push off. Application rollback can leave these
 extra tables/columns in place; do not drop messages or media as an automatic
 rollback. Use a reviewed forward fix or deliberately restore a verified backup.
+
+Migration `004_admin_and_encryption.sql` adds roles, key backups, ciphertext
+fields, reports/audit records and separately consented platform aggregates.
+Legacy plaintext is retained and labelled; deleted tombstones are cleared.
+New plaintext message sends are rejected. Keep key rows and encrypted backups:
+after encrypted writes, dropping these fields is not a safe rollback.
+See the [messaging security guide](messaging-security.md) for recovery, trust,
+retention, provisioning and cryptographic limitations.
 
 ## Coding conventions
 

@@ -121,15 +121,17 @@ not packaged by desktop CI.
 - **Discovery:** search profiles and announcements with live keyword, location, instrument, genre, date, and remote filters, sorting, and bounded pages.
 - **Announcements:** publish, edit, save, react to, and comment on open calls, with full detail pages and optimized JPEG/PNG uploads.
 - **Bookmarks:** save announcements and revisit or remove them from the saved list.
-- **Collaboration:** private messages, read state, conversation archiving, blocking, followed-musician alerts, and a notification center with optional browser push.
-- **Preferences:** system/light/dark themes, opt-in private engagement analytics, and notification settings.
+- **Collaboration:** end-to-end encrypted new messages, recovery keys/fingerprints, read/archive/block controls, and notifications with optional browser push.
+- **Safety:** user/message reporting, operator-managed admin roles, report-only moderation and an audit log.
+- **Preferences:** system/light/dark themes, personal analytics, separately opted-in admin aggregates, and notification settings.
 - **Web installation:** an installable PWA with a cached shell, read-only saved feed, explicit offline states, and no queued writes.
 - **Google sign-in:** optional web registration/login with verified, single-use Google credentials.
 
 ### Current limitations
 
 - Google sign-in needs a configured web OAuth client; browser push needs HTTPS, VAPID keys, browser support, and permission. Native WebViews use email/password, not embedded Google sign-in.
-- Messages are access-controlled, not end-to-end encrypted. Analytics counts only mutually opted-in activity, not unique visitors or total platform traffic.
+- Legacy history and voluntarily reported excerpts remain server-readable. New-message E2EE has no ratchet/forward secrecy or independent security audit; recovery keys and trusted clients matter. See [messaging security and administration](docs/messaging-security.md).
+- Analytics requires mutual consent; platform aggregates require a second opt-in. Reports are not unique visitors or total platform traffic.
 - Offline web access is limited to the shell and the last matching feed page in the current tab for up to 24 hours. Private APIs are not cached; reconnect to submit changes. Native shells still require a reachable API.
 - Payments/subscriptions and AT Protocol federation are not implemented. The [AT Protocol exploration](docs/at-protocol.md) explains the proposed opt-in integration; [product vision](docs/main.md) remains historical planning material.
 - Desktop CI provides development artifacts, not signed/notarized public releases. Mobile distribution and cross-platform accessibility still need platform-specific verification.

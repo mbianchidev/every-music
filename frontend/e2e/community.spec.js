@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { createIdentity, generateRecoveryKey, unlockIdentity, encryptMessage } from '../src/lib/message-crypto.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
@@ -131,6 +135,30 @@ async function optIn(page) {
   await expect(page.getByRole('status').filter({ hasText: 'Preferences saved.' })).toBeVisible();
 }
 
+async function assertAccessible(page, label) {
+  const report = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(report.violations.map(item => ({
+    id: item.id, nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
+  })), label).toEqual([]);
+}
+
+async function enableEncryptedMessaging(page) {
+  await page.goto('/#messages');
+  await page.getByRole('button', { name: 'Generate recovery key', exact: true }).click();
+  const recovery = await page.getByLabel('Generated recovery key', { exact: true }).inputValue();
+  await assertAccessible(page, 'Generated messaging recovery form');
+  await page.getByRole('checkbox', { name: 'I saved this recovery key outside the app', exact: true }).check();
+  await page.getByRole('button', { name: 'Enable encrypted messaging', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Encrypted messaging is ready in this tab.' })).toBeVisible();
+  return recovery;
+}
+
+async function unlockMessages(page, recovery) {
+  await page.getByLabel(/^Recovery key\b/).fill(recovery);
+  await page.getByRole('button', { name: 'Unlock messages', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Encrypted messaging is ready in this tab.' })).toBeVisible();
+}
+
 test('musicians complete profiles, collaborate, publish media, and engage through the real stack', async ({ browser }) => {
   const first = await browser.newContext();
   const second = await browser.newContext();
@@ -176,6 +204,8 @@ test('musicians complete profiles, collaborate, publish media, and engage throug
 
     await login(b, people[1]);
     await optIn(b);
+    const recoveryA = await enableEncryptedMessaging(a);
+    const recoveryB = await enableEncryptedMessaging(b);
     await b.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Musicians', exact: true }).click();
     await b.getByRole('searchbox', { name: 'Search musicians', exact: true }).fill(people[0].artistName);
     await b.getByText('Filters and sorting', { exact: true }).click();
@@ -232,8 +262,53 @@ test('musicians complete profiles, collaborate, publish media, and engage throug
     await expect(b.getByRole('link', { name: new RegExp(`${people[0].artistName}.*\\bRead\\b`) })).toBeVisible();
     await expect(b.getByLabel(/^Message(?:\s*\*)?$/)).toHaveValue('Keep this draft during live updates.');
     await expect(b.getByLabel(/^Message(?:\s*\*)?$/)).toBeFocused();
-    await a.reload();
+    await a.getByRole('button', { name: 'Lock messaging', exact: true }).click();
+    await expect(a.getByRole('log').getByText('Synthetic rehearsal invitation.', { exact: true })).toHaveCount(0);
+    await a.getByLabel(/^Recovery key\b/).fill('A deliberately invalid synthetic recovery key');
+    await a.getByRole('button', { name: 'Unlock messages', exact: true }).click();
+    await expect(a.getByRole('alert').filter({ hasText: 'cannot unlock the selected messaging key' })).toBeVisible();
+    await unlockMessages(a, recoveryA);
     await expect(a.getByRole('log').getByText('Synthetic rehearsal invitation.', { exact: true })).toBeVisible();
+    await a.reload();
+    await unlockMessages(a, recoveryA);
+    await expect(a.getByRole('log').getByText('Synthetic rehearsal invitation.', { exact: true })).toBeVisible();
+    const historicalMessageId = await b.getByRole('article').filter({ has: b.getByText('Synthetic rehearsal accepted.', { exact: true }) }).getAttribute('data-message-id');
+    const threadId = new URLSearchParams(new URL(a.url()).hash.split('?')[1]).get('id');
+    await a.getByText('Keys and recovery', { exact: true }).click();
+    const oldFingerprint = await a.getByText(/Current fingerprint:/).locator('code').textContent();
+    await a.getByRole('button', { name: 'Reset messaging identity', exact: true }).click();
+    await a.getByRole('button', { name: 'Generate recovery key', exact: true }).click();
+    await a.getByRole('checkbox', { name: 'I saved this recovery key outside the app', exact: true }).check();
+    await a.getByRole('button', { name: 'Enable encrypted messaging', exact: true }).click();
+    await expect(a.getByRole('status').filter({ hasText: 'Encrypted messaging is ready in this tab.' })).toBeVisible();
+    await expect(a.getByLabel(/^Message(?:\s*\*)?$/)).toBeEnabled();
+    await a.getByLabel(/^Message(?:\s*\*)?$/).fill('Synthetic message after an identity reset.');
+    await a.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect(b.getByRole('log').getByText('Synthetic message after an identity reset.', { exact: true })).toHaveCount(0);
+    await expect(b.getByRole('alert').filter({ hasText: 'new messaging fingerprint' }).first()).toBeVisible();
+    await b.getByRole('button', { name: 'Compare fingerprints', exact: true }).click();
+    const comparison = b.getByRole('dialog', { name: 'Compare messaging fingerprints', exact: true });
+    await comparison.getByRole('checkbox', { name: 'I compared these fingerprints with this musician through another channel', exact: true }).check();
+    await comparison.getByRole('button', { name: 'Verify fingerprint', exact: true }).click();
+    await expect(b.getByRole('log').getByText('Synthetic message after an identity reset.', { exact: true })).toBeVisible();
+    const fresh = await browser.newContext();
+    try {
+      await syntheticGoogle(fresh);
+      const sessionB = await b.evaluate(() => JSON.parse(sessionStorage.getItem('everymusic.session.v1')));
+      await fresh.addInitScript(session => {
+        if (location.origin === 'http://127.0.0.1:4179') sessionStorage.setItem('everymusic.session.v1', JSON.stringify(session));
+      }, sessionB);
+      const restored = await fresh.newPage();
+      await restored.goto(`/#messages?id=${threadId}`);
+      await unlockMessages(restored, recoveryB);
+      const oldMessage = restored.locator(`[data-message-id="${historicalMessageId}"]`);
+      await oldMessage.getByRole('button', { name: 'Compare message fingerprints', exact: true }).click();
+      const historyComparison = restored.getByRole('dialog', { name: 'Compare messaging fingerprints', exact: true });
+      await expect(historyComparison.getByText(oldFingerprint, { exact: true })).toBeVisible();
+      await historyComparison.getByRole('checkbox', { name: 'I compared these fingerprints with this musician through another channel', exact: true }).check();
+      await historyComparison.getByRole('button', { name: 'Verify fingerprint', exact: true }).click();
+      await expect(oldMessage.getByText('Synthetic rehearsal accepted.', { exact: true })).toBeVisible();
+    } finally { await fresh.close(); }
 
     const title = 'A guitarist for a remote ensemble';
     await a.getByRole('link', { name: 'Post', exact: true }).click();
@@ -428,7 +503,7 @@ test('themes persist and all principal screens support accessible names, keyboar
     for (const hash of [
       '#feed', '#musicians', `#musician?id=${people[0].id}`, `#announcement?id=${announcementId}`,
       '#profile', '#edit-profile', '#create', `#messages?id=${conversationId}`,
-      '#notifications', '#settings', '#analytics', '#login', '#register',
+      '#notifications', '#reports', '#admin', '#settings', '#analytics', '#login', '#register',
       '#forgot-password', '#reset-password?token=synthetic', '#verify-email?token=synthetic',
     ]) {
       await page.goto(`/${hash}`);
@@ -537,7 +612,7 @@ test('themes persist and all principal screens support accessible names, keyboar
   await expect(page.getByRole('link', { name: 'Post', exact: true })).toBeFocused();
 });
 
-test('Google signup and returning deep links preserve account isolation through the real application', async ({ page }) => {
+test('Google signup and returning deep links preserve account isolation through the real application', async ({ page, browser }, testInfo) => {
   await page.goto('/#login');
   await page.evaluate(email => { window.syntheticGoogleEmail = email; }, `${marker}-old-google@example.test`);
   await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
@@ -586,4 +661,122 @@ test('Google signup and returning deep links preserve account isolation through 
   await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
   await expect(page.getByRole('heading', { name: demoCalls[0][0], exact: true })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('everymusic.session.v1')).persona.userId)).toBe(newUserId);
+  await exerciseReportAdministration(page, browser, previousSession, testInfo);
 });
+
+async function exerciseReportAdministration(administrator, browser, reporterSession, testInfo) {
+  const reporterContext = await browser.newContext();
+  await syntheticGoogle(reporterContext);
+  await reporterContext.addInitScript(session => {
+    if (location.origin === 'http://127.0.0.1:4179' && !sessionStorage.getItem('everymusic.session.v1')) {
+      sessionStorage.setItem('everymusic.session.v1', JSON.stringify(session));
+    }
+  }, reporterSession);
+  const reporter = await reporterContext.newPage();
+  administrator.on('dialog', dialog => dialog.accept());
+  try {
+    await reporter.goto('/#messages');
+    await enableEncryptedMessaging(reporter);
+    await optIn(reporter);
+    await reporter.getByRole('checkbox', { name: 'Include my opted-in activity in aggregate admin analytics', exact: true }).check();
+    await reporter.getByRole('button', { name: 'Save preferences', exact: true }).click();
+    await expect(reporter.getByRole('status').filter({ hasText: 'Preferences saved.' })).toBeVisible();
+    const reporterId = reporterSession.persona.userId;
+    const access = reporterSession.keys.accessToken;
+    const keyResponse = await reporter.request.get(`http://127.0.0.1:55474/realm/encryption/users/${reporterId}`, { headers: { Authorization: `Bearer ${access}` } });
+    expect(keyResponse.ok()).toBe(true);
+    const recipient = (await keyResponse.json()).data.key;
+    const targetId = (await pool.query('INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [`${marker}-reported@example.test`])).rows[0].id;
+    people.push({ id: targetId, email: `${marker}-reported@example.test` });
+    await pool.query('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [targetId, 'Demo Reported Member']);
+    await pool.query('INSERT INTO user_preferences (user_id, analytics, platform_analytics) VALUES ($1, TRUE, TRUE)', [targetId]);
+    const recovery = generateRecoveryKey();
+    const generated = await createIdentity(targetId, recovery);
+    const publication = generated.publication;
+    const keyId = (await pool.query(`INSERT INTO messaging_keys (user_id, signing_key, encryption_key, identity_proof, fingerprint, encrypted_private_key)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [targetId, JSON.stringify(publication.signingKey), JSON.stringify(publication.encryptionKey), publication.identityProof, generated.fingerprint, publication.encryptedPrivateKey])).rows[0].id;
+    const sender = { id: keyId, userId: targetId, fingerprint: generated.fingerprint, ...publication };
+    const pair = [reporterId, targetId].sort();
+    const conversation = (await pool.query('INSERT INTO conversations (first_user_id, second_user_id) VALUES ($1, $2) RETURNING id', pair)).rows[0].id;
+    await pool.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES ($1, $2), ($1, $3)', [conversation, ...pair]);
+    const message = await encryptMessage({
+      body: 'A synthetic message selected by its recipient for a report.', conversationId: conversation, clientId: randomUUID(),
+      sender, recipient, unlocked: await unlockIdentity(sender, recovery),
+    });
+    const seededMessageId = (await pool.query(`INSERT INTO messages (conversation_id, sender_id, client_id, ciphertext, sender_key_id, recipient_key_id, encryption_version)
+      VALUES ($1, $2, $3, $4, $5, $6, 1) RETURNING id`, [conversation, targetId, message.clientId, message.ciphertext, keyId, recipient.id])).rows[0].id;
+    await reporter.goto(`/#messages?id=${conversation}`);
+    const received = reporter.getByRole('log').getByRole('article').filter({ has: reporter.getByText('A synthetic message selected by its recipient for a report.', { exact: true }) });
+    await expect(received).toBeVisible();
+    await reporter.getByRole('button', { name: 'Compare fingerprints', exact: true }).click();
+    const fingerprints = reporter.getByRole('dialog', { name: 'Compare messaging fingerprints', exact: true });
+    await expect(fingerprints.getByText(generated.fingerprint, { exact: true })).toBeVisible();
+    await expect(fingerprints.getByText(recipient.fingerprint, { exact: true })).toBeVisible();
+    await assertAccessible(reporter, 'Fingerprint comparison dialog');
+    await fingerprints.getByRole('checkbox', { name: 'I compared these fingerprints with this musician through another channel', exact: true }).check();
+    await fingerprints.getByRole('button', { name: 'Verify fingerprint', exact: true }).click();
+    await expect(fingerprints).not.toBeVisible();
+    await received.getByRole('button', { name: 'Report message', exact: true }).click();
+    const report = reporter.getByRole('dialog', { name: 'Report message', exact: true });
+    await report.getByLabel(/^Describe the concern\b/).fill('A fictional concern shared intentionally for review.');
+    await report.getByRole('checkbox', { name: 'I agree to share these report details and this selected decrypted message with administrators', exact: true }).check();
+    expect((await new AxeBuilder({ page: reporter }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
+    await report.getByRole('button', { name: 'Submit report', exact: true }).click();
+    await expect(reporter.getByRole('status').filter({ hasText: 'Report submitted.' })).toBeVisible();
+    expect((await reporter.request.get('http://127.0.0.1:55474/realm/admin/analytics', { headers: { Authorization: `Bearer ${access}` } })).status()).toBe(403);
+    const roleScript = fileURLToPath(new URL('../../backend/scripts/admin-role.mjs', import.meta.url));
+    await promisify(execFile)(process.execPath, [roleScript, '--user', `${marker}-google@example.test`, '--grant'], {
+      env: { ...process.env, REALM_ENV: 'test' }, timeout: 10000,
+    });
+    await administrator.getByRole('link', { name: 'Administration', exact: true }).click();
+    await expect(administrator.getByRole('heading', { name: 'Platform and safety', exact: true })).toBeVisible();
+    for (const theme of ['light', 'dark']) {
+      await administrator.getByLabel('Color theme', { exact: true }).selectOption(theme);
+      for (const section of ['Overview', 'Reports', 'Audit log']) {
+        await administrator.getByRole('navigation', { name: 'Administration sections' }).getByRole('link', { name: section, exact: true }).click();
+        await expect(administrator.locator('.spinner')).toHaveCount(0);
+        await assertAccessible(administrator, `${theme} admin ${section}`);
+      }
+    }
+    await administrator.getByRole('navigation', { name: 'Administration sections' }).getByRole('link', { name: 'Reports', exact: true }).click();
+    await administrator.getByRole('link', { name: 'Review report about Demo Reported Member', exact: true }).click();
+    await expect(administrator.getByText('A synthetic message selected by its recipient for a report.', { exact: true })).toBeVisible();
+    await expect(administrator.getByText(/signature matches the sender key/)).toBeVisible();
+    for (const theme of ['light', 'dark']) {
+      await administrator.getByLabel('Color theme', { exact: true }).selectOption(theme);
+      expect((await new AxeBuilder({ page: administrator }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
+    }
+    await administrator.getByLabel(/^Decision\b/).selectOption('remove_message');
+    await administrator.getByLabel(/^Internal decision note\b/).fill('Synthetic report reviewed and selected message removed.');
+    await administrator.getByRole('button', { name: 'Record decision', exact: true }).click();
+    await expect(administrator.getByText('No reports match this status.', { exact: true })).toBeVisible();
+    await expect(reporter.getByRole('log').getByText('Message removed by a moderator', { exact: true })).toBeVisible();
+    await administrator.getByRole('link', { name: 'Audit log', exact: true }).click();
+    await expect(administrator.getByRole('table', { name: 'Administrator audit log', exact: true }).getByRole('row').filter({ hasText: seededMessageId }).getByText('message removed', { exact: true })).toBeVisible();
+    await reporter.goto(`/#musician?id=${targetId}`);
+    await reporter.getByRole('button', { name: 'Report musician', exact: true }).click();
+    const profileReport = reporter.getByRole('dialog', { name: 'Report musician', exact: true });
+    await profileReport.getByLabel(/^Describe the concern\b/).fill('A second synthetic concern about this account.');
+    await profileReport.getByRole('checkbox', { name: 'I agree to share these report details with administrators', exact: true }).check();
+    await profileReport.getByRole('button', { name: 'Submit report', exact: true }).click();
+    await expect(profileReport).not.toBeVisible();
+    await administrator.getByRole('link', { name: 'Overview', exact: true }).click();
+    await expect(administrator.getByRole('table', { name: 'Daily counts by activity', exact: true }).getByText('Profile views', { exact: true })).toBeVisible();
+    await administrator.getByRole('main').evaluate(element => element.blur());
+    await administrator.screenshot({ path: testInfo.outputPath('admin-overview.png') });
+    await administrator.setViewportSize({ width: 320, height: 720 });
+    expect(await administrator.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await assertAccessible(administrator, 'Narrow admin overview');
+    await administrator.setViewportSize({ width: 1280, height: 900 });
+    await administrator.getByRole('link', { name: 'Reports', exact: true }).click();
+    await administrator.getByRole('link', { name: 'Review report about Demo Reported Member', exact: true }).click();
+    await administrator.getByLabel(/^Decision\b/).selectOption('suspend_user');
+    await administrator.getByLabel(/^Internal decision note\b/).fill('Synthetic account suspended following review.');
+    await administrator.getByRole('button', { name: 'Record decision', exact: true }).click();
+    await expect(administrator.getByText('No reports match this status.', { exact: true })).toBeVisible();
+    expect((await pool.query('SELECT is_active FROM users WHERE id = $1', [targetId])).rows[0].is_active).toBe(false);
+    await reporter.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Your reports', exact: true }).click();
+    await expect(reporter.getByRole('article').filter({ hasText: 'Status: actioned' })).toHaveCount(2);
+  } finally { await reporterContext.close(); }
+}

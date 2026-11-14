@@ -75,6 +75,10 @@ background refreshes do not steal focus.
 The UI includes discovery/filter/sort/page controls, profile/catalog/project
 editors, full detail and announcement editing/comment/reaction actions,
 messaging, notification preferences, and opt-in reach analytics.
+Admin routes use the live database role and recheck it under a row lock within
+moderation transactions. Operator-only role provisioning, report-only access,
+audited decisions, and separate platform consent are detailed in
+[messaging security and administration](messaging-security.md).
 See [usage](usage.md) for user workflows.
 
 The production web build emits a manifest and versioned service worker. It
@@ -121,8 +125,19 @@ New installs and prior schemas converge through the same migrations.
 Messages belong to a canonical pair of users. Every read/write verifies
 membership; either party's block prevents sends. A per-sender client UUID makes
 retries idempotent. Per-member read/archive state is independent, and deleting
-text leaves a visible tombstone. Data is access-controlled, not end-to-end
-encrypted. Hosts must protect the database and backups.
+text leaves a visible tombstone. New messages contain only a signed/encrypted
+JOSE envelope plus routing metadata. Client Web Crypto keys/recovery secrets
+never arrive unencrypted; encrypted key backups support other devices.
+Legacy version-0 history stays labelled and server-readable, not silently
+reclassified as E2EE. Reported excerpts are deliberately disclosed and
+sender-verified; admin status never bypasses conversation membership.
+
+Migration `004_admin_and_encryption.sql` adds live account roles, messaging
+identities, versioned ciphertext fields, reports/audit metadata and separate
+platform aggregates. It preserves plaintext legacy history, clears old deleted
+tombstones and defaults all accounts to member/platform consent off. There is
+no safe downgrade to plaintext once encrypted messages exist: keep the key
+tables/backups and use a reviewed forward fix rather than dropping columns.
 
 Managed image uploads are decoded by Sharp, constrained by bytes/pixels/frame
 count, stripped of metadata, and encoded as bounded WebP. Bytes live in
@@ -152,6 +167,9 @@ content. Message counts are not linked to conversations. Preference row locks
 serialize consent changes with collection; opt-out clears the owner's daily
 report totals, not public announcement counters or functional interactions.
 Operational request logs remain separate from analytics.
+Platform totals use a separate collection requiring both parties' additional
+platform consent; existing personal totals are never retroactively exposed.
+Reported content expires 90 days after review, audit metadata after 365 days.
 
 ## Operational boundaries and extension points
 

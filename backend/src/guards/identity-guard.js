@@ -31,6 +31,7 @@ async function resolveIdentity(request) {
   return {
     userId: identity.id,
     email: identity.email,
+    role: identity.role,
     expiresAt: payload.exp,
   };
 }
@@ -47,6 +48,14 @@ export async function identityGuard(request, reply) {
     request.log.error({ err: error }, 'Authentication lookup failed');
     return unauthorized(reply, 'TOKEN_VERIFICATION_FAILED');
   }
+}
+
+export async function adminGuard(request, reply) {
+  await identityGuard(request, reply);
+  if (reply.sent) return reply;
+  if (request.authenticatedUser.role !== 'admin') return reply.code(403).send({
+    success: false, error: { code: 'ADMIN_REQUIRED', message: 'Administrator access is required' },
+  });
 }
 
 export async function optionalIdentityGuard(request) {

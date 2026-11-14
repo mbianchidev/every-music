@@ -50,6 +50,7 @@ export class OpportunityRepository {
       FROM announcements a
       LEFT JOIN profiles p ON a.user_id = p.user_id
       WHERE a.id = $1 AND a.is_deleted = false
+        AND EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)
     `;
     const result = await executor.execute(query, [announcementId, viewerId]);
     return result.rows[0] || null;
@@ -69,7 +70,8 @@ export class OpportunityRepository {
   }
 
   async searchAnnouncements(filters, pagination) {
-    let whereConditions = ['a.is_deleted = false', 'a.is_published = true'];
+    let whereConditions = ['a.is_deleted = false', 'a.is_published = true',
+      'EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)'];
     const params = [];
     let paramIndex = 1;
 
@@ -332,6 +334,7 @@ export class OpportunityRepository {
       JOIN announcements a ON sa.announcement_id = a.id
       LEFT JOIN profiles p ON p.user_id = a.user_id
       WHERE sa.user_id = $1
+        AND EXISTS(SELECT 1 FROM users u WHERE u.id = a.user_id AND u.is_active AND NOT u.is_deleted)
         AND a.is_deleted = false
         AND a.is_published = true
         AND (a.expires_at IS NULL OR a.expires_at > NOW())

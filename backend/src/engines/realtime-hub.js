@@ -17,8 +17,10 @@ export class RealtimeHub {
     if (!this.starting) {
       this.starting = this.connector.listen('everymusic_events', event => {
         for (const client of this.clients) {
+          if (client.stream.destroyed || client.stream.writableEnded) { this.clients.delete(client); continue; }
           if (!event.userId || event.userId === client.userId) {
             if (!client.stream.write(`data: ${JSON.stringify(event)}\n\n`)) client.stream.destroy();
+            else if (event.type === 'account.changed') { this.clients.delete(client); client.stream.end(); }
           }
         }
       }, () => {

@@ -9,6 +9,6 @@ export function finishSignIn(response) {
   } catch (error) {
     console.warn('Could not restore the requested page', error);
   }
-  window.location.hash = /^#(?:feed|musician|musicians|announcement|messages|notifications|profile|saved|my-posts)(?:\?|$)/.test(destination || '')
+  window.location.hash = /^#(?:feed|musician|musicians|announcement|messages|notifications|profile|saved|my-posts|reports|admin|settings|analytics)(?:\?|$)/.test(destination || '')
     ? destination : response.isNewUser ? '#edit-profile' : '#feed';
 }

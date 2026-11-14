@@ -97,16 +97,31 @@ stripped of metadata. Published images are public.
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives
-reload. Sending a failed draft again does not duplicate the message. Opening
+reload. First generate and save a recovery key in Messages; both musicians need
+messaging keys before a new message can be sent. Unlock with the saved recovery
+key after reload or on another device. Sign-in/password recovery cannot replace
+it. Compare fingerprints through another channel for independently verified
+key identity; changed fingerprints block trust until explicitly compared.
+Sending a failed draft again does not duplicate the message. Opening
 the newest messages marks the conversation and its message alerts read.
 Archive to hide a conversation, show archived conversations to restore it,
 or block a musician to prevent either participant sending new messages.
 New messages restore archived conversations. Removing your own message
 replaces its text for both participants; recipients cannot remove your text.
 
-Messages are private to the participants at the API boundary, but are **not
-end-to-end encrypted**. The host/database administrator can access stored text.
-Use a trusted HTTPS host and do not send secrets.
+New messages are end-to-end encrypted before upload. Legacy history is explicitly
+labelled and may remain plaintext in the database/backups. Recipients can
+deliberately share a selected decrypted message with an abuse report.
+There is no forward-secrecy ratchet or independent cryptographic audit; use a
+trusted HTTPS deployment and protect your devices/recovery keys. See the full
+[security model, recovery and administration guide](messaging-security.md).
+
+Use **Report musician** or **Report message** to submit a concern. Review exactly
+what you are sharing and explicitly consent; report details/selected messages
+are readable by administrators. **Your reports** shows their status.
+Administrators see a report queue, can remove reported messages or suspend
+member accounts, and have an audited report-access/action log. Admin roles are
+operator-managed, with no default administrator or private-chat browsing.
 
 **Follow musician** opts into their new-announcement alerts, subject to your
 notification preferences. Notifications also include messages, comments,
@@ -128,6 +143,14 @@ or all traffic. It stores no viewer identity, IP address, or message body in
 analytics. Turning it off deletes your daily report totals. Existing public
 announcement counters, messages, reactions, and bookmarks are not deleted by
 analytics opt-out.
+
+Platform analytics is a separate default-off opt-in in Settings. It requires
+both musicians' personal and platform consent for new activity. The admin
+overview shows aggregate activity/public-call reach and operational account
+totals, not individual visitors or private messages. Existing personal history
+is not imported into it. Turning platform analytics off stops new contributions
+and clears totals for your own content; anonymous prior contributions to other
+content are not individually traceable.
 
 The production web build is installable using **Install app**, when offered,
 or your browser's Install/Add to Home Screen menu. Its manifest supplies the

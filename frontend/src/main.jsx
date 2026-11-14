@@ -21,6 +21,8 @@ import NotificationsScreen from './pages/NotificationsScreen.jsx';
 import SettingsScreen from './pages/SettingsScreen.jsx';
 import AnalyticsScreen from './pages/AnalyticsScreen.jsx';
 import AppStatus from './components/AppStatus.jsx';
+import AdministrationScreen from './pages/AdministrationScreen.jsx';
+import ReportsScreen from './pages/ReportsScreen.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -43,6 +45,8 @@ const ROUTES = {
   notifications: { screen: NotificationsScreen, title: 'Notifications', protected: true },
   settings: { screen: SettingsScreen, title: 'Settings', protected: true },
   analytics: { screen: AnalyticsScreen, title: 'Analytics', protected: true },
+  reports: { screen: ReportsScreen, title: 'Your reports', protected: true },
+  admin: { screen: AdministrationScreen, title: 'Administration', protected: true },
 };
 
 function readRoute() {

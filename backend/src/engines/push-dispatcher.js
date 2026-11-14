@@ -92,6 +92,9 @@ export class PushDispatcher {
     if (Date.now() - this.lastMaintenance < 60 * 60 * 1000) return;
     await this.connector.execute("DELETE FROM google_challenges WHERE expires_at < NOW()");
     await this.connector.execute("DELETE FROM analytics_daily WHERE day < CURRENT_DATE - 29");
+    await this.connector.execute("DELETE FROM platform_analytics_daily WHERE day < CURRENT_DATE - 29");
+    await this.connector.execute("DELETE FROM user_reports WHERE reviewed_at < NOW() - INTERVAL '90 days'");
+    await this.connector.execute("DELETE FROM admin_audit WHERE created_at < NOW() - INTERVAL '365 days'");
     await this.connector.execute("DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '90 days'");
     await this.connector.execute(`
       DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'

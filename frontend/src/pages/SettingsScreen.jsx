@@ -5,6 +5,7 @@ import { useResource } from '../lib/resources.js';
 import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
+import MessagingKeys from '../components/MessagingKeys.jsx';
 
 const labels = {
   messages: 'New messages',
@@ -12,6 +13,7 @@ const labels = {
   engagements: 'Comments and reactions on my announcements',
   profileViews: 'Daily profile-view notifications (only with analytics consent)',
   analytics: 'Opt in to privacy-friendly engagement analytics',
+  platformAnalytics: 'Include my opted-in activity in aggregate admin analytics',
 };
 
 export default function SettingsScreen() {
@@ -66,12 +68,16 @@ export default function SettingsScreen() {
           <fieldset disabled={busy}>
             <legend>Notifications and analytics</legend>
             {Object.entries(labels).map(([key, label]) => <label className="checkbox-label" key={key}>
-              <input type="checkbox" checked={draft[key]} onChange={event => setDraft(previous => ({ ...previous, [key]: event.target.checked }))} />{label}
+              <input type="checkbox" checked={draft[key]} disabled={key === 'platformAnalytics' && !draft.analytics} onChange={event => setDraft(previous => ({
+                ...previous, [key]: event.target.checked, ...(key === 'analytics' && !event.target.checked ? { platformAnalytics: false } : {}),
+              }))} />{label}
             </label>)}
           </fieldset>
           <p className="body-muted">Analytics is off by default. When both you and the content owner opt in, we count views, likes, saves, and messages as daily totals. No visitor IDs, IP addresses, message text, or third-party trackers are stored in analytics. Daily reports expire after 30 days; opting out deletes those totals. Public announcement counters, messages, reactions, and bookmarks are retained.</p>
+          <p className="body-muted">Platform aggregates require a second opt-in from both musicians. Administrators see aggregate daily activity and reach of opted-in public calls, not individual visitors or private message text. Only new activity is included. Disabling it removes platform totals for your own content and stops new contributions; already anonymous contributions to other content cannot be identified individually.</p>
           <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save preferences'}</button>
         </form>
+        <div className="detail-section"><MessagingKeys /></div>
         <section className="detail-section" aria-labelledby="push-heading">
           <h2 className="heading-md" id="push-heading">Browser push</h2>
           <p>Push uses your browser's notification permission and this server's configured push service. It is optional and disabled by default.</p>

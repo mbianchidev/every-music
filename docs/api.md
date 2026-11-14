@@ -240,19 +240,74 @@ membership. Either participant blocking the other prevents new conversations
 and sends with 403 `MESSAGING_UNAVAILABLE`. Archive/read state is per member.
 New messages restore archived conversations.
 
-Send `{ "body": "<1-4000 nonblank characters>", "clientId": "<new uuid>" }`.
-Keep the same client ID for a retry of the same text/conversation: the existing
-message is returned and no duplicate notification is created. Reusing the ID
-with different content returns 409 `MESSAGE_CONFLICT`. Message results expose
-`id`, `senderId`, `body`, `isDeleted`, `createdAt`; lists also include
-`conversation` with `recipientId`, `recipientName`, and `blockedByMe`.
-Conversation summaries include `lastMessage`, `unreadCount`, `archived`,
-and `updatedAt`, never email addresses.
+New sends require `{ "ciphertext": "<general JSON JWE as a string>",
+"clientId": "<new uuid>", "senderKeyId": "<uuid>", "recipientKeyId": "<uuid>" }`.
+The fixed JOSE profile and signed context are described in
+[messaging security](messaging-security.md). Envelopes are at most 65,536
+characters and must name exactly the two current participant keys. Plaintext
+`body` sends return 426 `MESSAGING_UPGRADE_REQUIRED`; there is no downgrade.
+
+Keep the exact envelope/client ID for retries. The existing message is returned
+without duplicate notifications/metrics. Reusing the ID with different
+content/key context returns 409 `MESSAGE_CONFLICT`. Changed or missing current
+keys return 409 `MESSAGING_KEYS_CHANGED`.
+
+Read with `format=encrypted-v1` plus pagination. An old reader encountering
+encrypted content receives 426 rather than blank message text. Responses include
+public `keys`, `conversation` with the current `recipientKey`,
+`recipientAvailable`, and each message's `id`, `clientId`, `senderId`,
+`encryptionVersion`, `ciphertext`, `senderKeyId`, `recipientKeyId`, `isDeleted`,
+`removedByModeration`, and `createdAt`. Only preserved version-0 legacy messages
+have a `body`. Private-key backups are never included in conversation responses.
+Previews are generic Encrypted message / Legacy message / Message removed, not
+decrypted snippets.
 
 PATCH accepts any of `{ "read": true, "archived": true, "blocked": true }`;
 archive/block also accept false. Reading marks corresponding message
 notifications read. Removing a message does not remove its timestamp or
-conversation. These are access-controlled server messages, not E2E encryption.
+conversation. Suspended accounts cannot receive new messages; other participants
+can still read the history they possess keys for.
+
+## Messaging keys, reports and administration
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/account` | Own database-derived `userId` and `role` |
+| GET | `/realm/encryption/me` | Paginated own public records and encrypted private-key backups |
+| GET | `/realm/encryption/me/:keyId` | Own selected backup only; foreign keys return 404 |
+| POST | `/realm/encryption/me` | Publish an identity proof, two public P-256 JWKs and encrypted backup; 201 |
+| GET | `/realm/encryption/users/:userId` | Authenticated lookup; `{ "key": null }` means no published key |
+| POST | `/realm/reports` | Authenticated report with explicit disclosure consent; 201 |
+| GET | `/realm/reports/me` | Paginated own report status/details |
+| GET | `/realm/admin/analytics` | Admin-only operational totals and separately consented platform aggregates |
+| GET | `/realm/admin/reports` | Admin-only paginated metadata queue; optional `status` |
+| GET | `/realm/admin/reports/:reportId` | Admin-only disclosed details/evidence; access is audited |
+| PATCH | `/realm/admin/reports/:reportId` | Admin-only decision; transaction rechecks the live role |
+| GET | `/realm/admin/audit` | Admin-only paginated action metadata, not message content |
+
+Key publication fields are `signingKey`, `encryptionKey`, `identityProof`, and
+`encryptedPrivateKey`. JWKs contain only `kty`, `crv`, `x`, `y`; private `d`
+material is forbidden. Identity proofs bind the authenticated account and
+encryption-key thumbprint. Backups must use the documented PBES2/A256GCM profile.
+The server computes the signing fingerprint. One key is current; resets must
+explicitly name `replaceKeyId`. Old records remain for history. Resets are
+bounded to five per account per day; key lists are paginated.
+
+Reports accept `reportedUserId`, `category` (`spam`, `harassment`, `threats`,
+`other`), `details` (5-2,000 characters), and `consent: true`. Optional `messageId`
+must identify a received message in the reporter's conversation. Encrypted
+evidence requires its original `signedEvidence` (max 32,768 characters),
+verified against that message's exact sender/conversation/client/key context.
+Legacy evidence is copied from the selected participant-authorized record and
+marked unverified. Self-reports, forged/unrelated evidence, and duplicate open
+reports are rejected; reports are limited to ten per account per day.
+
+Decisions accept `action` (`review`, `dismiss`, `remove_message`, `suspend_user`)
+and `note` (5-2,000 characters). Only the attached message can be removed.
+Self/administrator suspension is forbidden. Concurrent/already-reviewed
+decisions return 409. No admin endpoint grants blanket conversation access.
+Roles are provisioned by the [operator CLI](messaging-security.md#administrator-provisioning),
+not registration fields or client claims.
 
 ## Notifications and preferences
 
@@ -269,7 +324,9 @@ conversation. These are access-controlled server messages, not E2E encryption.
 All require authentication. Notification objects contain `id`, `kind`,
 `title`, `link`, `readAt`, and `createdAt`. Preferences are `messages`,
 `announcements`, `engagements` (default true), `profileViews`, `push`, and
-`analytics` (default false). Announcement alerts are for followed musicians.
+`analytics`, and `platformAnalytics` (default false). Platform consent requires
+personal analytics; disabling personal analytics also disables platform
+aggregates. Announcement alerts are for followed musicians.
 Profile-view alerts are anonymous and limited to one per UTC day when both
 users consent to analytics and the owner enables that category.
 
@@ -301,6 +358,15 @@ totals; public announcement counters and functional messages/reactions/bookmarks
 remain. Hourly maintenance removes older daily aggregates. Operational HTTP logs are
 separate and may contain client IPs.
 
+The admin report reads a separate `platform_analytics_daily` collection.
+Both actor and owner must explicitly opt in to personal **and** platform
+analytics at collection time. Historical personal totals are not repurposed.
+Opting out clears platform totals for the owner's content and stops new
+contributions; earlier anonymous contributions to somebody else's aggregates
+cannot be selectively attributed/removed. Admin outputs contain operational
+account/report totals, global daily counts and opted-in public-call reach, not
+visitor identities or private conversation details.
+
 ## Live events
 
 GET `/realm/events` with a Bearer access token returns an SSE
@@ -311,14 +377,16 @@ initial `connected` event tells clients to reload current data.
 
 Types include `profiles.changed`, `announcements.changed`, `comments.changed`,
 `messages.changed`, `conversations.changed`, `saved.changed`,
-`notifications.changed`, and `preferences.changed`. Public content
+`notifications.changed`, `preferences.changed`, `analytics.changed`,
+`keys.changed`, `reports.changed`, `admin.changed`, and `account.changed`. Public content
 invalidations are shared; private types target only the affected user.
 Payloads never contain message bodies or credentials. Read current state
 from the corresponding authenticated APIs; events are not a durable log.
 Streams close at token expiry, on listener failure, slow-client backpressure,
 or server shutdown. Reconnect with backoff and refresh on 401. Limits are
 three streams per user within each API process, and 1,000 total per process
-(429 on exhaustion).
+(429 on exhaustion). Key/report/admin invalidations target affected accounts.
+Account/role changes close current streams so reconnect checks live permission.
 
 For example:
 

@@ -1,11 +1,7 @@
 import { CommunityConductor } from '../conductors/community-conductor.js';
 import { identityGuard, optionalIdentityGuard } from '../guards/identity-guard.js';
-
-const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' };
-const text = (maxLength, minLength = 1) => ({ type: 'string', minLength, maxLength });
-const object = (properties, required = []) => ({ type: 'object', additionalProperties: false, properties, required });
-const params = (...names) => object(Object.fromEntries(names.map(name => [name, uuid])), names);
-const paging = object({ page: text(16), pageSize: text(3), archived: { enum: ['true', 'false'] } });
+import { uuid, text, object, params, paging as pageProperties } from '../validators/http-schemas.js';
+const paging = object({ ...pageProperties, archived: { enum: ['true', 'false'] }, format: { const: 'encrypted-v1' } });
 
 export async function communityOrchestrator(fastify, { config }) {
   const conductor = new CommunityConductor(config);
@@ -13,8 +9,9 @@ export async function communityOrchestrator(fastify, { config }) {
     method, url, preHandler: guard, schema, handler,
   });
   const preferences = object(Object.fromEntries(
-    ['messages', 'announcements', 'engagements', 'profileViews', 'push', 'analytics'].map(key => [key, { type: 'boolean' }]),
+    ['messages', 'announcements', 'engagements', 'profileViews', 'push', 'analytics', 'platformAnalytics'].map(key => [key, { type: 'boolean' }]),
   ));
+  route('GET', '/account', conductor.getAccount);
   route('GET', '/preferences', conductor.getPreferences);
   route('PUT', '/preferences', conductor.updatePreferences, { body: preferences });
   route('POST', '/conversations', conductor.startConversation, {
@@ -25,7 +22,8 @@ export async function communityOrchestrator(fastify, { config }) {
     params: params('conversationId'), querystring: paging,
   });
   route('POST', '/conversations/:conversationId/messages', conductor.sendMessage, {
-    params: params('conversationId'), body: object({ body: text(4000), clientId: uuid }, ['body', 'clientId']),
+    params: params('conversationId'),
+    body: object({ body: text(4000), clientId: uuid, ciphertext: text(65536), senderKeyId: uuid, recipientKeyId: uuid }, ['clientId']),
   });
   route('PATCH', '/conversations/:conversationId', conductor.updateConversation, {
     params: params('conversationId'),

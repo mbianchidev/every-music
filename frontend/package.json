@@ -25,6 +25,7 @@
     "ios:build": "tauri ios build"
   },
   "dependencies": {
+    "jose": "^6.2.15",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

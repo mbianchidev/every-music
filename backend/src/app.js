@@ -8,6 +8,8 @@ import { profileOrchestrator } from './orchestrators/profile-orchestrator.js';
 import { announcementOrchestrator } from './orchestrators/announcement-orchestrator.js';
 import { catalogOrchestrator } from './orchestrators/catalog-orchestrator.js';
 import { communityOrchestrator } from './orchestrators/community-orchestrator.js';
+import { encryptionOrchestrator } from './orchestrators/encryption-orchestrator.js';
+import { administrationOrchestrator } from './orchestrators/administration-orchestrator.js';
 import { identityGuard } from './guards/identity-guard.js';
 import { RealtimeHub } from './engines/realtime-hub.js';
 import { PushDispatcher } from './engines/push-dispatcher.js';
@@ -151,6 +153,8 @@ export async function buildNexus({
   await nexus.register(announcementOrchestrator, { prefix: '/realm/announcements' });
   await nexus.register(catalogOrchestrator, { prefix: '/realm/catalog' });
   await nexus.register(communityOrchestrator, { prefix: '/realm', config });
+  await nexus.register(encryptionOrchestrator, { prefix: '/realm/encryption' });
+  await nexus.register(administrationOrchestrator, { prefix: '/realm' });
 
   const hub = new RealtimeHub(connector, nexus.log);
   const dispatcher = new PushDispatcher({ config: config.push, connector, logger: nexus.log });

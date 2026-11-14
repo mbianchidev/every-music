@@ -1,28 +1,16 @@
-import { communityRepository } from '../repositories/community-repository.js';
+import { communityRepository, messageView } from '../repositories/community-repository.js';
 import { InputValidator } from '../validators/input-validator.js';
 import { optimizeImage } from '../engines/media-engine.js';
 import { requestError } from '../engines/request-error.js';
 import { validatePushSubscription } from '../engines/push-dispatcher.js';
-
-function pagination(request) {
-  const result = InputValidator.parsePagination(request.query?.page, request.query?.pageSize);
-  if (!result.valid) throw requestError(400, 'VALIDATION_ERROR', result.message);
-  return result.pagination;
-}
-
-function pageOf(rows, key, page) {
-  return {
-    [key]: rows.slice(0, page.pageSize),
-    pagination: { ...page, hasMore: rows.length > page.pageSize },
-  };
-}
-
-const ok = (reply, data, status = 200) => reply.code(status).send({ success: true, data });
+import { ok, pagination, pageOf } from './response-helpers.js';
 
 export class CommunityConductor {
   constructor(config) {
     this.config = config;
   }
+
+  getAccount = async (request, reply) => ok(reply, { userId: request.authenticatedUser.userId, role: request.authenticatedUser.role });
 
   getPreferences = async (request, reply) => ok(reply, {
     ...await communityRepository.preferences(request.authenticatedUser.userId),
@@ -50,13 +38,19 @@ export class CommunityConductor {
   getMessages = async (request, reply) => {
     const page = pagination(request);
     const result = await communityRepository.getMessages(request.params.conversationId, request.authenticatedUser.userId, page);
-    return ok(reply, { ...pageOf(result.rows, 'messages', page), conversation: result.conversation });
+    if (request.query.format !== 'encrypted-v1' && result.rows.some(row => row.encryptionVersion === 1)) {
+      throw requestError(426, 'MESSAGING_UPGRADE_REQUIRED', 'Update the app to read end-to-end encrypted messages.');
+    }
+    return ok(reply, { ...pageOf(result.rows, 'messages', page), conversation: result.conversation, keys: result.keys });
   };
 
   sendMessage = async (request, reply) => {
-    if (!request.body.body.trim()) throw requestError(400, 'VALIDATION_ERROR', 'Message cannot be blank');
+    if (request.body.body !== undefined) throw requestError(426, 'MESSAGING_UPGRADE_REQUIRED', 'Update the app: new messages must be encrypted on your device.');
+    if (!request.body.ciphertext || !request.body.senderKeyId || !request.body.recipientKeyId) {
+      throw requestError(400, 'ENCRYPTION_REQUIRED', 'Encrypted content and both participant key IDs are required.');
+    }
     const row = await communityRepository.sendMessage(request.params.conversationId, request.authenticatedUser.userId, request.body);
-    return ok(reply, { id: row.id, senderId: row.sender_id, body: row.body, createdAt: row.created_at, isDeleted: row.is_deleted }, 201);
+    return ok(reply, messageView(row), 201);
   };
 
   updateConversation = async (request, reply) => ok(reply,

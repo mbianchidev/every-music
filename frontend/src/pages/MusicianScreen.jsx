@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
 import ShareButton from '../components/ShareButton.jsx';
+import ReportButton from '../components/ReportButton.jsx';
 
 export default function MusicianScreen({ route }) {
   const id = route.query.get('id');
@@ -46,6 +47,7 @@ export default function MusicianScreen({ route }) {
             {mine ? <a className="btn btn-secondary" href="#edit-profile">Edit profile</a> : <>
               <button className="btn btn-primary" type="button" disabled={busy} onClick={() => act(true)}>Send message</button>
               <button className="btn btn-secondary" type="button" disabled={busy} aria-pressed={profile.isFollowing} onClick={() => act(false)}>{profile.isFollowing ? 'Unfollow' : 'Follow musician'}</button>
+              <ReportButton userId={profile.userId} name={profile.artistName || 'this musician'} />
             </>}
             <ShareButton title={profile.artistName || 'Every.music musician'} />
           </div>

@@ -12,6 +12,7 @@
 | [Desktop and mobile](mobile.md) | Build native clients with the right API URL and platform toolchains |
 | [Release artifacts](releases.md) | Build/checksum native installers and obtain CI development bundles |
 | [API reference](api.md) | Integrate discovery, accounts, images, projects, messages, notifications, analytics, and live events |
+| [Messaging security and administration](messaging-security.md) | Understand E2EE/recovery limits, reports, admin roles, moderation and platform analytics |
 
 ## Developing Every.music
 

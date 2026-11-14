@@ -18,11 +18,17 @@ const sections = [
   ] },
 ];
 
-export default function Navigation({ routeName, unreadCount = 0 }) {
+export default function Navigation({ routeName, unreadCount = 0, isAdmin = false }) {
   const dialog = useRef(null);
   const trigger = useRef(null);
   const navigating = useRef(false);
   const [open, setOpen] = useState(false);
+  const groups = [sections[0], { ...sections[1], items: [
+    ...sections[1].items.slice(0, -1), { id: 'reports', icon: 'shield', label: 'Your reports' },
+    ...(isAdmin ? [{ id: 'admin', icon: 'shield', label: 'Administration' }] : []),
+    sections[1].items.at(-1),
+  ] }];
+  useEffect(() => { if (dialog.current?.open) dialog.current.close(); }, [isAdmin]);
   useEffect(() => {
     const wide = window.matchMedia('(min-width: 1024px)');
     const resize = () => { if (wide.matches && dialog.current?.open) dialog.current.close(); };
@@ -42,7 +48,7 @@ export default function Navigation({ routeName, unreadCount = 0 }) {
       {item.id === 'notifications' && unreadCount > 0 && <span className="nav-badge" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </a>
   );
-  const links = (mobile = false) => sections.map(section => <div className="nav-group" key={section.label}>
+  const links = (mobile = false) => groups.map(section => <div className="nav-group" key={section.label}>
     <p className="nav-group-label">{section.label}</p>
     {section.items.map(item => link(item, mobile))}
   </div>);
@@ -60,7 +66,7 @@ export default function Navigation({ routeName, unreadCount = 0 }) {
         {link({ id: 'musicians', icon: 'people', label: 'Musicians' })}
         {link({ id: 'create', icon: 'plus', label: 'Post' })}
         {link({ id: 'messages', icon: 'message', label: 'Messages' })}
-        <button ref={trigger} className={`nav-item ${sections[1].items.some(item => item.id === current) || current === 'notifications' ? 'nav-item-active' : ''}`} type="button" aria-label="More navigation" aria-haspopup="dialog"
+        <button ref={trigger} className={`nav-item ${groups[1].items.some(item => item.id === current) || current === 'notifications' ? 'nav-item-active' : ''}`} type="button" aria-label="More navigation" aria-haspopup="dialog"
           aria-expanded={open} aria-controls="workspace-navigation"
           onClick={() => { dialog.current.showModal(); setOpen(true); }}><Icon name="more" /><span>More</span>{unreadCount > 0 && <span className="mobile-unread" aria-hidden="true" />}</button>
       </nav>

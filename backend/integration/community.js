@@ -10,6 +10,8 @@ import { googleIdentityBridge } from '../src/engines/google-identity-bridge.js';
 import { PushDispatcher } from '../src/engines/push-dispatcher.js';
 import { publishEvent } from '../src/repositories/community-repository.js';
 import { generateVAPIDKeys } from 'web-push';
+import { createIdentity, generateRecoveryKey, unlockIdentity, encryptMessage, decryptMessage } from '../../frontend/src/lib/message-crypto.js';
+import { administrationRepository } from '../src/repositories/administration-repository.js';
 
 if (realmConfig.environment !== 'test' || !realmConfig.realm.connectionString) {
   throw new Error('Community integration tests require REALM_ENV=test and an isolated REALM_CONNECTION');
@@ -41,6 +43,9 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     await realmConnector.execute('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [rows[0].id, `${marker} artist ${i}`]);
   }
   async function call(path, { actor = 0, method = 'GET', body, status = 200 } = {}) {
+    if (method === 'GET' && /\/conversations\/[^/]+\/messages(?:\?|$)/.test(path)) {
+      path += `${path.includes('?') ? '&' : '?'}format=encrypted-v1`;
+    }
     const response = await app.inject({
       method, url: `/realm${path}`,
       headers: actor === null ? {} : { authorization: `Bearer ${tokens[actor]}` },
@@ -54,6 +59,31 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     actor, method: 'POST', status: 201,
     body: { title: `${marker} open call`, description: 'A synthetic collaboration opportunity for integration testing.', city: marker, ...extra },
   });
+  const clientKeys = new Map();
+  async function keyFor(actor) {
+    if (!clientKeys.has(actor)) {
+      const recovery = generateRecoveryKey();
+      const generated = await createIdentity(users[actor], recovery);
+      const record = await call('/encryption/me', { actor, method: 'POST', status: 201, body: generated.publication });
+      clientKeys.set(actor, { record, recovery, unlocked: await unlockIdentity(record, recovery) });
+    }
+    return clientKeys.get(actor);
+  }
+  async function encryptedInput(id, actor, body) {
+    const recipientId = (await call(`/conversations/${id}/messages`, { actor })).conversation.recipientId;
+    const recipientActor = users.indexOf(recipientId);
+    const [sender, recipient] = await Promise.all([keyFor(actor), keyFor(recipientActor)]);
+    return encryptMessage({ body, conversationId: id.toLowerCase(), clientId: randomUUID(), sender: sender.record, recipient: recipient.record, unlocked: sender.unlocked });
+  }
+  const send = async (id, actor, body, status = 201) => call(`/conversations/${id}/messages`, {
+    actor, method: 'POST', status, body: await encryptedInput(id, actor, body),
+  });
+  async function decrypt(id, message, actor, keys) {
+    return decryptMessage({
+      message, conversationId: id, ownUserId: users[actor], unlocked: (await keyFor(actor)).unlocked,
+      sender: keys.find(key => key.id === message.senderKeyId), recipient: keys.find(key => key.id === message.recipientKeyId),
+    });
+  }
 
   await t.test('profile selections, project collaborators, and ownership survive reload', async () => {
     const instrument = (await call('/catalog/instruments')).instruments[0].id;
@@ -179,7 +209,7 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     const conversation = await call('/conversations', { method: 'POST', status: 201, body: { recipientUserId: users[1].toUpperCase() } });
     const same = await call('/conversations', { actor: 1, method: 'POST', status: 201, body: { recipientUserId: users[0] } });
     assert.equal(same.id, conversation.id);
-    const input = { body: 'Hello, shall we rehearse?', clientId: randomUUID() };
+    const input = await encryptedInput(conversation.id, 0, 'Hello, shall we rehearse?');
     const message = await call(`/conversations/${conversation.id}/messages`, { method: 'POST', status: 201, body: input });
     const retry = await call(`/conversations/${conversation.id.toUpperCase()}/messages`, { method: 'POST', status: 201, body: input });
     assert.equal(message.id, retry.id);
@@ -187,7 +217,10 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     await call(`/conversations/${conversation.id}/messages`, { actor: 2, method: 'POST', body: { ...input, clientId: randomUUID() }, status: 404 });
     const received = await call(`/conversations/${conversation.id}/messages`, { actor: 1 });
     assert.equal(received.messages.length, 1);
-    assert.equal(received.messages[0].body, input.body);
+    assert.equal(received.messages[0].body, undefined);
+    assert.equal((await decrypt(conversation.id, received.messages[0], 1, received.keys)).body, 'Hello, shall we rehearse?');
+    assert.equal((await realmConnector.execute('SELECT body FROM messages WHERE id = $1', [message.id])).rows[0].body, null);
+    await call(`/conversations/${conversation.id}/messages`, { method: 'POST', body: { body: 'No plaintext downgrade', clientId: randomUUID() }, status: 426 });
     assert.equal((await call('/conversations', { actor: 1 })).conversations.find(c => c.id === conversation.id).unreadCount, 1);
     await call(`/conversations/${conversation.id.toUpperCase()}`, { actor: 1, method: 'PATCH', body: { read: true, archived: true } });
     assert.equal((await call('/notifications', { actor: 1 })).unreadCount, 0);
@@ -210,7 +243,7 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     assert.equal((await call('/notifications')).notifications.filter(item => item.kind === 'profile_view').length, 1);
     const conversation = await call('/conversations', { actor: 1, method: 'POST', status: 201, body: { recipientUserId: users[0] } });
     const before = (await call('/notifications')).notifications.length;
-    await call(`/conversations/${conversation.id}/messages`, { actor: 1, method: 'POST', status: 201, body: { body: 'Synthetic muted notification.', clientId: randomUUID() } });
+    await send(conversation.id, 1, 'Synthetic muted notification.');
     await call(`/profiles/${users[1]}/follow`, { method: 'POST' });
     await announcement({}, 1);
     assert.equal((await call('/notifications')).notifications.length, before);
@@ -258,9 +291,7 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
         readers.push(reader);
       }
       const conversation = await call('/conversations', { method: 'POST', status: 201, body: { recipientUserId: users[1] } });
-      await call(`/conversations/${conversation.id}/messages`, {
-        method: 'POST', status: 201, body: { body: 'Synthetic private live message', clientId: randomUUID() },
-      });
+      await send(conversation.id, 0, 'Synthetic private live message');
       const barrier = randomUUID();
       await publishEvent(realmConnector, 'profiles.changed', { id: barrier });
       const untilBarrier = async reader => {
@@ -294,9 +325,7 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     };
     await call('/push/subscriptions', { actor: 1, method: 'POST', body: subscription, status: 201 });
     const conversation = await call('/conversations', { method: 'POST', status: 201, body: { recipientUserId: users[1] } });
-    const enqueue = () => call(`/conversations/${conversation.id}/messages`, {
-      method: 'POST', status: 201, body: { body: 'Never include this private message in push payloads', clientId: randomUUID() },
-    });
+    const enqueue = () => send(conversation.id, 0, 'Never include this private message in push payloads');
     await enqueue();
     const payloads = [];
     const logger = { error() {}, warn() {} };
@@ -363,5 +392,124 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     const returning = await call('/auth/login/google', { actor: null, method: 'POST', body: { idToken: 'synthetic-provider-token', challengeId: again.id } });
     assert.equal(returning.user.userId, login.user.userId);
     assert.equal(returning.isNewUser, false);
+  });
+
+  await t.test('key resets preserve encrypted history, backups stay private, and invalid publications fail closed', async () => {
+    const conversation = await call('/conversations', { method: 'POST', status: 201, body: { recipientUserId: users[1] } });
+    const old = await keyFor(0);
+    await call(`/encryption/me/${old.record.id}`, { actor: 1, status: 404 });
+    const historicalInput = await encryptedInput(conversation.id, 0, 'Synthetic encrypted history before a key reset.');
+    const historical = await call(`/conversations/${conversation.id}/messages`, { method: 'POST', status: 201, body: historicalInput });
+    await call('/encryption/me', { method: 'POST', status: 400, body: {
+      signingKey: { ...old.record.signingKey, d: 'not-public-material' }, encryptionKey: old.record.encryptionKey,
+      identityProof: old.record.identityProof, encryptedPrivateKey: old.record.encryptedPrivateKey, replaceKeyId: old.record.id,
+    } });
+    const recovery = generateRecoveryKey();
+    const generated = await createIdentity(users[0], recovery);
+    await call('/encryption/me', { method: 'POST', status: 400, body: {
+      ...generated.publication, encryptedPrivateKey: 'Never store an unencrypted private key', replaceKeyId: old.record.id,
+    } });
+    const record = await call('/encryption/me', { method: 'POST', status: 201, body: { ...generated.publication, replaceKeyId: old.record.id } });
+    clientKeys.set(0, { record, recovery, unlocked: await unlockIdentity(record, recovery) });
+    assert.equal((await call('/encryption/me')).keys[0].id, record.id);
+    assert.equal((await call(`/encryption/me/${old.record.id}`)).isCurrent, false);
+    const retry = await call(`/conversations/${conversation.id}/messages`, { method: 'POST', status: 201, body: historicalInput });
+    assert.equal(retry.id, historical.id);
+    const history = await call(`/conversations/${conversation.id}/messages`, { actor: 1 });
+    const message = history.messages.find(row => row.id === historical.id);
+    assert.equal((await decrypt(conversation.id, message, 1, history.keys)).body, 'Synthetic encrypted history before a key reset.');
+    assert.equal((await decryptMessage({
+      message, conversationId: conversation.id, ownUserId: users[0], unlocked: await unlockIdentity(old.record, old.recovery),
+      sender: history.keys.find(key => key.id === message.senderKeyId), recipient: history.keys.find(key => key.id === message.recipientKeyId),
+    })).body, 'Synthetic encrypted history before a key reset.');
+  });
+
+  await t.test('admin analytics require a live role and separate mutual platform consent', async () => {
+    const email = `${marker}-admin@example.test`;
+    const adminId = (await realmConnector.execute('INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [email])).rows[0].id;
+    users.push(adminId);
+    await realmConnector.execute('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [adminId, 'Synthetic administrator']);
+    const adminActor = tokens.length;
+    tokens.push(cipherEngine.createAccessToken(adminId, email));
+    for (const actor of [0, adminActor]) await call('/admin/analytics', { actor, status: 403 });
+    await administrationRepository.changeRole(email, 'admin');
+    assert.equal((await call('/account', { actor: adminActor })).role, 'admin');
+    assert.deepEqual((await call('/admin/analytics', { actor: adminActor })).daily, []);
+    await call('/preferences', { method: 'PUT', body: { platformAnalytics: true }, status: 400 });
+    await call('/preferences', { method: 'PUT', body: { analytics: true, platformAnalytics: true } });
+    await call('/preferences', { actor: 1, method: 'PUT', body: { analytics: true, platformAnalytics: true } });
+    const post = await announcement();
+    await call('/analytics/events', { actor: 1, method: 'POST', body: { kind: 'announcement_view', resourceId: post.id } });
+    const platform = await call('/admin/analytics', { actor: adminActor });
+    assert.equal(platform.daily.find(row => row.kind === 'announcement_view').count, 1);
+    assert.equal(platform.content.find(row => row.id === post.id).views, 1);
+    assert.equal(JSON.stringify(platform.daily).includes(users[1]), false);
+    await call('/preferences', { actor: 1, method: 'PUT', body: { platformAnalytics: false } });
+    await call('/analytics/events', { actor: 1, method: 'POST', body: { kind: 'announcement_view', resourceId: post.id } });
+    assert.equal((await call('/admin/analytics', { actor: adminActor })).daily.find(row => row.kind === 'announcement_view').count, 1);
+    await call('/preferences', { method: 'PUT', body: { platformAnalytics: false } });
+    assert.deepEqual((await call('/admin/analytics', { actor: adminActor })).daily, []);
+    assert.ok((await call('/analytics')).daily.find(row => row.kind === 'announcement_view').count >= 2);
+    await administrationRepository.changeRole(email, 'member');
+    await call('/admin/analytics', { actor: adminActor, status: 403 });
+    await administrationRepository.changeRole(email, 'admin');
+  });
+
+  await t.test('reported evidence is participant-authorized, sender-verified and audited without admin chat access', async () => {
+    const adminActor = tokens.length - 1;
+    const adminId = (await call('/account', { actor: adminActor })).userId;
+    const conversation = await call('/conversations', { method: 'POST', status: 201, body: { recipientUserId: users[1] } });
+    const sent = await send(conversation.id, 0, 'A synthetic message explicitly selected as report evidence.');
+    const received = await call(`/conversations/${conversation.id}/messages`, { actor: 1 });
+    const message = received.messages.find(item => item.id === sent.id);
+    const evidence = await decrypt(conversation.id, message, 1, received.keys);
+    const notAnAccessToken = await app.inject({ method: 'GET', url: '/realm/account', headers: { authorization: `Bearer ${evidence.signedEvidence}` } });
+    assert.equal(notAnAccessToken.statusCode, 401);
+    const reportBody = {
+      reportedUserId: users[0], messageId: sent.id, category: 'spam',
+      details: 'A fictional concern for integration testing.', signedEvidence: evidence.signedEvidence, consent: true,
+    };
+    await call(`/conversations/${conversation.id}/messages`, { actor: adminActor, status: 404 });
+    const foreign = await call('/reports', { actor: 2, method: 'POST', body: reportBody, status: 404 });
+    const missing = await call('/reports', { actor: 2, method: 'POST', body: { ...reportBody, messageId: randomUUID() }, status: 404 });
+    assert.deepEqual(foreign.error, missing.error);
+    await call(`/encryption/me/${(await keyFor(0)).record.id}`, { actor: adminActor, status: 404 });
+    await call('/reports', { actor: 1, method: 'POST', body: { ...reportBody, consent: false }, status: 400 });
+    const other = await send(conversation.id, 0, 'A different synthetic message.');
+    await call('/reports', { actor: 1, method: 'POST', body: { ...reportBody, messageId: other.id }, status: 400 });
+    const report = await call('/reports', { actor: 1, method: 'POST', body: reportBody, status: 201 });
+    await call('/reports', { actor: 1, method: 'POST', body: reportBody, status: 409 });
+    await call(`/admin/reports/${report.id}`, { actor: 1, status: 403 });
+    assert.equal((await call('/reports/me', { actor: 2 })).reports.length, 0);
+    assert.equal((await call('/reports/me', { actor: 1 })).reports[0].id, report.id);
+    const queue = await call('/admin/reports?status=open', { actor: adminActor });
+    assert.equal(queue.reports.some(row => row.id === report.id), true);
+    assert.equal(JSON.stringify(queue).includes('explicitly selected'), false);
+    const detail = await call(`/admin/reports/${report.id}`, { actor: adminActor });
+    assert.equal(detail.evidence, 'A synthetic message explicitly selected as report evidence.');
+    assert.equal(detail.evidenceVerified, true);
+    await call(`/admin/reports/${report.id}`, { actor: adminActor, method: 'PATCH', body: { action: 'remove_message', note: 'Synthetic report reviewed and selected message removed.' } });
+    const deleted = (await call(`/conversations/${conversation.id}/messages`, { actor: 1 })).messages.find(row => row.id === sent.id);
+    assert.equal(deleted.isDeleted, true);
+    assert.equal(deleted.removedByModeration, true);
+    assert.equal(deleted.ciphertext, null);
+    const audit = await call('/admin/audit', { actor: adminActor });
+    assert.ok(audit.entries.some(row => row.action === 'report_viewed' && row.reportId === report.id));
+    assert.ok(audit.entries.some(row => row.action === 'message_removed' && row.targetId === sent.id));
+    assert.equal(JSON.stringify(audit).includes('explicitly selected'), false);
+    const protectedReport = await call('/reports', { actor: 1, method: 'POST', status: 201, body: {
+      reportedUserId: adminId, category: 'other', details: 'Synthetic administrator concern.', consent: true,
+    } });
+    await call(`/admin/reports/${protectedReport.id}`, { actor: adminActor, method: 'PATCH', status: 403, body: { action: 'suspend_user', note: 'Cannot suspend an administrator here.' } });
+    const visiblePost = await announcement({}, 2);
+    const suspend = await call('/reports', { actor: 1, method: 'POST', status: 201, body: {
+      reportedUserId: users[2], category: 'other', details: 'Synthetic suspension test concern.', consent: true,
+    } });
+    await call(`/admin/reports/${suspend.id}`, { actor: adminActor, method: 'PATCH', body: { action: 'suspend_user', note: 'Synthetic account suspended following review.' } });
+    await call('/account', { actor: 2, status: 401 });
+    await call(`/profiles/${users[2]}`, { status: 404 });
+    await call(`/announcements/${visiblePost.id}`, { status: 404 });
+    await call('/analytics/events', { actor: 1, method: 'POST', status: 404, body: { kind: 'announcement_view', resourceId: visiblePost.id } });
+    assert.equal((await call(`/announcements/search?city=${marker}`)).announcements.some(row => row.id === visiblePost.id), false);
   });
 });
