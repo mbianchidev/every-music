@@ -1,8 +1,10 @@
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import ManagedImage from './ManagedImage.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 const AnnouncementCard = ({ post, actions, expanded = false }) => {
+  const { t, formatNumber } = useI18n();
   const city = post.location?.city;
 
   return (
@@ -33,6 +35,7 @@ const AnnouncementCard = ({ post, actions, expanded = false }) => {
 
       <p className="announcement-meta">
         <span><Icon name="location" size={14} />{city || 'Location flexible'}</span>
+        {post.distanceKm !== null && post.distanceKm !== undefined && <span>{t('places.distanceAway', { distance: formatNumber(post.distanceKm) })}</span>}
         {post.isRemote && <span><Icon name="globe" size={14} />Remote welcome</span>}
       </p>
 

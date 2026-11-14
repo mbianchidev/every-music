@@ -1,14 +1,18 @@
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function MusicianCard({ musician }) {
+  const { t, formatNumber } = useI18n();
   const name = musician.artistName || [musician.firstName, musician.lastName].filter(Boolean).join(' ') || 'Musician';
   return (
     <article className="card musician-card">
       <div className="musician-summary">
         <Avatar name={name} src={musician.profilePictureUrl} />
         <div><h2 className="heading-md"><a href={`#musician?id=${musician.userId}`}>{name}</a></h2>
-          <p><Icon name="location" size={13} /> {musician.city || 'Location not specified'}</p></div>
+          <p><Icon name="location" size={13} /> {musician.place?.label || musician.city || 'Location not specified'}
+            {musician.distanceKm !== null && musician.distanceKm !== undefined && <span className="distance"> · {t('places.distanceAway', { distance: formatNumber(musician.distanceKm) })}</span>}</p>
+          {musician.openToProjects && <span className="tag tag-open">{t('profileExtras.openToProjects')}</span>}</div>
       </div>
       {musician.bio && <p className="announcement-description">{musician.bio}</p>}
       <div className="card-taxonomy">{!!musician.instruments?.length && <div className="tag-list" aria-label="Instruments">

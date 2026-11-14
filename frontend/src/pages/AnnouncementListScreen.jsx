@@ -7,8 +7,11 @@ import EmptyState from '../components/EmptyState.jsx';
 import AnnouncementCard from '../components/AnnouncementCard.jsx';
 import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import Pagination from '../components/Pagination.jsx';
+import QuotaNotice from '../components/QuotaNotice.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function AnnouncementListScreen({ mode }) {
+  const { t } = useI18n();
   const [page, setPage] = useState(1);
   const saved = mode === 'saved';
   const resource = useResource(`/announcements/${saved ? 'saved' : 'me'}?page=${page}&pageSize=12`, { events: 'announcements.changed,saved.changed,profiles.changed' });
@@ -21,6 +24,7 @@ export default function AnnouncementListScreen({ mode }) {
     <div className="container">
       <PageHeader eyebrow="Your space" title={saved ? 'Saved calls' : 'My calls'} subtitle={saved ? 'Good possibilities. Keep them close.' : 'Your published calls and private drafts, all in one place.'}
         actions={!saved && <a className="btn btn-primary" href="#create">Post a call</a>} />
+      <div className="compact-actions"><QuotaNotice kind={saved ? 'savedAnnouncements' : 'activeAnnouncements'} />{saved && <a href="#saved-searches">{t('discoveryExtras.saved.title')}</a>}</div>
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!resource.data && !resource.error ? <Spinner label="Loading announcements" /> : rows.length ? (
         <>
