@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
 import VerificationRequest from '../components/VerificationRequest.jsx';
+import ProfileVisits from '../components/ProfileVisits.jsx';
 
 export default function ProfileScreen() {
   const resource = useResource('/profiles/me', { events: 'profiles.changed' });
@@ -51,6 +52,7 @@ export default function ProfileScreen() {
         </article>
       )}
       <VerificationRequest />
+      {resource.data && <ProfileVisits />}
     </div>
   );
 }

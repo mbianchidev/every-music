@@ -8,9 +8,12 @@ import Spinner from '../components/Spinner.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
 import ShareButton from '../components/ShareButton.jsx';
 import ReportButton from '../components/ReportButton.jsx';
+import BlockButton from '../components/BlockButton.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function MusicianScreen({ route }) {
   const id = route.query.get('id');
+  const { t } = useI18n();
   const resource = useResource(`/profiles/${encodeURIComponent(id || 'missing')}`, { events: 'profiles.changed' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -42,11 +45,13 @@ export default function MusicianScreen({ route }) {
       {error && <p className="error" role="alert">{error}</p>}
       {!profile && !resource.error ? <Spinner label="Loading musician" /> : profile && (
         <article className="card">
+          {profile.isBlocked && <p className="status-message">{t('profileExtras.block.notice')}</p>}
           <ProfileDetails profile={profile} showName={false} />
           <div className="compact-actions">
             {mine ? <a className="btn btn-secondary" href="#edit-profile">Edit profile</a> : <>
               <button className="btn btn-primary" type="button" disabled={busy} onClick={() => act(true)}>Send message</button>
-              <button className="btn btn-secondary" type="button" disabled={busy} aria-pressed={profile.isFollowing} onClick={() => act(false)}>{profile.isFollowing ? 'Unfollow' : 'Follow musician'}</button>
+              {!profile.isBlocked && <button className="btn btn-secondary" type="button" disabled={busy} aria-pressed={profile.isFollowing} onClick={() => act(false)}>{profile.isFollowing ? 'Unfollow' : 'Follow musician'}</button>}
+              <BlockButton userId={profile.userId} name={profile.artistName || 'Musician'} blocked={profile.isBlocked} onChanged={resource.reload} />
               <ReportButton userId={profile.userId} name={profile.artistName || 'this musician'} />
             </>}
             <ShareButton title={profile.artistName || 'Every.music musician'} />

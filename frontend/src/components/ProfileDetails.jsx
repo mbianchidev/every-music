@@ -1,6 +1,7 @@
 import { mediaUrl } from '../lib/media.js';
 import Avatar from './Avatar.jsx';
 import VerifiedBadge from './VerifiedBadge.jsx';
+import ProfileExtras from './ProfileExtras.jsx';
 
 const links = { spotify_link: 'Spotify', youtube_link: 'YouTube', bandcamp_link: 'Bandcamp', soundcloud_link: 'SoundCloud', website_link: 'Website' };
 
@@ -16,6 +17,7 @@ export default function ProfileDetails({ profile, showName = true }) {
           {profile.city && <p className="body-muted">{[profile.city, profile.state, profile.country].filter(Boolean).join(', ')}</p>}
         </div>
       </div>
+      <ProfileExtras profile={profile} />
       {profile.bio && <section className="detail-section"><h2 className="heading-md">About</h2><p className="detail-text">{profile.bio}</p></section>}
       <section className="detail-section">
         <h2 className="heading-md">Instruments</h2>

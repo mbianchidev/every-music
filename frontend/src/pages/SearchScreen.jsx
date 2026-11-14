@@ -9,8 +9,12 @@ import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import Pagination from '../components/Pagination.jsx';
 import MusicianCard from '../components/MusicianCard.jsx';
 import Icon from '../components/Icon.jsx';
+import DiscoveryFilters from '../components/DiscoveryFilters.jsx';
+import SaveSearchButton from '../components/SaveSearchButton.jsx';
+import { discoveryDefaults, hasCenter, searchQuery } from '../lib/discovery.js';
+import { useI18n } from '../lib/i18n.js';
 
-const emptyFilters = { searchTerm: '', city: '', instrumentId: '', genreId: '', isRemote: '', createdWithin: '', sort: 'newest' };
+const emptyFilters = { searchTerm: '', city: '', instrumentId: '', genreId: '', isRemote: '', createdWithin: '', sort: 'newest', ...discoveryDefaults };
 
 export default function SearchScreen({ route, kind = 'announcements' }) {
   const profiles = kind === 'profiles';
@@ -19,21 +23,27 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
   ])));
   const [page, setPage] = useState(() => Number(route?.query.get('page')) || 1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [nearMe, setNearMe] = useState(null);
+  const [resetKey, setResetKey] = useState(0);
+  const { t } = useI18n();
   const debounced = useDebounced(filters);
   const instruments = useResource('/catalog/instruments', { auth: false, reconnect: false });
   const genres = useResource('/catalog/genres', { auth: false, reconnect: false });
-  const query = queryString({ ...debounced, isRemote: profiles ? '' : debounced.isRemote, page, pageSize: 12 });
+  const query = searchQuery(debounced, { profiles, nearMe, page, pageSize: 12 });
   const resource = useResource(`/${kind}/search?${query}`, {
-    events: profiles ? 'profiles.changed' : 'announcements.changed,saved.changed,profiles.changed', cacheFeed: !profiles,
+    events: profiles ? 'profiles.changed,blocks.changed' : 'announcements.changed,saved.changed,profiles.changed,blocks.changed', cacheFeed: !profiles && !nearMe,
   });
   const update = (key, value) => { setFilters(previous => ({ ...previous, [key]: value })); setPage(1); };
+  const updateMany = changes => { setFilters(previous => ({ ...previous, ...changes })); setPage(1); };
+  const center = hasCenter(filters, nearMe);
   useEffect(() => {
     history.replaceState(null, '', `#${profiles ? 'musicians' : 'feed'}?${queryString({ ...filters, page })}`);
   }, [filters, page, profiles]);
   const rows = resource.data?.[kind] || [];
   const updating = resource.loading || filters !== debounced;
-  const activeFilters = ['city', 'instrumentId', 'genreId', 'createdWithin', ...(profiles ? [] : ['isRemote'])]
-    .filter(key => filters[key] !== '').length + Number(filters.sort !== 'newest');
+  const activeFilters = ['city', 'instrumentId', 'genreId', 'createdWithin', 'placeId', 'radiusKm', 'country', 'region',
+    ...(profiles ? ['openToProjects'] : ['isRemote', 'isCoverBand'])]
+    .filter(key => filters[key] !== '').length + Number(filters.sort !== 'newest') + Number(Boolean(nearMe));
   const changePage = value => {
     setPage(value);
     document.getElementById('results-heading')?.focus();
@@ -77,23 +87,30 @@ export default function SearchScreen({ route, kind = 'announcements' }) {
             <option value="">Anywhere</option><option value="true">Remote welcome</option><option value="false">Local only</option>
           </select>
         </FormField>}
+        <DiscoveryFilters key={resetKey} profiles={profiles} filters={filters} onChange={updateMany} nearMe={nearMe} onNearMe={value => { setNearMe(value); setPage(1); }} />
         <FormField id="discovery-date" label={profiles ? 'Joined' : 'Date posted'}>
           <select className="input" value={filters.createdWithin} onChange={event => update('createdWithin', event.target.value)}>
             <option value="">Any time</option><option value="week">Past 7 days</option><option value="month">Past 30 days</option>
           </select>
         </FormField>
         <FormField id="discovery-sort" label="Sort by">
-          <select className="input" value={filters.sort} onChange={event => update('sort', event.target.value)}>
+          <select className="input" value={filters.sort === 'distance' && !center ? 'newest' : filters.sort} onChange={event => update('sort', event.target.value)}>
             <option value="newest">Newest first</option><option value="oldest">Oldest first</option>
             <option value={profiles ? 'name' : 'title'}>{profiles ? 'Artist name' : 'Title'}</option>
             <option value="city">City</option>{!profiles && <option value="popular">Most liked</option>}
+            {center && <option value="distance">{t('places.sortDistance')}</option>}
+            {!profiles && <option value="expiring">{t('discoveryExtras.filters.sortExpiring')}</option>}
           </select>
         </FormField>
-        <button className="btn btn-ghost" type="button" onClick={() => { setFilters({ ...emptyFilters }); setPage(1); }}>Clear filters</button>
+        <button className="btn btn-ghost" type="button" onClick={() => { setFilters({ ...emptyFilters }); setNearMe(null); setResetKey(value => value + 1); setPage(1); }}>Clear filters</button>
           </div>
         </details>
       </form>
       {(instruments.error || genres.error) && <ErrorState message={instruments.error || genres.error} onRetry={() => { instruments.reload(); genres.reload(); }} />}
+      {!profiles && <div className="compact-actions save-search-row">
+        <SaveSearchButton filters={filters} nearMe={nearMe} catalogs={{ instruments: instruments.data?.instruments, genres: genres.data?.genres }} />
+        <a href="#saved-searches">{t('discoveryExtras.saved.title')}</a>
+      </div>}
       <h2 className="sr-only" id="results-heading" tabIndex="-1">Search results</h2>
       {resource.data?.offline && <p className="status-message" role="status">Offline saved copy from {new Date(resource.data.cachedAt).toLocaleString()}. These results may be out of date.</p>}
       {resource.data?.offlineCacheWarning && <p className="status-message" role="status">{resource.data.offlineCacheWarning}</p>}

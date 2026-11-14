@@ -4,6 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { realmConfig, validateRealmConfig } from '../config/realm.js';
+import { loadPlaces } from './places-dataset.js';
 
 const { Pool } = pg;
 const migrationsDirectory = join(dirname(fileURLToPath(import.meta.url)), '../database/migrations');
@@ -96,6 +97,8 @@ export async function runMigrations({
         }
       }
     }
+
+    await loadPlaces(pool, { logger });
   } finally {
     await pool.end();
   }

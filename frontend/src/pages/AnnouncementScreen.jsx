@@ -12,6 +12,7 @@ import AnnouncementActions from '../components/AnnouncementActions.jsx';
 import ManagedImage from '../components/ManagedImage.jsx';
 import ApplicationPanel from '../components/ApplicationPanel.jsx';
 import VerifiedBadge from '../components/VerifiedBadge.jsx';
+import AnnouncementStats from '../components/AnnouncementStats.jsx';
 
 export default function AnnouncementScreen({ route }) {
   const id = route.query.get('id');
@@ -67,7 +68,7 @@ export default function AnnouncementScreen({ route }) {
             {!!post.instruments.length && <div><h2 className="heading-md">Instruments needed</h2><div className="tag-list">{post.instruments.map(item => <span className="tag" key={item.instrument_id}>{item.name}</span>)}</div></div>}
             {!!post.genres.length && <div><h2 className="heading-md">Genres</h2><div className="tag-list">{post.genres.map(item => <span className="tag" key={item.genre_id}>{item.name}</span>)}</div></div>}
             <div className="compact-actions">{post.links.map((link, index) => <a key={index} href={link.url} target="_blank" rel="noopener noreferrer">{link.link_type}</a>)}</div>
-            <p>{post.stats.likes} likes / {post.stats.dislikes} dislikes</p>
+            <AnnouncementStats post={post} />
             <div className="compact-actions">
               <AnnouncementActions key={`${post.id}-${post.isSaved}`} post={post} mode={mine ? 'own' : 'feed'} onChanged={() => { window.location.hash = '#my-posts'; }} />
               {!mine && <>

@@ -29,6 +29,7 @@ import MarketplaceScreen from './pages/MarketplaceScreen.jsx';
 import ListingScreen from './pages/ListingScreen.jsx';
 import ListingEditorScreen from './pages/ListingEditorScreen.jsx';
 import MyListingsScreen from './pages/MyListingsScreen.jsx';
+import SavedSearchesScreen from './pages/SavedSearchesScreen.jsx';
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -60,6 +61,7 @@ const ROUTES = {
   'edit-listing': { screen: ListingEditorScreen, get title() { return t('marketplace.routes.editListing'); }, protected: true },
   'my-listings': { screen: MyListingsScreen, props: { mode: 'own' }, get title() { return t('marketplace.routes.myListings'); }, protected: true },
   'saved-listings': { screen: MyListingsScreen, props: { mode: 'saved' }, get title() { return t('marketplace.routes.savedListings'); }, protected: true },
+  'saved-searches': { screen: SavedSearchesScreen, title: 'Saved searches', protected: true },
 };
 
 function readRoute() {

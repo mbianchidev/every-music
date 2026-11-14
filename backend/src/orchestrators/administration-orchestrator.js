@@ -8,7 +8,7 @@ export async function administrationOrchestrator(fastify) {
     preHandler: identityGuard,
     config: { rateLimit: { max: 20, timeWindow: '1 hour' } },
     schema: { body: object({
-      reportedUserId: uuid, messageId: uuid, category: { enum: ['spam', 'harassment', 'threats', 'other'] },
+      reportedUserId: uuid, messageId: uuid, category: { enum: ['spam', 'harassment', 'threats', 'inappropriate_language', 'fake_profile', 'other'] },
       details: text(2000, 5), signedEvidence: text(32768), consent: { const: true },
     }, ['reportedUserId', 'category', 'details', 'consent']) },
   }, async (request, reply) => ok(reply, await administrationRepository.createReport(request.authenticatedUser.userId, request.body), 201));

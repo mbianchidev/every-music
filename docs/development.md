@@ -129,7 +129,7 @@ provider is contacted.
 `test:migrations` needs a role with `CREATEDB` on that isolated instance and a
 local Git ref for the previous schema. It creates two uniquely named temporary
 databases, runs the actual migration runner against fresh/prior schemas,
-replays migrations 003/004, compares columns/indexes/constraints, checks legacy
+replays migrations 003/004/008, compares columns/indexes/constraints, checks legacy
 projects/messages/tombstones, member-role and consent defaults, then drops only
 the databases it created.
 CI fetches both merge parents and uses `HEAD^1` as the base.
@@ -155,6 +155,12 @@ in a second isolated context, submits selected signed report evidence, grants
 the other actor admin using the real operator CLI, and verifies report removal,
 suspension, audit entries and aggregate analytics. It does not weaken auth limits.
 Do not treat its browser checks as a native screen-reader certification.
+`e2e/profiles-ads.spec.js` covers the place picker, contacts and link limits,
+expiry and active-call caps, distance/cover-band/region/open-to filters, saved
+search alerts, private reactions, blocks, report categories, Premium
+statistics and profile visits, and "near me" with a granted, synthetic browser
+geolocation. It mints sessions for synthetic users with the browser fixture's
+test signing keys, so it does not use the password sign-in rate limit.
 On Linux, use `playwright install --with-deps chromium` when system browser
 libraries are missing. Failure traces/screenshots are in ignored
 `frontend/test-results/`. Browser tests use an elevated global request budget
@@ -278,6 +284,38 @@ New plaintext message sends are rejected. Keep key rows and encrypted backups:
 after encrypted writes, dropping these fields is not a safe rollback.
 See the [messaging security guide](messaging-security.md) for recovery, trust,
 retention, provisioning and cryptographic limitations.
+
+Migration `008_profiles_ads_discovery.sql` adds the `places` and
+`place_datasets` tables, place links on profiles and announcements, profile
+contact visibility, open-to-projects and content links, saved searches,
+consented profile visits and the `inappropriate_language`/`fake_profile`
+report categories. It is additive; legacy free-text cities stay readable.
+
+### Places dataset
+
+`backend/database/seeds/places.tsv.gz` holds the GeoNames `cities15000`
+export (cities above 15,000 people, without historical or abandoned places)
+joined with admin1 region and country names, plus Latin-script exonyms for
+search. `places.manifest.json` records the input checksums, row count and
+content checksum. GeoNames data is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); keep the attribution
+in the client Settings, `frontend/public/third-party-notices.txt` and these docs.
+
+`npm run bootstrap` and every `npm run migrate` (including container startup)
+load the seed after the SQL migrations. Loading upserts by GeoNames ID under an
+advisory lock, never deletes places that profiles or calls may reference, and
+is skipped when the stored content checksum matches. To refresh the dataset:
+
+```bash
+cd backend
+node scripts/generate-places.mjs                       # download current exports
+node scripts/generate-places.mjs --source DIR          # or reuse pinned copies of
+                                                        # cities15000.zip, admin1CodesASCII.txt, countryInfo.txt
+npm run migrate
+```
+
+The generator is deterministic for the same inputs. Commit the regenerated
+seed and manifest together.
 
 ## Coding conventions
 

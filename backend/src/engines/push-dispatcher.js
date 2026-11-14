@@ -98,6 +98,7 @@ export class PushDispatcher {
     await this.connector.execute("DELETE FROM user_reports WHERE reviewed_at < NOW() - INTERVAL '90 days'");
     await this.connector.execute("DELETE FROM admin_audit WHERE created_at < NOW() - INTERVAL '365 days'");
     await this.connector.execute("DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '90 days'");
+    await this.connector.execute("DELETE FROM profile_visits WHERE day < CURRENT_DATE - 29");
     await this.connector.execute(`
       DELETE FROM media m WHERE m.created_at < NOW() - INTERVAL '1 day'
       AND NOT (${retainedMediaReferences.join(' OR ')})`);

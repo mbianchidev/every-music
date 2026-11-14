@@ -21,6 +21,7 @@ test('fresh installs and upgrades converge, preserve legacy data, and allow migr
   const current = await readFile(new URL('../database/schema.sql', import.meta.url), 'utf8');
   const migration = await readFile(new URL('../database/migrations/003_community.sql', import.meta.url), 'utf8');
   const encryptionMigration = await readFile(new URL('../database/migrations/004_admin_and_encryption.sql', import.meta.url), 'utf8');
+  const discoveryMigration = await readFile(new URL('../database/migrations/008_profiles_ads_discovery.sql', import.meta.url), 'utf8');
   const admin = new pg.Pool({ connectionString: realmConfig.realm.connectionString, max: 1 });
   const created = [];
   const pools = [];
@@ -74,6 +75,11 @@ test('fresh installs and upgrades converge, preserve legacy data, and allow migr
     await pool.query(migration);
     await pool.query(encryptionMigration);
     await pool.query(encryptionMigration);
+    await pool.query(discoveryMigration);
+    await pool.query(discoveryMigration);
+    assert.deepEqual((await pool.query('SELECT place_id, contact_visibility, open_to_projects FROM profiles WHERE user_id = $1', [userId])).rows[0],
+      { place_id: null, contact_visibility: 'members', open_to_projects: false });
+    assert.ok((await pool.query('SELECT COUNT(*)::int AS count FROM places')).rows[0].count > 30000);
     assert.equal((await pool.query('SELECT artist_name FROM profiles WHERE user_id = $1', [userId])).rows[0].artist_name, 'Synthetic legacy musician');
     assert.deepEqual((await pool.query('SELECT name, collaborators FROM projects')).rows, [
       { name: 'Synthetic legacy project', collaborators: [] },

@@ -121,6 +121,57 @@ default (`APPLICATION_RETENTION_DAYS`); the dashboard shows the exact date.
 Status changes are off for closed calls, but notes still work. After the
 retention period the applications are deleted automatically.
 
+### Places, contacts, plans and saved searches
+
+**City** fields suggest cities as you type, including common local names such
+as "Milano" or "Den Haag"; use the arrow keys and Enter, or click a
+suggestion. Choosing a city also records its region, country and approximate
+coordinates. You can still type a town that is not listed; it is shown as
+written but cannot be found by distance, region or country.
+
+Edit profile also has **Age**, **Open to new projects**, contact details
+(Telegram, WhatsApp, Signal, phone and a personal website) with a **Who can
+see your contacts** choice, and up to 20 music and social links. Contacts are
+never shown to people who are not signed in. Your profile also shows as open
+to new projects automatically while you have an active published call. On the
+free plan other musicians see your first three links and three projects; you
+always see everything, with a note when something is hidden.
+
+The call editor has an **Expiration date**. The free plan keeps a call online
+for up to 30 days and fills that date in for you; Premium can leave it empty.
+It also shows how many active calls you have. The free plan allows five active
+calls and ten saved calls at a time; the editor and Saved list show what is
+left, and a clear message explains when a limit is reached. **My calls** has
+**Publish** and **Unpublish** buttons so you can pause a call instead of
+deleting it.
+
+In **Filters and sorting**, choose **Near city** and a **Distance**, or a
+**Country** and **Region**, then sort by **Nearest first**. Calls also filter
+by **Cover band**, and musicians by **Availability** (open to new projects).
+To search near your current position, first turn on **Use my location for
+nearby searches** in Settings, then choose **Use my location**. Your browser
+asks for permission; the position is rounded to about 1 km, used only for
+those results and never saved.
+
+**Save this search** keeps the current feed filters in **Saved searches** and
+notifies you when a newly published call matches. A saved "near me" search
+stores the nearest city, not your position. The free plan keeps one saved
+search; turn its notifications off or delete it from Saved searches.
+
+Only you see the likes, dislikes and statistics of your own calls; other
+members see only their own reaction. Views, saves and the **Analytics** screen
+need Premium; the free plan explains this instead. **Who visited your profile**
+on your profile lists, with Premium, members who visited in the last 30 days
+and chose to be shown. That choice is **Show me to musicians whose profiles I
+visit** in Settings, off by default; turning it off deletes your recorded
+visits.
+
+**Block musician** on a profile hides each of you from the other's search
+results, removes follows between you, and hides your calls from them. Manage
+blocked musicians in Settings. Reports also accept **Inappropriate language**
+and **Fake profile using other people's photos**. City data comes from
+[GeoNames](https://www.geonames.org/) under CC BY 4.0.
+
 ### Messages and notifications
 
 Use **Send message** on a musician profile. Conversation history survives
@@ -151,7 +202,8 @@ member accounts, and have an audited report-access/action log. Admin roles are
 operator-managed, with no default administrator or private-chat browsing.
 
 **Follow musician** opts into their new-announcement alerts, subject to your
-notification preferences. Notifications also include messages, comments,
+notification preferences, and notifies the musician once. Profiles show
+follower and following counts. Notifications also include messages, comments,
 reactions, and optional daily profile-view alerts. The notification center has
 read controls and pagination. Settings controls categories and optional
 browser push; permission is requested only when you choose to enable it.

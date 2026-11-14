@@ -41,6 +41,8 @@ test('community workflows use real HTTP guards, transactions, and PostgreSQL per
     users.push(rows[0].id);
     tokens.push(cipherEngine.createAccessToken(rows[0].id, `${marker}-${i}@example.test`));
     await realmConnector.execute('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [rows[0].id, `${marker} artist ${i}`]);
+    // Premium lifts the freemium caps; features/profiles-ads.js covers the free plan limits.
+    await realmConnector.execute("INSERT INTO user_entitlements (user_id, plan, source) VALUES ($1, 'premium', 'admin')", [rows[0].id]);
   }
   async function call(path, { actor = 0, method = 'GET', body, status = 200 } = {}) {
     if (method === 'GET' && /\/conversations\/[^/]+\/messages(?:\?|$)/.test(path)) {

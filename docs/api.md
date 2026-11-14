@@ -96,11 +96,26 @@ refresh sessions without removing the Google identity.
 | PUT | `/realm/profiles/me/projects/:projectId` | Required, project owner |
 | DELETE | `/realm/profiles/me/projects/:projectId` | Required |
 | POST / DELETE | `/realm/profiles/:profileId/follow` | Required |
+| POST / DELETE | `/realm/profiles/:profileId/block` | Required |
 
 Profile detail accepts either a profile ID or the legacy user-ID identifier.
 It returns identity/location/bio/image/contacts, instruments, genres, projects,
 and `isFollowing` for an authenticated viewer. Inactive/deleted users are not
 searchable. Project objects retain the existing SQL-style field names.
+Detail also returns `age`, `place` (`{ id, name, region, regionCode, country,
+countryCode, latitude, longitude, label }` or `null` for a legacy free-text
+city), `openToProjects`, `followersCount`, `followingCount`, `isBlocked` (the
+viewer blocked this musician) and content `links` (`{ id, linkType, url }`).
+`contacts` is `null` unless the viewer may see it: never for anonymous viewers
+or between blocked accounts, otherwise per the owner's `contactVisibility`
+(`members`: any signed-in member, `following`: musicians the owner follows,
+`hidden`: nobody). Other viewers see at most `maxProjectsShown` projects and
+`maxContentShown` links from the **owner's** plan. The owner always receives
+everything plus `contactVisibility`, `openToProjectsManual`,
+`hasActiveAnnouncement` and `publicDisplay` (`maxProjectsShown`,
+`maxContentShown`, `hiddenProjects`, `hiddenLinks`). A musician who blocked
+the viewer returns 404. A signed-in visit by someone else is recorded only
+when that visitor opted in to [profile visits](#discovery-saved-searches-blocks-and-visits).
 
 Search accepts `searchTerm` (up to 200 characters), `city` (up to 255),
 `instrumentId`, `genreId`, `createdWithin` (`week` or `month`), and `sort`
@@ -108,6 +123,25 @@ Search accepts `searchTerm` (up to 200 characters), `city` (up to 255),
 over the rolling past 7 or 30 days; omitted/empty means any time. Other values
 return 400. Search summaries include selected `instruments` and `genres`
 using the same identifiers/names as profile detail.
+
+Location filters, shared by profile and announcement search:
+
+- `placeId`: a GeoNames place from the [catalog](#catalog), or
+  `latitude` + `longitude` (decimal degrees) for a "near me" search. Raw
+  coordinates are used for that request only and are never stored.
+- `radiusKm` (1-1000): only results within that distance of the center. It
+  requires a center. Results without coordinates are excluded.
+- `country` (ISO 3166 alpha-2) and `region` (GeoNames admin1 code, requires
+  `country`): match the result's linked place. Legacy free-text cities have no
+  place and do not match these filters.
+- `sort=distance`: nearest first; requires a center. Summaries then include
+  `distanceKm` (rounded to 0.1 km), otherwise `null`.
+
+Distance uses an indexed latitude/longitude bounding box followed by an exact
+haversine check, so no PostGIS extension is needed. Profile search also
+accepts `openToProjects=true|false`. Summaries include `place` and
+`openToProjects`. Signed-in viewers never see musicians or announcements from
+accounts that either blocked them or that they blocked.
 Profile editing takes camel-case fields plus:
 
 ```json
@@ -125,6 +159,19 @@ Profile editing takes camel-case fields plus:
 
 Use actual catalog IDs, not these illustrative IDs. Skill levels are
 `beginner`, `intermediate`, `advanced`, `professional`; years are 0-120.
+
+Profile editing also accepts `age` (13-120 or `null`), `placeId` (a catalog
+place, or `null` to clear it and keep the free-text `city` sent alongside),
+`openToProjects` (boolean), `contactVisibility` (`members`, `following`,
+`hidden`), `phone`, `whatsapp` (phone numbers), `telegramId` (`@name`, 5-32
+characters), `signal` (phone number or username), `websiteUrl`, and `links`:
+up to 20 `{ "linkType": "spotify" | "youtube" | "soundcloud" | "bandcamp" |
+"instagram" | "website" | "other", "url": "<http(s) URL>" }` in display order.
+A place sets `city`, `state`, `country`, `latitude` and `longitude` from the
+GeoNames record; sending `city`, `state`, `country` or coordinates without
+`placeId` detaches the place. Empty contact strings clear the contact. `openToProjects` on
+detail and search is true when the manual flag is set **or** the musician has
+an active (published, unexpired) announcement.
 Omitted relation fields preserve values; `[]` clears them.
 Instrument/genre arrays are capped at 100 entries to bound transactional work;
 announcement links are capped at 20.
@@ -163,16 +210,84 @@ data, not inferred tags. Detail retrieval itself does not record analytics.
 
 Announcement search accepts profile search's keyword/location/catalog filters,
 `isRemote` / `isCoverBand` (`true` or `false`), and `sort`
-(`newest`, `oldest`, `title`, `city`, `popular`). The shared `createdWithin`
-filter uses the announcement's creation date. `popular` sorts by likes.
+(`newest`, `oldest`, `title`, `city`, `popular`, `expiring`, `distance`). The shared `createdWithin`
+filter uses the announcement's creation date. `popular` ranks by likes minus
+dislikes, then likes;
+`expiring` puts the soonest expiration first.
 Optional `pictureUrl` uses a managed media URL or a legacy HTTP/S URL.
-`isPublished: false` saves a private draft.
+`isPublished: false` saves a private draft. Create and update also accept
+`placeId` (as for profiles) and `expiresAt` (`YYYY-MM-DD`, meaning the end of
+that UTC day, or an ISO 8601 timestamp). With a limited
+`announcementExpiryDays`, a create without `expiresAt` defaults to the end of
+that many days from now, publishing a draft without one gets the same
+default, `null` returns 403 `EXPIRY_REQUIRED`, and a later date returns 403
+`EXPIRY_BEYOND_PLAN` (one extra day is allowed for time zones). Unlimited plans
+may omit or clear it. Past dates return 400 `EXPIRY_IN_PAST`.
+
+Publishing (create, draft to published, or a new future expiry on an expired
+call) is refused with 403 `PLAN_LIMIT_REACHED` when the owner already has
+`maxActiveAnnouncements` published, unexpired calls. Saving a call beyond
+`maxSavedAnnouncements` visible saved calls returns the same code; saving an
+already saved call is idempotent. Messages name the limit so clients can show
+them directly.
+
+Like and dislike counts are private to the owner. Every response for other
+viewers, including search, saved and detail, has `stats: null`; they only see
+their own `myReaction`. The owner receives `stats.likes` and `stats.dislikes`
+and, when their plan has `announcementStats`, `stats.views` and `stats.saves`;
+detail adds `statsLocked`. The `popular` sort still uses reactions. Detail and
+summaries include `place`, `expiresAt` and (for distance searches)
+`distanceKm`. A call whose owner blocked the viewer returns 404 for detail,
+save, reaction and comment routes.
 
 For relation fields on update:
 
 - omitted field: preserve current values
 - empty array: clear all values
 - populated array: replace the set
+
+## Discovery, saved searches, blocks and visits
+
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/realm/quotas` | `{ plan, activeAnnouncements, savedAnnouncements, savedSearches, announcementExpiryDays, announcementStats, profileVisits, maxProjectsShown, maxContentShown }`; each usage is `{ used, limit, remaining }` with `null` for unlimited |
+| GET | `/realm/saved-searches` | `{ searches: [{ id, name, filters, notify, createdAt }] }` |
+| POST | `/realm/saved-searches` | `{ "name": "1-100 characters", "filters": {...}, "notify": true }`, 201; 30 per hour |
+| PATCH | `/realm/saved-searches/:searchId` | Any of `name`, `filters`, `notify` |
+| DELETE | `/realm/saved-searches/:searchId` | Own searches only; 404 otherwise |
+| POST / DELETE | `/realm/profiles/:profileId/block` | Block or unblock by user or profile ID; idempotent; 60 per hour |
+| GET | `/realm/blocks` | Paginated `{ blocked: [{ userId, artistName, profilePictureUrl }] }` |
+| GET / PUT | `/realm/profile-visits/sharing` | `{ "share": boolean }`, the caller's consent to being shown as a visitor |
+| GET | `/realm/profile-visits` | Paginated `{ visits: [{ userId, artistName, profilePictureUrl, lastVisitedAt, days }] }`; requires `profileVisits` |
+
+All require authentication. Saved search `filters` accept the announcement
+search fields as JSON values: `searchTerm`, `city`, `instrumentId`, `genreId`,
+`isRemote`, `isCoverBand` (booleans), `placeId`, `latitude` + `longitude`,
+`radiusKm`, `country`, `region`. At least one is required (400 `EMPTY_SEARCH`).
+Coordinates are never stored: they are replaced by the nearest city, and a
+place is stored with its `placeLabel`, `latitude` and `longitude`. Creating
+beyond `maxSavedSearches` returns 403 `PLAN_LIMIT_REACHED`.
+
+When an announcement becomes published (on create or a draft-to-published
+update), matching saved searches with `notify: true` are evaluated in the
+same database transaction. Each matching member receives one
+`saved_search_match` notification per announcement (`params: { announcementId,
+title }`), even after unpublishing and republishing. Authors and members with
+a block in either direction are never notified. Distance filters match the
+announcement's coordinates, so remote calls without a place do not match them.
+
+Following someone creates one `new_follower` notification per follower
+(`params: { followerId, name }`); unfollowing and following again does not
+notify twice. Following is refused with 404 when either account blocked the
+other. Blocking removes follows in both directions and recorded visits between
+the two accounts; existing conversation block rules are unchanged and
+conversation blocks appear in `/realm/blocks`.
+
+Visits are recorded by profile detail for signed-in visitors who set
+`share: true`, once per owner, visitor and UTC day, never for self-views or
+between blocked accounts. Withdrawing consent deletes the visitor's records.
+Owners without `profileVisits` receive 403 `PLAN_LIMIT_REACHED`. Hourly
+maintenance deletes visits older than 30 days.
 
 ## Pagination
 
@@ -367,7 +482,7 @@ explicitly name `replaceKeyId`. Old records remain for history. Resets are
 bounded to five per account per day; key lists are paginated.
 
 Reports accept `reportedUserId`, `category` (`spam`, `harassment`, `threats`,
-`other`), `details` (5-2,000 characters), and `consent: true`. Optional `messageId`
+`inappropriate_language`, `fake_profile`, `other`), `details` (5-2,000 characters), and `consent: true`. Optional `messageId`
 must identify a received message in the reporter's conversation. Encrypted
 evidence requires its original `signedEvidence` (max 32,768 characters),
 verified against that message's exact sender/conversation/client/key context.
@@ -599,7 +714,9 @@ self-views are not counted. 200 returns `{ "recorded": true | false }`.
 Successful likes, new bookmarks, and received messages also contribute
 consented aggregates. The API does not accept arbitrary metric kinds/owners.
 
-GET `/realm/analytics` returns only the caller's `daily` aggregate rows
+GET `/realm/analytics` requires the caller's plan to include
+`announcementStats` (otherwise 403 `PLAN_LIMIT_REACHED`; consent rules are
+unchanged). It returns only the caller's `daily` aggregate rows
 (`day`, `kind`, `count`) and `content` reach for their latest 100 announcements
 (`id`, `title`, `views`, `likes`, `saves`). The reporting window is the last
 30 database calendar days. There are no viewer IDs, IPs, message bodies,
@@ -629,7 +746,8 @@ initial `connected` event tells clients to reload current data.
 Types include `profiles.changed`, `announcements.changed`, `comments.changed`,
 `messages.changed`, `conversations.changed`, `saved.changed`,
 `notifications.changed`, `preferences.changed`, `analytics.changed`,
-`keys.changed`, `reports.changed`, `admin.changed`, and `account.changed`. Public content
+`keys.changed`, `reports.changed`, `admin.changed`, `blocks.changed`,
+`saved-searches.changed`, and `account.changed`. Public content
 invalidations are shared; private types target only the affected user.
 Payloads never contain message bodies or credentials. Read current state
 from the corresponding authenticated APIs; events are not a durable log.
@@ -797,3 +915,15 @@ Notification kinds `security_alert` (`params.event`: `two_factor_enabled`,
 `verification_decided` (`params.decision`) are added. Live event types
 `security.changed`, `privacy.changed`, and `verification.changed` target the
 affected account.
+
+| GET | `/realm/catalog/places?q=&limit=&country=` | City autocomplete: `q` (folded, at least 2 letters) matches the start of a name or Latin-script exonym such as "Milano"; `limit` 1-20 (default 8); optional ISO `country`. Returns `{ places }`, exact names first, then by population |
+| GET | `/realm/catalog/places/:placeId` | One place |
+| GET | `/realm/catalog/places/nearest?latitude=&longitude=` | The nearest known city (a more populous one when nearly as close); 404 `PLACE_NOT_FOUND` when none is near |
+| GET | `/realm/catalog/countries` | `{ countries: [{ code, name }] }` present in the dataset |
+| GET | `/realm/catalog/regions?country=` | `{ regions: [{ code, name }] }` for one country |
+
+Catalog routes are public. Place lookups allow 120 requests per minute per
+client. Places come from the GeoNames `cities15000` export with admin1 regions
+and country names, licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); see
+[development](development.md#places-dataset) for regeneration.

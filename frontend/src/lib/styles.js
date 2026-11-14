@@ -515,6 +515,38 @@ tbody th { font-weight: 500; }
 .deletion-facts { display: grid; gap: 6px; margin: 0; padding-left: 20px; }
 .two-step { display: grid; gap: 12px; }
 .two-step > p { margin: 0; }
+/* w1-profiles-ads */
+.place-picker-control { position: relative; }
+.place-options { position: absolute; z-index: 40; top: calc(100% + 4px); right: 0; left: 0; max-height: 288px; margin: 0; padding: 4px; overflow-y: auto; list-style: none; border: 1px solid var(--control-border); border-radius: 8px; background: var(--surface); box-shadow: 0 10px 28px rgba(15, 18, 30, 0.16); }
+.place-options[hidden] { display: none; }
+.place-options li { padding: 9px 10px; border-radius: 6px; color: var(--paper); cursor: pointer; }
+.place-options li[aria-selected="true"], .place-options li:hover { background: var(--brand-soft); color: var(--brand-ink); }
+.place-meta { display: block; color: var(--muted); font-size: 12px; }
+.place-options li[aria-selected="true"] .place-meta { color: inherit; }
+.place-picker .text-link { justify-self: start; }
+.filter-location { display: flex; flex-direction: column; gap: 8px; grid-column: 1 / -1; }
+.filter-location .btn { align-self: flex-start; }
+.upgrade-notice { border-style: dashed; border-color: var(--control-border); }
+.quota-notice { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.quota-full { color: var(--danger); font-weight: 600; }
+.profile-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.tag-open { background: var(--positive-soft); color: var(--positive); }
+.musician-summary .tag-open { margin-top: 4px; }
+.contact-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 20px; margin: 10px 0 0; }
+.contact-list dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.contact-list dd { margin: 0; overflow-wrap: anywhere; }
+.profile-links, .person-list, .saved-search-list { display: grid; gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.profile-links li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.person-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.person-list .btn { min-height: 36px; margin-left: auto; padding: 6px 12px; }
+.saved-search-list .card { display: flex; flex-direction: column; gap: 8px; }
+.saved-search-list .heading-md { margin: 0; }
+.save-search-row { align-items: center; margin-bottom: 12px; }
+.distance { color: var(--muted); }
+.announcement-stats { margin-top: 14px; }
+@media (max-width: 480px) {
+  .person-list .btn { margin-left: 0; }
+}
 `;
 
 export default styles;

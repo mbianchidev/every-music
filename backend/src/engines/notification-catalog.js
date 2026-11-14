@@ -29,6 +29,7 @@ export const notificationKinds = {
   security_alert: { inApp: 'on', push: 'on', email: 'optional' },
   verification_requested: { inApp: 'on', push: 'optional', email: 'off' },
   verification_decided: { inApp: 'on', push: 'on', email: 'optional' },
+  saved_search_match: { inApp: 'on', push: 'on', email: 'optional' },
 };
 
 export function notificationKind(kind) {

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import conduit from '../lib/conduit.js';
 import FormField from './FormField.jsx';
 import ModalDialog from './ModalDialog.jsx';
+import { useI18n } from '../lib/i18n.js';
 
 export default function ReportButton({ userId, name = 'this musician', message }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('spam');
   const [details, setDetails] = useState('');
@@ -33,7 +35,9 @@ export default function ReportButton({ userId, name = 'this musician', message }
       <form className="form-stack" onSubmit={submit}>
         <FormField id={`report-category-${message?.id || userId}`} label="Reason" required>
           <select className="input" value={category} onChange={event => setCategory(event.target.value)} disabled={busy}>
-            <option value="spam">Spam</option><option value="harassment">Harassment</option><option value="threats">Threats</option><option value="other">Other concern</option>
+            <option value="spam">Spam</option><option value="harassment">Harassment</option><option value="threats">Threats</option>
+            <option value="inappropriate_language">{t('profileExtras.reports.inappropriateLanguage')}</option>
+            <option value="fake_profile">{t('profileExtras.reports.fakeProfile')}</option><option value="other">Other concern</option>
           </select>
         </FormField>
         <FormField id={`report-details-${message?.id || userId}`} label="Describe the concern" required hint="5-2,000 characters. Do not include passwords, recovery keys, or unrelated private information.">

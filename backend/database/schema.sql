@@ -507,6 +507,180 @@ CREATE TABLE IF NOT EXISTS notification_job_runs (
     last_run_at TIMESTAMPTZ NOT NULL
 );
 
+-- w1-profiles-ads: GeoNames places, place-linked profiles and announcements,
+-- profile contacts and content links, open-to-projects, saved searches,
+-- consented profile visits and additional report categories.
+
+CREATE TABLE IF NOT EXISTS places (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    country_code TEXT NOT NULL CHECK (country_code ~ '^[A-Z]{2}$'),
+    country_name TEXT NOT NULL,
+    region_code TEXT,
+    region_name TEXT,
+    latitude DOUBLE PRECISION NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude DOUBLE PRECISION NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+    population INTEGER NOT NULL DEFAULT 0,
+    search_names TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_places_search ON places USING gin (search_names gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_places_region ON places(country_code, region_code);
+CREATE INDEX IF NOT EXISTS idx_places_location ON places(latitude, longitude);
+
+CREATE TABLE IF NOT EXISTS place_datasets (
+    name TEXT PRIMARY KEY,
+    checksum TEXT NOT NULL,
+    row_count INTEGER NOT NULL,
+    loaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS place_id INTEGER REFERENCES places(id) ON DELETE SET NULL;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS contact_visibility TEXT NOT NULL DEFAULT 'members'
+    CHECK (contact_visibility IN ('members', 'following', 'hidden'));
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS open_to_projects BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_profiles_place ON profiles(place_id);
+
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS place_id INTEGER REFERENCES places(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_announcements_place ON announcements(place_id);
+CREATE INDEX IF NOT EXISTS idx_announcements_active_owner ON announcements(user_id, expires_at)
+    WHERE is_published = TRUE AND is_deleted = FALSE;
+
+CREATE TABLE IF NOT EXISTS profile_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    link_type TEXT NOT NULL CHECK (link_type IN ('spotify', 'youtube', 'soundcloud', 'bandcamp', 'instagram', 'website', 'other')),
+    url TEXT NOT NULL CHECK (length(url) BETWEEN 1 AND 2048),
+    position SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_profile_links_profile ON profile_links(profile_id, position);
+
+CREATE INDEX IF NOT EXISTS idx_blocked_users_reverse ON blocked_users(blocked_user_id, user_id);
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100),
+    filters JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(filters) = 'object'),
+    notify BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_saved_searches_owner ON saved_searches(user_id, created_at DESC, id);
+CREATE INDEX IF NOT EXISTS idx_saved_searches_notify ON saved_searches(user_id) WHERE notify = TRUE;
+
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS share_profile_visits BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS profile_visits (
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    visitor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day DATE NOT NULL DEFAULT CURRENT_DATE,
+    visited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(owner_id, day, visitor_id),
+    CHECK (owner_id <> visitor_id)
+);
+CREATE INDEX IF NOT EXISTS idx_profile_visits_visitor ON profile_visits(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_profile_visits_day ON profile_visits(day);
+
+ALTER TABLE user_reports DROP CONSTRAINT IF EXISTS user_reports_category_check;
+ALTER TABLE user_reports ADD CONSTRAINT user_reports_category_check CHECK (category IN (
+    'spam', 'harassment', 'threats', 'inappropriate_language', 'fake_profile', 'other'
+));
+
+-- w2-account-trust: two-factor authentication, re-authentication codes,
+-- session revocation, per-account throttles, opt-in contact discovery, and
+-- profile verification requests.
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_revoked_at TIMESTAMPTZ;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+
+-- One row per account. enabled_at IS NULL means an unfinished enrollment.
+-- totp_secret and phone_number are sealed with the two-factor key.
+CREATE TABLE IF NOT EXISTS user_two_factor (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    method TEXT NOT NULL CHECK (method IN ('totp', 'email', 'sms')),
+    totp_secret TEXT CHECK (length(totp_secret) <= 512),
+    phone_number TEXT CHECK (length(phone_number) <= 512),
+    totp_last_step BIGINT,
+    enabled_at TIMESTAMPTZ,
+    pending_code_hash VARCHAR(64),
+    pending_expires_at TIMESTAMPTZ,
+    pending_attempts INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (method <> 'totp' OR totp_secret IS NOT NULL),
+    CHECK (method <> 'sms' OR phone_number IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_user_two_factor_pending ON user_two_factor(created_at) WHERE enabled_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS two_factor_recovery_codes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash VARCHAR(64) NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, code_hash)
+);
+
+CREATE TABLE IF NOT EXISTS two_factor_challenges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    method TEXT NOT NULL CHECK (method IN ('totp', 'email', 'sms')),
+    code_hash VARCHAR(64),
+    attempts INTEGER NOT NULL DEFAULT 0,
+    sends INTEGER NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_two_factor_challenges_user ON two_factor_challenges(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_two_factor_challenges_expiration ON two_factor_challenges(expires_at);
+
+-- Emailed one-time codes that re-authenticate accounts without a password.
+CREATE TABLE IF NOT EXISTS account_codes (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL CHECK (purpose IN ('reauthenticate')),
+    code_hash VARCHAR(64) NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, purpose)
+);
+
+-- Per-account throttles that hold across API processes.
+CREATE TABLE IF NOT EXISTS account_rate_events (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action TEXT NOT NULL CHECK (action ~ '^[a-z][a-z_]{2,63}$'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_account_rate_events_lookup ON account_rate_events(user_id, action, created_at DESC);
+
+-- Present only for accounts that opted in to being found by email address.
+CREATE TABLE IF NOT EXISTS contact_discovery (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    email_hash VARCHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- subject_type/subject_id let other subject kinds reuse this queue later.
+CREATE TABLE IF NOT EXISTS verification_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    subject_type TEXT NOT NULL DEFAULT 'user' CHECK (subject_type IN ('user')),
+    subject_id UUID NOT NULL,
+    requested_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    challenge_code TEXT NOT NULL CHECK (length(challenge_code) <= 32),
+    selfie_media_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    document_media_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    review_note TEXT CHECK (length(review_note) <= 2000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ,
+    media_purge_after TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_verification_requests_pending ON verification_requests(subject_type, subject_id) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_verification_requests_queue ON verification_requests(status, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_verification_requests_requester ON verification_requests(requested_by, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_verification_requests_purge ON verification_requests(media_purge_after) WHERE media_purge_after IS NOT NULL;
+
 -- w4-applications: in-app replies to announcements with an owner dashboard.
 -- Withdrawn rows keep only routing metadata; the partial unique index allows
 -- one active application per applicant and announcement. closed_at records
@@ -620,98 +794,3 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_saved_listings_listing ON marketplace
 
 ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS listing_id UUID REFERENCES marketplace_listings(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_user_reports_listing ON user_reports(listing_id, status) WHERE listing_id IS NOT NULL;
-
--- w2-account-trust: two-factor authentication, re-authentication codes,
--- session revocation, per-account throttles, opt-in contact discovery, and
--- profile verification requests.
-
-ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_revoked_at TIMESTAMPTZ;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
-
--- One row per account. enabled_at IS NULL means an unfinished enrollment.
--- totp_secret and phone_number are sealed with the two-factor key.
-CREATE TABLE IF NOT EXISTS user_two_factor (
-    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    method TEXT NOT NULL CHECK (method IN ('totp', 'email', 'sms')),
-    totp_secret TEXT CHECK (length(totp_secret) <= 512),
-    phone_number TEXT CHECK (length(phone_number) <= 512),
-    totp_last_step BIGINT,
-    enabled_at TIMESTAMPTZ,
-    pending_code_hash VARCHAR(64),
-    pending_expires_at TIMESTAMPTZ,
-    pending_attempts INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (method <> 'totp' OR totp_secret IS NOT NULL),
-    CHECK (method <> 'sms' OR phone_number IS NOT NULL)
-);
-CREATE INDEX IF NOT EXISTS idx_user_two_factor_pending ON user_two_factor(created_at) WHERE enabled_at IS NULL;
-
-CREATE TABLE IF NOT EXISTS two_factor_recovery_codes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    code_hash VARCHAR(64) NOT NULL,
-    used_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, code_hash)
-);
-
-CREATE TABLE IF NOT EXISTS two_factor_challenges (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(64) NOT NULL UNIQUE,
-    method TEXT NOT NULL CHECK (method IN ('totp', 'email', 'sms')),
-    code_hash VARCHAR(64),
-    attempts INTEGER NOT NULL DEFAULT 0,
-    sends INTEGER NOT NULL DEFAULT 0,
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_two_factor_challenges_user ON two_factor_challenges(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_two_factor_challenges_expiration ON two_factor_challenges(expires_at);
-
--- Emailed one-time codes that re-authenticate accounts without a password.
-CREATE TABLE IF NOT EXISTS account_codes (
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    purpose TEXT NOT NULL CHECK (purpose IN ('reauthenticate')),
-    code_hash VARCHAR(64) NOT NULL,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, purpose)
-);
-
--- Per-account throttles that hold across API processes.
-CREATE TABLE IF NOT EXISTS account_rate_events (
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    action TEXT NOT NULL CHECK (action ~ '^[a-z][a-z_]{2,63}$'),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_account_rate_events_lookup ON account_rate_events(user_id, action, created_at DESC);
-
--- Present only for accounts that opted in to being found by email address.
-CREATE TABLE IF NOT EXISTS contact_discovery (
-    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    email_hash VARCHAR(64) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- subject_type/subject_id let other subject kinds reuse this queue later.
-CREATE TABLE IF NOT EXISTS verification_requests (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    subject_type TEXT NOT NULL DEFAULT 'user' CHECK (subject_type IN ('user')),
-    subject_id UUID NOT NULL,
-    requested_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    challenge_code TEXT NOT NULL CHECK (length(challenge_code) <= 32),
-    selfie_media_id UUID REFERENCES media(id) ON DELETE SET NULL,
-    document_media_id UUID REFERENCES media(id) ON DELETE SET NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
-    reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    review_note TEXT CHECK (length(review_note) <= 2000),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    reviewed_at TIMESTAMPTZ,
-    media_purge_after TIMESTAMPTZ
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_verification_requests_pending ON verification_requests(subject_type, subject_id) WHERE status = 'pending';
-CREATE INDEX IF NOT EXISTS idx_verification_requests_queue ON verification_requests(status, created_at, id);
-CREATE INDEX IF NOT EXISTS idx_verification_requests_requester ON verification_requests(requested_by, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_verification_requests_purge ON verification_requests(media_purge_after) WHERE media_purge_after IS NOT NULL;

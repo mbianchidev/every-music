@@ -229,6 +229,26 @@ job that leases expiring listings with `SKIP LOCKED`, creates one
 or removed more than a year ago. Media maintenance keeps attached listing
 photos. Payments are not processed; contact uses encrypted messaging.
 
+## Places, discovery and plan limits
+
+Migration `008_profiles_ads_discovery.sql` adds a `places` table loaded from a
+committed GeoNames seed by the migration runner (`scripts/places-dataset.js`).
+Profiles and announcements reference a place and copy its city, region,
+country and coordinates, so legacy free-text cities keep working. Distance
+search is portable SQL: a bounding box on the indexed latitude/longitude
+columns (split at the antimeridian) followed by a haversine check
+(`engines/geo.js`). Browser coordinates for "near me" are request-only.
+
+Freemium caps are enforced in the writing transaction under the user's row
+lock (`repositories/quota-repository.js`) with limits from
+`entitlementRepository`. Saved searches are matched inside the transaction
+that publishes an announcement, so notifications commit atomically with the
+publication; JSON filters are evaluated in SQL and fan out through
+`notificationRepository.createMany` with per-announcement keys. Blocks
+(`blocked_users`) are excluded in both directions from search, saved-search
+matching, follows and contact visibility. Profile visits are written only
+with the visitor's consent and expire after 30 days.
+
 ## Operational boundaries and extension points
 
 `/health/live` reports process liveness; `/health/ready` checks PostgreSQL and

@@ -207,8 +207,9 @@ test('announcement applications: apply, owner dashboard, notifications, and rete
 
   await t.test('expired calls cannot receive applications and each account has a daily limit', async () => {
     const expired = await call('/announcements/', { method: 'POST', status: 201, body: {
-      title: `${marker} expired call`, description: 'A synthetic call that has already expired for testing.', expiresAt: '2001-01-01T00:00:00Z',
+      title: `${marker} expired call`, description: 'A synthetic call that has already expired for testing.',
     } });
+    await realmConnector.execute("UPDATE announcements SET expires_at = NOW() - INTERVAL '1 day' WHERE id = $1", [expired.id]);
     await call(`/announcements/${expired.id}/applications`, { actor: second, method: 'POST', status: 404, body: { message: 'Hello' } });
     const open = await call('/announcements/', { method: 'POST', status: 201, body: {
       title: `${marker} limit call`, description: 'A synthetic call used to check the daily application limit.',

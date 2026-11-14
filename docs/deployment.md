@@ -78,6 +78,10 @@ Use readiness for load balancer admission. Use liveness only for process restart
   Use a suitable maintenance window for large tables; see
   [migration verification](development.md#community-api-migration-and-browser-tests).
 - Run `npm run migrate` as a dedicated release step outside Compose when the platform separates migrations from application startup.
+- Migrations also load the bundled GeoNames city dataset (about 34,000 rows,
+  a few seconds on first run, skipped afterwards while the seed is unchanged).
+  See [places dataset](development.md#places-dataset).
+- Hourly maintenance deletes profile visits older than 30 days.
 
 ## Email
 
