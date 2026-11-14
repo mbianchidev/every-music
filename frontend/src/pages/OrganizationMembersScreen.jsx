@@ -23,6 +23,7 @@ function MemberEditor({ member, actorRole, titleOnly, busy, onSave }) {
   const submit = event => {
     event.preventDefault();
     const body = { title: draft.title.trim() || null };
+    if (!current) body.memberId = member.memberId;
     if (titleOnly) { onSave(member, body); return; }
     body.joinedOn = draft.joinedOn || null;
     if (!current) body.leftOn = draft.leftOn || null;
@@ -114,7 +115,7 @@ export default function OrganizationMembersScreen({ route }) {
             const editable = manageMembers && (self || role === 'leader' || member.role === 'member');
             const removable = !self && editable && member.role !== 'leader' && ['active', 'invited'].includes(member.status) && (member.role !== 'admin' || role === 'leader');
             return (
-              <li className="card" key={`${member.userId}-${member.status}-${member.joinedOn}`}>
+              <li className="card" key={member.memberId}>
                 <h3><a href={`#musician?id=${member.userId}`}>{member.name}</a></h3>
                 <p className="body-muted">{[
                   t(`organizations.roles.${member.role}`), t(`organizations.statuses.${member.status}`), member.title,

@@ -79,7 +79,7 @@ export async function organizationOrchestrator(fastify) {
   route('PATCH', '/organizations/:organizationId/members/:userId', conductor.updateMember, {
     schema: {
       params: params('organizationId', 'userId'),
-      body: { ...object({ title: nullableText(100), role: { enum: ['member', 'admin'] }, permissions, joinedOn: date, leftOn: date }), minProperties: 1 },
+      body: { ...object({ memberId: uuid, title: nullableText(100), role: { enum: ['member', 'admin'] }, permissions, joinedOn: date, leftOn: date }), minProperties: 1 },
     },
   });
   route('DELETE', '/organizations/:organizationId/members/:userId', conductor.removeMember, { schema: { params: params('organizationId', 'userId') } });

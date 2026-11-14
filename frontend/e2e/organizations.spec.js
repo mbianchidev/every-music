@@ -109,6 +109,7 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
     await invite.getByLabel('Title', { exact: true }).fill('Drums');
     await invite.getByRole('checkbox', { name: 'Publish updates and announcements', exact: true }).check();
     await assertAccessible(leader, 'member invitation');
+    await reflows(leader, 'member management at 320px');
     await leader.getByRole('button', { name: 'Send invitation', exact: true }).click();
     await expect(leader.getByRole('status').filter({ hasText: `Invitation sent to ${people[1].artistName}` })).toBeVisible();
 
@@ -117,6 +118,7 @@ test('a musician creates a band page, invites a bandmate, and publishes on behal
     await expect(member.getByRole('link', { name: `You were invited to join ${band.name}`, exact: true })).toBeVisible();
     await member.goto('/#your-pages');
     await assertAccessible(member, 'Your pages with an invitation');
+    await reflows(member, 'Your pages at 320px');
     await member.getByRole('button', { name: `Accept invitation to ${band.name}`, exact: true }).click();
     await expect(member.getByRole('status').filter({ hasText: `You joined ${band.name}.` })).toBeVisible();
     await member.getByRole('link', { name: band.name, exact: true }).click();
@@ -172,6 +174,7 @@ test('fans discover and follow pages, music lovers share follows, and venues are
     await expect(fan.getByRole('region', { name: 'Page results' }).getByRole('article')).toHaveCount(1);
     await assertAccessible(fan, 'page discovery');
     await fan.screenshot({ path: testInfo.outputPath('discovery.png') });
+    await reflows(fan, 'discovery at 320px');
     await fan.getByRole('link', { name: band.name, exact: true }).click();
     await fan.getByRole('button', { name: 'Follow', exact: true }).click();
     await expect(fan.getByRole('button', { name: 'Unfollow', exact: true })).toBeVisible();

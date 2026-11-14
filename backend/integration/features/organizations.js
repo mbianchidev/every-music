@@ -160,6 +160,11 @@ test('organizations: pages, memberships, relations, releases, feeds, claims, and
     await call(`/organizations/${band.id}/members`, { actor: 1, method: 'POST', status: 201, body: { userId: users[0], role: 'admin', title: 'Lead guitar' } });
     await call(`/organizations/${band.id}/invitation`, { method: 'PATCH', body: { response: 'accept' } });
     assert.equal((await call(`/organizations/${band.id}`)).viewer.role, 'admin');
+    const formerStint = detail.history[0].memberId;
+    await call(`/organizations/${band.id}/members/${users[0]}`, { actor: 1, method: 'PATCH', body: { memberId: formerStint, title: 'Rhythm guitar', leftOn: detail.history[0].leftOn } });
+    detail = await call(`/organizations/${band.id}`, { actor: null });
+    assert.deepEqual(detail.history.map(item => [item.memberId, item.title]), [[formerStint, 'Rhythm guitar']]);
+    assert.equal(detail.members.find(item => item.userId === users[0]).title, 'Lead guitar', 'editing a former period leaves the current one unchanged');
     assert.equal((await call(`/users/${users[0]}/organizations`, { actor: null })).organizations[0].id, band.id);
   });
 
@@ -205,6 +210,7 @@ test('organizations: pages, memberships, relations, releases, feeds, claims, and
     assert.deepEqual(videos.map(item => item.params.title), ['New video: Brand new single']);
     const posts = (await call(`/organizations/${band.id}/posts`, { actor: null })).posts;
     assert.deepEqual(posts.map(item => item.url), ['https://www.youtube.com/watch?v=newvideo001', 'https://www.youtube.com/watch?v=oldvideo001']);
+    await call(`/organizations/${band.id}/posts/${posts[0].id}`, { actor: 1, method: 'DELETE', status: 404 });
   });
 
   await t.test('announcements can be published on behalf of a page by permitted members', async () => {

@@ -14,7 +14,7 @@ function period(t, formatDate, member) {
 export default function OrganizationMembers({ organization }) {
   const { t, formatDate } = useI18n();
   const row = member => (
-    <li key={`${member.userId}-${member.status}-${member.joinedOn}-${member.leftOn}`} className="member-row">
+    <li key={member.memberId} className="member-row">
       <Avatar name={member.name} src={member.pictureUrl} />
       <div>
         <a href={`#musician?id=${member.userId}`}>{member.name}</a>

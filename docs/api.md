@@ -202,12 +202,12 @@ authentication adds viewer fields); writes require authentication.
 | POST / DELETE | `/realm/organizations/:organizationId/follow` | Follow or unfollow |
 | GET | `/realm/organizations/:organizationId/members` | For active members: every member period and invitation, with permissions |
 | POST | `/realm/organizations/:organizationId/members` | Invite `{ userId, role?, title?, permissions? }`, `manage_members`, 201 |
-| PATCH | `/realm/organizations/:organizationId/members/:userId` | `{ title?, role?, permissions?, joinedOn?, leftOn? }` |
+| PATCH | `/realm/organizations/:organizationId/members/:userId` | `{ memberId?, title?, role?, permissions?, joinedOn?, leftOn? }`; `memberId` selects a former period, otherwise the current one changes |
 | DELETE | `/realm/organizations/:organizationId/members/:userId` | Remove, cancel an invitation, or leave (your own user ID) |
 | PATCH | `/realm/organizations/:organizationId/invitation` | Invitee `{ "response": "accept" \| "decline" }` |
 | POST | `/realm/organizations/:organizationId/leadership` | Leader transfers to `{ userId }` of an active member |
 | POST / DELETE | `/realm/organizations/:organizationId/photos[/:photoId]` | `{ url, category: inside \| outside \| gallery, caption? }`, `manage_profile` |
-| GET / POST / DELETE | `/realm/organizations/:organizationId/posts[/:postId]` | Paginated updates; posting `{ title?, body?, url? }` needs `post_announcements` |
+| GET / POST / DELETE | `/realm/organizations/:organizationId/posts[/:postId]` | Paginated updates; posting `{ title?, body?, url? }` and removing manual updates need `post_announcements` (release and imported video posts are not removable) |
 | POST / PATCH / DELETE | `/realm/organizations/:organizationId/releases[/:releaseId]` | Bands: `{ title, releaseType: single \| ep \| lp \| album, releaseDate?, links? }`, `manage_profile` |
 | GET / POST | `/realm/organizations/:organizationId/relations` | Managers list pending and accepted relations; agencies/labels request `{ bandId }` |
 | PATCH / DELETE | `/realm/organizations/:organizationId/relations/:relationId` | Band answers `{ response }`; either side ends it |

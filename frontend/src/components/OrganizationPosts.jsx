@@ -18,7 +18,7 @@ export function PostList({ posts, onRemove, busy, showOrganization = false }) {
         {post.body && <p className="detail-text">{post.body}</p>}
         {post.url && !post.title && <p><a href={post.url} target="_blank" rel="noopener noreferrer">{t('organizations.posts.openLink')}</a></p>}
         <p className="body-muted"><time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>{post.authorName && ` / ${post.authorName}`}</p>
-        {onRemove && post.source !== 'release' && <button className="text-link" type="button" disabled={busy} onClick={() => onRemove(post)}>
+        {onRemove && post.source === 'manual' && <button className="text-link" type="button" disabled={busy} onClick={() => onRemove(post)}>
           {t('organizations.posts.remove', { title: post.title || formatDate(post.publishedAt) })}
         </button>}
       </li>

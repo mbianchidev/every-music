@@ -125,7 +125,9 @@ verification changes as `organization_verified`/`organization_unverified`.
 - **Updates feed** (`organization_posts`): manual posts by members with
   `post_announcements`, a post for each new release, and videos imported from
   the band's public YouTube channel feed. Followers are notified with kind
-  `organization_update`.
+  `organization_update`. Only manual updates can be deleted; release posts
+  follow their release, and imported videos stay so they are never re-imported
+  or announced twice.
 
 ### YouTube import
 

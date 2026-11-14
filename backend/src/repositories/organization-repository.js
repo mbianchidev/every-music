@@ -44,7 +44,7 @@ function number(value) {
 
 function memberView(row) {
   return {
-    userId: row.user_id, name: row.member_name, pictureUrl: row.member_picture_url, role: row.role, status: row.status,
+    memberId: row.id, userId: row.user_id, name: row.member_name, pictureUrl: row.member_picture_url, role: row.role, status: row.status,
     title: row.title, joinedOn: row.joined_on, leftOn: row.left_on,
   };
 }
@@ -249,7 +249,7 @@ class OrganizationRepository {
         (SELECT ${displayName('p')} FROM profiles p WHERE p.user_id = o.created_by) AS creator_name
       FROM organizations o WHERE o.id = $1`, [id, viewerId ?? null]);
     const { rows: members } = await executor.execute(`
-      SELECT m.user_id, m.role, m.status, m.title, to_char(m.joined_on, 'YYYY-MM-DD') AS joined_on,
+      SELECT m.id, m.user_id, m.role, m.status, m.title, to_char(m.joined_on, 'YYYY-MM-DD') AS joined_on,
         to_char(m.left_on, 'YYYY-MM-DD') AS left_on, ${displayName('p')} AS member_name, p.profile_picture_url AS member_picture_url
       FROM organization_members m JOIN users u ON u.id = m.user_id AND u.is_active AND NOT u.is_deleted
       LEFT JOIN profiles p ON p.user_id = m.user_id
@@ -345,7 +345,7 @@ class OrganizationRepository {
     return realmConnector.transaction(async executor => {
       await this.requireMember(executor, organizationId, userId, null);
       const { rows } = await executor.execute(`
-        SELECT m.user_id, m.role, m.status, m.title, m.permissions, to_char(m.joined_on, 'YYYY-MM-DD') AS joined_on,
+        SELECT m.id, m.user_id, m.role, m.status, m.title, m.permissions, to_char(m.joined_on, 'YYYY-MM-DD') AS joined_on,
           to_char(m.left_on, 'YYYY-MM-DD') AS left_on, ${displayName('p')} AS member_name, p.profile_picture_url AS member_picture_url
         FROM organization_members m JOIN users u ON u.id = m.user_id AND u.is_active AND NOT u.is_deleted
         LEFT JOIN profiles p ON p.user_id = m.user_id
@@ -412,14 +412,17 @@ class OrganizationRepository {
     });
   }
 
-  async updateMember(organizationId, actorId, targetId, changes) {
+  // `memberId` selects one membership period; without it the current
+  // (active or invited) period is changed.
+  async updateMember(organizationId, actorId, targetId, { memberId = null, ...changes }) {
     return realmConnector.transaction(async executor => {
       const self = actorId === targetId;
-      const access = await this.requireMember(executor, organizationId, actorId, self && Object.keys(changes).every(key => key === 'title') ? null : 'manage_members', { lock: true });
+      const titleOnly = Object.keys(changes).every(key => key === 'title');
+      const access = await this.requireMember(executor, organizationId, actorId, self && titleOnly && !memberId ? null : 'manage_members', { lock: true });
       const { rows } = await executor.execute(`
         SELECT id, role, status, joined_on, left_on FROM organization_members
-        WHERE organization_id = $1 AND user_id = $2 AND status IN ('active', 'invited', 'left', 'removed')
-        ORDER BY status IN ('active', 'invited') DESC, created_at DESC LIMIT 1`, [organizationId, targetId]);
+        WHERE organization_id = $1 AND user_id = $2
+          AND (id = $3 OR ($3::uuid IS NULL AND status IN ('active', 'invited')))`, [organizationId, targetId, memberId]);
       const target = rows[0];
       if (!target) throw requestError(404, 'MEMBER_NOT_FOUND', 'Member not found');
       if (!self && access.role !== 'leader' && target.role !== 'member') {

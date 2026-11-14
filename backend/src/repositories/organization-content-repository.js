@@ -80,8 +80,9 @@ class OrganizationContentRepository {
   async removePost(organizationId, userId, postId) {
     return realmConnector.transaction(async executor => {
       await organizationRepository.requireMember(executor, organizationId, userId, 'post_announcements');
-      const { rowCount } = await executor.execute("DELETE FROM organization_posts WHERE id = $1 AND organization_id = $2 AND source <> 'release'", [postId, organizationId]);
-      if (!rowCount) throw requestError(404, 'POST_NOT_FOUND', 'Update not found. Remove a release from the releases list.');
+      // Imported and release posts are kept: their rows deduplicate future imports.
+      const { rowCount } = await executor.execute("DELETE FROM organization_posts WHERE id = $1 AND organization_id = $2 AND source = 'manual'", [postId, organizationId]);
+      if (!rowCount) throw requestError(404, 'POST_NOT_FOUND', 'Update not found. Releases are removed from the releases list; imported videos cannot be removed.');
       await publishEvent(executor, 'organizations.changed', { id: organizationId });
     });
   }

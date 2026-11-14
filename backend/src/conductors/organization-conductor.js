@@ -26,6 +26,7 @@ export function normalizeInput(body = {}) {
   if (Array.isArray(input.bandIds)) input.bandIds = input.bandIds.map(id => id.toLowerCase());
   if (typeof input.userId === 'string') input.userId = input.userId.toLowerCase();
   if (typeof input.bandId === 'string') input.bandId = input.bandId.toLowerCase();
+  if (typeof input.memberId === 'string') input.memberId = input.memberId.toLowerCase();
   if (Array.isArray(input.links)) input.links = input.links.map(link => ({ linkType: link.linkType, url: String(link.url).trim() }));
   return input;
 }

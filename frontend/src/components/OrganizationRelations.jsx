@@ -44,7 +44,8 @@ export default function OrganizationRelations({ organization, onChanged }) {
           }}>{t('organizations.relations.end', { name: other.name })}</button>}
         </li>;
       })}</ul> : <p className="body-muted">{t('organizations.relations.empty')}</p>}
-      {manage && agency && <>
+      {manage && managed.error && <p className="error" role="alert">{managed.error} <button className="text-link" type="button" onClick={managed.reload}>{t('organizations.common.retry')}</button></p>}
+      {manage && agency && managed.data && <>
         {!!pending.length && <><h3>{t('organizations.relations.pending')}</h3><ul className="inline-list">{pending.map(relation => <li key={relation.id}>
           {relation.band.name} <span className="body-muted">({t('organizations.relations.awaiting')})</span>
           <button className="text-link" type="button" disabled={busy} onClick={() => run(() => conduit.transmit(`/organizations/${organization.id}/relations/${relation.id}`, { method: 'DELETE', auth: true }), t('organizations.relations.cancelled'))}>
