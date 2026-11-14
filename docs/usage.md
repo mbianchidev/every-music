@@ -440,6 +440,9 @@ sessions end immediately. A confirmation email is sent when mail is configured.
   recalled.
 - Other people's content: you are removed from their project collaborator
   lists, and their like counters are recalculated.
+- Pages you lead: leadership passes to the longest-serving active admin, or
+  else member, who is notified. A page with no other active member is retired.
+  Pages you created but do not lead stay with their members.
 - Reports filed by you or about you are removed. Administrator audit entries
   keep only the action and time; their actor or target IDs no longer lead to an
   account. They expire after 365 days.

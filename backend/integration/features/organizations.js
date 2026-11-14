@@ -8,6 +8,7 @@ import { realmConnector } from '../../src/repositories/realm-connector.js';
 import { cipherEngine } from '../../src/engines/cipher-engine.js';
 import { entitlementRepository } from '../../src/repositories/entitlement-repository.js';
 import { organizationRepository } from '../../src/repositories/organization-repository.js';
+import { accountRepository } from '../../src/repositories/account-repository.js';
 import { OrganizationFeedImporter } from '../../src/engines/organization-feed-importer.js';
 
 if (realmConfig.environment !== 'test' || !realmConfig.realm.connectionString) {
@@ -333,5 +334,29 @@ test('organizations: pages, memberships, relations, releases, feeds, claims, and
     await call(`/organizations/${otherBand.id}`, { actor: 0, method: 'DELETE', status: 403 });
     await call(`/organizations/${otherBand.id}`, { actor: 5, method: 'DELETE' });
     await call(`/organizations/${otherBand.id}`, { actor: null, status: 404 });
+  });
+
+  await t.test('deleting a leader account hands the page over or retires it', async () => {
+    const extra = [];
+    for (let i = 0; i < 3; i += 1) {
+      const email = `${marker}-handover-${i}@example.test`;
+      const { rows } = await realmConnector.execute('INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [email]);
+      users.push(rows[0].id); extra.push(rows[0].id);
+      tokens.push(cipherEngine.createAccessToken(rows[0].id, email));
+      await realmConnector.execute('INSERT INTO profiles (user_id, artist_name) VALUES ($1, $2)', [rows[0].id, `${marker} handover ${i}`]);
+    }
+    const [leader, member, solo] = [tokens.length - 3, tokens.length - 2, tokens.length - 1];
+    const shared = await call('/organizations', { actor: leader, method: 'POST', status: 201, body: { kind: 'band', name: `${marker} handover band` } });
+    const alone = await call('/organizations', { actor: solo, method: 'POST', status: 201, body: { kind: 'band', name: `${marker} solo band` } });
+    organizations.push(shared.id, alone.id);
+    await call(`/organizations/${shared.id}/members`, { actor: leader, method: 'POST', status: 201, body: { userId: extra[1] } });
+    await call(`/organizations/${shared.id}/invitation`, { actor: member, method: 'PATCH', body: { response: 'accept' } });
+    await accountRepository.deleteAccount(extra[0]);
+    await accountRepository.deleteAccount(extra[2]);
+    const { rows: leaders } = await realmConnector.execute(
+      "SELECT user_id FROM organization_members WHERE organization_id = $1 AND role = 'leader' AND status = 'active'", [shared.id]);
+    assert.deepEqual(leaders.map(row => row.user_id), [extra[1]]);
+    const { rows: [retired] } = await realmConnector.execute('SELECT is_deleted FROM organizations WHERE id = $1', [alone.id]);
+    assert.equal(retired.is_deleted, true);
   });
 });

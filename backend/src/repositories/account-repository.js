@@ -5,6 +5,17 @@ import { twoFactorRepository, throwOutcome, MAX_CODE_ATTEMPTS } from './two-fact
 import { cipherEngine } from '../engines/cipher-engine.js';
 import { secretBox } from '../engines/secret-box.js';
 import { requestError } from '../engines/request-error.js';
+import { exportSections } from '../engines/export-sections.js';
+import { organizationRepository } from './organization-repository.js';
+
+async function exportFeatureSections(all) {
+  const sections = {};
+  for (const section of exportSections) {
+    const rows = await all(section.sql);
+    sections[section.key] = section.single ? rows[0] ?? null : rows;
+  }
+  return sections;
+}
 
 export const MAX_REAUTH_FAILURES = 5;
 
@@ -270,6 +281,7 @@ class AccountRepository {
           SELECT id, status, challenge_code AS "challengeCode", selfie_media_id IS NOT NULL AS "selfieStored",
             document_media_id IS NOT NULL AS "documentStored", review_note AS "reviewNote", created_at AS "createdAt", reviewed_at AS "reviewedAt"
           FROM verification_requests WHERE requested_by = $1 ORDER BY created_at, id`),
+        ...await exportFeatureSections(all),
       };
     });
   }
@@ -291,6 +303,7 @@ class AccountRepository {
         UPDATE projects SET collaborators = COALESCE((
           SELECT jsonb_agg(entry) FROM jsonb_array_elements(collaborators) entry WHERE entry->>'userId' <> $1::text), '[]'::jsonb)
         WHERE collaborators @> jsonb_build_array(jsonb_build_object('userId', $1::text))`, [userId]);
+      await organizationRepository.handOverOnAccountDeletion(executor, userId);
       await executor.execute('DELETE FROM users WHERE id = $1', [userId]);
       if (reacted.length) {
         await executor.execute(`

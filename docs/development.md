@@ -364,6 +364,9 @@ seed and manifest together.
   (`$2` only) when drafts or private content reference media, or the hourly cleanup
   deletes those uploads after a day. Read and write media through
   `mediaRepository` so the configured storage driver is used.
+- Add every table that stores personal data to the account export registry
+  (`backend/src/engines/export-sections.js`), returning only the user's own
+  data, and make sure account deletion removes or detaches its rows.
 
 - Keep HTTP envelopes consistent: `{ "success": true, "data": ... }` or `{ "success": false, "error": ... }`.
 - Use repository executors supplied by `realmConnector.transaction`; calling the global pool from inside a transaction is not atomic.

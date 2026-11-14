@@ -331,8 +331,13 @@ test('account trust: two-step sign-in, re-authentication, export, deletion, disc
     await realmConnector.execute(`INSERT INTO messages (conversation_id, sender_id, client_id, body) VALUES
       ($1, $2, uuid_generate_v4(), 'Synthetic note written by the exporter'),
       ($1, $3, uuid_generate_v4(), 'Synthetic private reply from someone else')`, [conversation, users[0], users[1]]);
+    await realmConnector.execute(`INSERT INTO saved_searches (user_id, name, filters) VALUES ($1, 'Synthetic saved search', '{}'::jsonb)`, [users[0]]);
     const exported = await data('/account/export');
     assert.equal(exported.account.email, emails[0]);
+    assert.deepEqual(exported.savedSearches.map(row => row.name), ['Synthetic saved search']);
+    for (const key of ['profileLinks', 'notificationChannels', 'applicationsSent', 'organizationMemberships', 'marketplaceListings']) {
+      assert.ok(Array.isArray(exported[key]), `export includes ${key}`);
+    }
     assert.equal(exported.profile.artistName, `${marker} artist 0`);
     assert.equal(exported.conversations[0].receivedMessages, 1);
     assert.ok(exported.sentMessages.some(message => message.body === 'Synthetic note written by the exporter'));

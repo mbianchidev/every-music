@@ -490,6 +490,35 @@ class OrganizationRepository {
     });
   }
 
+  // Runs inside account deletion before the user row is removed. Each page the
+  // user leads passes to the longest-serving active admin, then member; pages
+  // with nobody left are retired so they never remain leaderless.
+  async handOverOnAccountDeletion(executor, userId) {
+    const { rows } = await executor.execute(`
+      SELECT m.organization_id, o.name FROM organization_members m JOIN organizations o ON o.id = m.organization_id
+      WHERE m.user_id = $1 AND m.role = 'leader' AND m.status = 'active' AND o.is_deleted = FALSE
+      FOR UPDATE OF m`, [userId]);
+    for (const { organization_id: organizationId, name } of rows) {
+      const { rows: [successor] } = await executor.execute(`
+        SELECT id, user_id FROM organization_members
+        WHERE organization_id = $1 AND user_id <> $2 AND status = 'active'
+        ORDER BY (role = 'admin') DESC, COALESCE(joined_on, created_at::date), created_at, id LIMIT 1`, [organizationId, userId]);
+      if (!successor) {
+        await executor.execute('UPDATE organizations SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1', [organizationId]);
+      } else {
+        await executor.execute(`UPDATE organization_members SET role = 'member', status = 'left', left_on = COALESCE(left_on, CURRENT_DATE), updated_at = NOW()
+          WHERE organization_id = $1 AND user_id = $2`, [organizationId, userId]);
+        await executor.execute(`UPDATE organization_members SET role = 'leader', permissions = '{}', updated_at = NOW() WHERE id = $1`, [successor.id]);
+        await notificationRepository.create(executor, {
+          userId: successor.user_id, kind: 'organization_membership', title: `You are now the leader of ${name}`,
+          link: `#organization?id=${organizationId}`, key: `organization-leader:${organizationId}:${successor.user_id}:${Date.now()}`,
+          params: { organizationId, organizationName: name, change: 'leader' },
+        });
+      }
+      await publishEvent(executor, 'organizations.changed', { id: organizationId });
+    }
+  }
+
   async transferLeadership(organizationId, actorId, targetId) {
     if (actorId === targetId) throw requestError(400, 'INVALID_TRANSFER', 'Choose another active member');
     return realmConnector.transaction(async executor => {
