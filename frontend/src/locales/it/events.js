@@ -83,7 +83,7 @@ export default {
     draft: "La discussione si apre quando l'evento viene pubblicato.",
     label: 'Il tuo messaggio', hint: 'Fino a 2.000 caratteri. Sii gentile: gli organizzatori possono rimuovere i messaggi.',
     post: 'Pubblica messaggio', posting: 'Pubblicazione...', posted: 'Messaggio pubblicato.', delete: 'Elimina il messaggio di {name}',
-    deleteConfirm: 'Eliminare questo messaggio?', deleted: 'Messaggio eliminato.', empty: 'Ancora nessun messaggio. Inizia tu la conversazione.',
+    deleteOwn: 'Elimina il tuo messaggio', deleteConfirm: 'Eliminare questo messaggio?', deleted: 'Messaggio eliminato.', empty: 'Ancora nessun messaggio. Inizia tu la conversazione.',
     loading: 'Caricamento discussione', pages: 'Pagine della discussione', you: 'Tu',
   },
   report: {

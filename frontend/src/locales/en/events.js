@@ -81,7 +81,7 @@ export default {
     heading: 'Discussion', intro: 'Talk with other people going and with the organizers.',
     locked: 'Mark yourself as going or interested to read and join the discussion.', draft: 'The discussion opens once the event is published.',
     label: 'Your message', hint: 'Up to 2,000 characters. Be kind: organizers can remove messages.', post: 'Post message', posting: 'Posting...',
-    posted: 'Message posted.', delete: 'Delete message from {name}', deleteConfirm: 'Delete this message?', deleted: 'Message deleted.',
+    posted: 'Message posted.', delete: 'Delete message from {name}', deleteOwn: 'Delete your message', deleteConfirm: 'Delete this message?', deleted: 'Message deleted.',
     empty: 'No messages yet. Start the conversation.', loading: 'Loading discussion', pages: 'Discussion pages', you: 'You',
   },
   report: {

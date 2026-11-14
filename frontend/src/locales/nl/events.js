@@ -85,7 +85,7 @@ export default {
     draft: 'De discussie opent zodra het evenement gepubliceerd is.',
     label: 'Je bericht', hint: 'Maximaal 2.000 tekens. Blijf vriendelijk: organisatoren kunnen berichten verwijderen.',
     post: 'Bericht plaatsen', posting: 'Plaatsen...', posted: 'Bericht geplaatst.', delete: 'Bericht van {name} verwijderen',
-    deleteConfirm: 'Dit bericht verwijderen?', deleted: 'Bericht verwijderd.', empty: 'Nog geen berichten. Begin het gesprek.',
+    deleteOwn: 'Je bericht verwijderen', deleteConfirm: 'Dit bericht verwijderen?', deleted: 'Bericht verwijderd.', empty: 'Nog geen berichten. Begin het gesprek.',
     loading: 'Discussie laden', pages: "Pagina's van de discussie", you: 'Jij',
   },
   report: {

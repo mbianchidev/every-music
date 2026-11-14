@@ -686,7 +686,8 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
   .inline-list { gap: 8px 14px; }
 }
 /* w8-events */
-.event-quick-filters, .filters.event-filters { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.event-quick-filters, .filters.event-filters { min-width: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.discovery-form > .filter-details { min-width: 0; }
 .event-quick-filters { max-width: 560px; }
 .filters.event-filters .btn { grid-column: 1 / -1; justify-self: start; }
 .event-filters .picker, .event-filters .chosen-entity, .event-filters .place-picker { align-self: start; }
@@ -729,6 +730,7 @@ body:has(.tour-dialog[open]) { overflow: hidden; }
 .events-extension-list h3 { margin: 0 0 10px; }
 .events-extension-list .stack { margin-bottom: 10px; }
 @media (max-width: 480px) {
+  .event-quick-filters, .filters.event-filters { grid-template-columns: minmax(0, 1fr); }
   .event-card .call-card-heading { flex-wrap: wrap; }
   .communication { padding: 12px; }
 }

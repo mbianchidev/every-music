@@ -12,7 +12,7 @@ import CapacityBar from '../components/events/CapacityBar.jsx';
 import EventLineup from '../components/events/EventLineup.jsx';
 import EventRsvp from '../components/events/EventRsvp.jsx';
 import EventPlanning from '../components/events/EventPlanning.jsx';
-import EventCommunications from '../components/events/EventCommunications.jsx';
+import EventCommunications, { EventCommunicationForm } from '../components/events/EventCommunications.jsx';
 import EventDiscussion from '../components/events/EventDiscussion.jsx';
 import EventReportButton from '../components/events/EventReportButton.jsx';
 import EventManageActions from '../components/events/EventManageActions.jsx';
@@ -79,7 +79,7 @@ export default function EventScreen({ route }) {
       {resource.error && <ErrorState message={resource.error} onRetry={resource.reload} />}
       {!event && !resource.error ? <Spinner label={t('events.detail.loading')} /> : event && <>
         {notice && <p className={`status-message event-notice event-notice-${notice}`}>{t(`events.detail.notices.${notice}`)}</p>}
-        <EventCommunications event={event} onChanged={resource.reload} />
+        <EventCommunications event={event} />
         <article className="card event-detail">
           {event.images[0] && <ManagedImage className="event-cover" src={event.images[0]} authenticated={event.visibility === 'draft'}
             alt={t('events.detail.imageAlt', { index: 1, title: event.title })} width="960" height="540" />}
@@ -102,6 +102,7 @@ export default function EventScreen({ route }) {
           </div>
         </article>
         <EventLineup event={event} onChanged={resource.reload} managedBandIds={managedBandIds} />
+        <EventCommunicationForm event={event} onChanged={resource.reload} />
         <EventRsvp event={event} onChanged={resource.reload} />
         <EventPlanning event={event} onChanged={resource.reload} />
         <EventDiscussion event={event} />

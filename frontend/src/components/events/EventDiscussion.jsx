@@ -65,7 +65,7 @@ export default function EventDiscussion({ event }) {
               <p className="detail-text">{item.body}</p>
               <div className="compact-actions">
                 {item.canDelete && <button className="text-link" type="button" onClick={() => remove(item)}>
-                  {t('events.discussion.delete', { name: item.isOwn ? t('events.discussion.you') : item.author.name })}</button>}
+                  {item.isOwn ? t('events.discussion.deleteOwn') : t('events.discussion.delete', { name: item.author.name })}</button>}
                 {!item.isOwn && <EventReportButton event={event} post={item} />}
               </div>
             </li>)}</ul>}
