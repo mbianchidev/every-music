@@ -6,6 +6,8 @@ import PageHeader from '../components/PageHeader.jsx';
 import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import MessagingKeys from '../components/MessagingKeys.jsx';
+import SecuritySettings from '../components/SecuritySettings.jsx';
+import PrivacySettings from '../components/PrivacySettings.jsx';
 
 const labels = {
   messages: 'New messages',
@@ -93,6 +95,8 @@ export default function SettingsScreen() {
           <p>Offline changes stay in the open form and are not sent automatically. Reconnect and submit again. Signing out clears the saved feed and unsubscribes this browser from push.</p>
         </section>
       </>}
+      <SecuritySettings />
+      <PrivacySettings />
     </div>
   );
 }

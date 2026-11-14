@@ -123,6 +123,8 @@ class AccountRepository {
       await executor.execute('UPDATE users SET sessions_revoked_at = NOW() WHERE id = $1', [userId]);
       await executor.execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE', [userId]);
       await executor.execute('DELETE FROM two_factor_challenges WHERE user_id = $1', [userId]);
+      await executor.execute('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
+      await executor.execute('UPDATE user_preferences SET push = FALSE WHERE user_id = $1', [userId]);
       await twoFactorRepository.securityAlert(executor, userId, 'sessions_revoked', 'You were signed out of all devices');
       await publishEvent(executor, 'account.changed', { userId });
     });

@@ -1,5 +1,6 @@
 import { mediaUrl } from '../lib/media.js';
 import Avatar from './Avatar.jsx';
+import VerifiedBadge from './VerifiedBadge.jsx';
 
 const links = { spotify_link: 'Spotify', youtube_link: 'YouTube', bandcamp_link: 'Bandcamp', soundcloud_link: 'SoundCloud', website_link: 'Website' };
 
@@ -10,6 +11,7 @@ export default function ProfileDetails({ profile, showName = true }) {
         {profile.profilePictureUrl ? <img className="profile-image" src={mediaUrl(profile.profilePictureUrl)} alt={`Profile image for ${profile.artistName || 'this musician'}`} width="88" height="88" />
           : <Avatar name={profile.artistName || 'Musician'} large />}
         <div>{showName && <h2 className="heading-md">{profile.artistName || 'Musician'}</h2>}
+          {profile.verifiedAt && <p><VerifiedBadge verifiedAt={profile.verifiedAt} label /></p>}
           {(profile.firstName || profile.lastName) && <p className="body-muted">{profile.firstName} {profile.lastName}</p>}
           {profile.city && <p className="body-muted">{[profile.city, profile.state, profile.country].filter(Boolean).join(', ')}</p>}
         </div>

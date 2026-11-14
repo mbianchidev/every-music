@@ -1,6 +1,7 @@
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import ManagedImage from './ManagedImage.jsx';
+import VerifiedBadge from './VerifiedBadge.jsx';
 
 const AnnouncementCard = ({ post, actions, expanded = false }) => {
   const city = post.location?.city;
@@ -9,6 +10,7 @@ const AnnouncementCard = ({ post, actions, expanded = false }) => {
     <article className="card announcement-card">
       {post.creatorName && <div className="card-author"><Avatar name={post.creatorName} src={post.creatorPictureUrl} />
         <a href={`#musician?id=${post.userId}`} aria-label={`Musician: ${post.creatorName}`}>{post.creatorName}</a>
+        <VerifiedBadge verifiedAt={post.creatorVerifiedAt} />
         {post.isCoverBand && <span className="tag tag-muted">Covers</span>}
       </div>}
       <div className="call-card-heading">

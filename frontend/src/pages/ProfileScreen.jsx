@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import ProfileDetails from '../components/ProfileDetails.jsx';
+import VerificationRequest from '../components/VerificationRequest.jsx';
 
 export default function ProfileScreen() {
   const resource = useResource('/profiles/me', { events: 'profiles.changed' });
@@ -49,6 +50,7 @@ export default function ProfileScreen() {
           <div className="compact-actions"><a href="#settings">Preferences</a><a href="#analytics">My analytics</a></div>
         </article>
       )}
+      <VerificationRequest />
     </div>
   );
 }

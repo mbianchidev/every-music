@@ -1,0 +1,20 @@
+export default {
+  title: 'Verificatie in twee stappen',
+  intro: {
+    totp: 'Voer de 6-cijferige code uit je authenticator-app in.',
+    email: 'We hebben een 6-cijferige code gestuurd naar {destination}.',
+    sms: 'We hebben een 6-cijferige code per sms gestuurd naar {destination}.',
+  },
+  notSent: 'De code kon niet worden verstuurd. Vraag een nieuwe code aan of gebruik een herstelcode.',
+  codeLabel: 'Verificatiecode',
+  codeHint: 'De 6 cijfers uit je app, e-mail of sms.',
+  recoveryLabel: 'Herstelcode',
+  recoveryHint: 'Een van de herstelcodes die je hebt bewaard, zoals ABCDE-FGHJK. Elke code werkt één keer.',
+  useRecovery: 'Gebruik in plaats daarvan een herstelcode',
+  useCode: 'Gebruik in plaats daarvan een verificatiecode',
+  submit: 'Verifiëren en inloggen',
+  submitting: 'Bezig met verifiëren...',
+  resend: 'Stuur een nieuwe code',
+  resent: 'Er is een nieuwe code verstuurd.',
+  cancel: 'Opnieuw beginnen',
+};

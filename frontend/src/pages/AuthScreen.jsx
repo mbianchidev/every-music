@@ -4,6 +4,8 @@ import { finishSignIn } from '../lib/sign-in.js';
 import FormField from '../components/FormField.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import GoogleSignIn from '../components/GoogleSignIn.jsx';
+import TwoStepSignIn from '../components/TwoStepSignIn.jsx';
+import { t } from '../lib/i18n.js';
 
 class AuthScreen extends Component {
   constructor(props) {
@@ -14,7 +16,10 @@ class AuthScreen extends Component {
       error: '',
       errorCode: '',
       loading: false,
-      message: props.route?.query.get('signedOut') === 'local-only' ? 'Signed out on this device. Server session revocation could not be confirmed.' : '',
+      message: props.route?.query.get('signedOut') === 'local-only' ? 'Signed out on this device. Server session revocation could not be confirmed.'
+        : props.route?.query.get('signedOut') === 'everywhere' ? t('accountSecurity.signedOutEverywhere')
+          : props.route?.query.has('accountDeleted') ? t('accountSecurity.accountDeleted') : '',
+      challenge: null,
     };
   }
 
@@ -34,6 +39,10 @@ class AuthScreen extends Component {
         method: 'POST',
         body: { email, password },
       });
+      if (response.twoFactorRequired) {
+        this.setState({ challenge: response, password: '', loading: false });
+        return;
+      }
       finishSignIn(response);
     } catch (error) {
       this.setState({
@@ -59,7 +68,18 @@ class AuthScreen extends Component {
   };
 
   render() {
-    const { email, password, error, errorCode, loading, message } = this.state;
+    const { email, password, error, errorCode, loading, message, challenge } = this.state;
+
+    if (challenge) {
+      return (
+        <div className="container-narrow center-content">
+          <div style={{ width: '100%' }}>
+            <PageHeader eyebrow="Member access" title="Welcome back" />
+            <TwoStepSignIn challenge={challenge} onCancel={() => this.setState({ challenge: null })} />
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="container-narrow center-content">
@@ -118,7 +138,7 @@ class AuthScreen extends Component {
               </button>
             </p>
           </form>
-          <GoogleSignIn />
+          <GoogleSignIn onTwoFactor={nextChallenge => this.setState({ challenge: nextChallenge, error: '', message: '' })} />
         </div>
       </div>
     );

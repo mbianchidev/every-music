@@ -137,7 +137,10 @@ export class AccountTrustConductor {
     });
   };
 
-  verification = async (request, reply) => ok(reply, await verificationRepository.mine(request.authenticatedUser.userId));
+  verification = async (request, reply) => ok(reply, {
+    ...await verificationRepository.mine(request.authenticatedUser.userId),
+    retentionDays: this.config.accountTrust.verificationRetentionDays,
+  });
 
   requestVerification = async (request, reply) => ok(reply,
     await verificationRepository.submit(request.authenticatedUser.userId, request.body), 201);
