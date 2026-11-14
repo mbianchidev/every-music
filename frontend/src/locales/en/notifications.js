@@ -19,6 +19,10 @@ export default {
     come_back: { label: 'Reminder after a long break', title: 'We miss you on Every.music', detail: '' },
     app_update_minor: { label: 'Minor app updates', title: 'An app update is available', detail: '' },
     app_update_major: { label: 'Major app updates', title: 'A major app update is available', detail: 'Update to keep using the latest features.' },
+    event_published: { label: 'New events from pages and artists you follow', title: 'New event: {title}', detail: '' },
+    event_lineup: { label: 'You were added to an event lineup', title: 'You are on the lineup of {title}', detail: '' },
+    event_reminder: { label: 'Event reminders you set', title: 'Reminder: {title} starts soon', detail: '' },
+    event_communication: { label: 'Official updates for events you go to', title: 'Official update about {title}', detail: '' },
   },
   groups: {
     messages: 'Messages',

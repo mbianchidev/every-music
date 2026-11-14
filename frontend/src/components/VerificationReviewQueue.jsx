@@ -32,7 +32,8 @@ function RequestCard({ request, onDecided }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const name = request.artistName;
+  const page = request.subjectType === 'organization';
+  const name = page ? request.organizationName : request.artistName;
   const decide = decision => async () => {
     setBusy(true); setError('');
     try {
@@ -44,14 +45,18 @@ function RequestCard({ request, onDecided }) {
     if (!window.confirm(t('profileVerification.admin.revokeConfirm', { name }))) return;
     setBusy(true); setError('');
     try {
-      await conduit.transmit(`/admin/users/${request.subjectId}/verification`, { method: 'DELETE', auth: true });
+      if (page) await conduit.transmit(`/admin/organizations/${request.subjectId}/verification`, { method: 'PUT', auth: true, body: { verified: false } });
+      else await conduit.transmit(`/admin/users/${request.subjectId}/verification`, { method: 'DELETE', auth: true });
       onDecided(t('profileVerification.admin.revoked', { name }));
     } catch (failure) { setError(failure.message); setBusy(false); }
   };
   const photos = [[request.selfieMediaId, 'selfieAlt'], [request.documentMediaId, 'documentAlt']].filter(([id]) => id);
   return (
     <li className="card account-trust-card">
-      <h4><a href={`#musician?id=${request.subjectId}`}>{name}</a><VerifiedBadge verifiedAt={request.verifiedAt} /></h4>
+      {page ? <h4><a href={`#organization?id=${request.subjectId}`}>{name}</a> <VerifiedBadge verified={Boolean(request.organizationVerifiedAt)} /></h4>
+        : <h4><a href={`#musician?id=${request.subjectId}`}>{name}</a><VerifiedBadge verifiedAt={request.verifiedAt} /></h4>}
+      {page && <p className="eyebrow">{t('organizationVerification.admin.page', { kind: t(`organizations.kinds.${request.organizationKind}`) })}</p>}
+      {page && request.requestNote && <><h5>{t('organizationVerification.admin.note')}</h5><p className="detail-text">{request.requestNote}</p></>}
       <p className="body-muted">{t('profileVerification.admin.requested', { date: formatDate(request.createdAt) })}
         {' / '}{t('profileVerification.admin.statusLine', { status: t(`profileVerification.admin.statuses.${request.status}`) })}</p>
       <p className="verification-code-inline">{t('profileVerification.admin.code', { code: request.challengeCode })}</p>
@@ -74,7 +79,7 @@ function RequestCard({ request, onDecided }) {
           <button className="btn btn-danger" type="button" disabled={busy || note.trim().length < 5} onClick={decide('reject')}>{t('profileVerification.admin.reject')}</button>
         </div>
       </form>}
-      {request.status === 'approved' && request.verifiedAt && <div>
+      {request.status === 'approved' && (page ? request.organizationVerifiedAt : request.verifiedAt) && <div>
         <button className="btn btn-secondary" type="button" disabled={busy} onClick={revoke}>{t('profileVerification.admin.revoke')}</button>
       </div>}
     </li>

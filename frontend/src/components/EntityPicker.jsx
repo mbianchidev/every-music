@@ -6,9 +6,11 @@ import FormField from './FormField.jsx';
 const sources = {
   band: term => `/organizations?kind=band&q=${encodeURIComponent(term)}&pageSize=10`,
   musician: term => `/profiles/search?searchTerm=${encodeURIComponent(term)}&pageSize=10`,
+  venue: term => `/organizations?kind=venue&q=${encodeURIComponent(term)}&pageSize=10`,
+  organization: term => `/organizations?q=${encodeURIComponent(term)}&pageSize=10`,
 };
-const rowsOf = (type, data) => (type === 'band' ? data?.organizations : data?.profiles) ?? [];
-const optionOf = (type, item) => (type === 'band'
+const rowsOf = (type, data) => (type === 'musician' ? data?.profiles : data?.organizations) ?? [];
+const optionOf = (type, item) => (type !== 'musician'
   ? { id: item.id, label: [item.name, item.location?.city].filter(Boolean).join(', ') }
   : { id: item.userId, label: [item.artistName || [item.firstName, item.lastName].filter(Boolean).join(' ') || item.userId, item.city].filter(Boolean).join(', ') });
 

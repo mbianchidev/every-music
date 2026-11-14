@@ -10,6 +10,8 @@ export function backFallback(route, authorized) {
     case 'edit-profile': return '#profile';
     case 'edit-announcement': return '#my-posts';
     case 'legal': return '#help';
+    case 'event': case 'new-event': case 'my-events': return '#events';
+    case 'edit-event': return route.query.get('id') ? `#event?id=${encodeURIComponent(route.query.get('id'))}` : '#events';
     case 'help': return route.query.get('view') ? '#help' : home;
     default: return null;
   }

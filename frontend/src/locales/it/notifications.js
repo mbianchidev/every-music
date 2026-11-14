@@ -19,6 +19,10 @@ export default {
     come_back: { label: 'Promemoria dopo una lunga pausa', title: 'Ci manchi su Every.music', detail: '' },
     app_update_minor: { label: "Aggiornamenti minori dell'app", title: "È disponibile un aggiornamento dell'app", detail: '' },
     app_update_major: { label: "Aggiornamenti importanti dell'app", title: "È disponibile un aggiornamento importante dell'app", detail: 'Aggiorna per continuare a usare le funzioni più recenti.' },
+    event_published: { label: 'Nuovi eventi di pagine e artisti che segui', title: 'Nuovo evento: {title}', detail: '' },
+    event_lineup: { label: 'Sei stato aggiunto alla line-up di un evento', title: 'Sei nella line-up di {title}', detail: '' },
+    event_reminder: { label: 'Promemoria degli eventi', title: 'Promemoria: {title} sta per iniziare', detail: '' },
+    event_communication: { label: 'Aggiornamenti ufficiali degli eventi a cui partecipi', title: 'Aggiornamento ufficiale su {title}', detail: '' },
   },
   groups: {
     messages: 'Messaggi',

@@ -42,6 +42,10 @@ const OrganizationScreen = lazyScreen(() => import('./pages/OrganizationScreen.j
 const OrganizationEditorScreen = lazyScreen(() => import('./pages/OrganizationEditorScreen.jsx'));
 const OrganizationMembersScreen = lazyScreen(() => import('./pages/OrganizationMembersScreen.jsx'));
 const YourPagesScreen = lazyScreen(() => import('./pages/YourPagesScreen.jsx'));
+const EventsScreen = lazyScreen(() => import('./pages/EventsScreen.jsx'));
+const EventScreen = lazyScreen(() => import('./pages/EventScreen.jsx'));
+const EventEditorScreen = lazyScreen(() => import('./pages/EventEditorScreen.jsx'));
+const MyEventsScreen = lazyScreen(() => import('./pages/MyEventsScreen.jsx'));
 
 const ROUTES = {
   boot: { screen: BootScreen, title: 'Starting' },
@@ -82,6 +86,11 @@ const ROUTES = {
   'edit-organization': { screen: OrganizationEditorScreen, get title() { return t('organizations.routes.edit'); }, protected: true },
   'organization-members': { screen: OrganizationMembersScreen, get title() { return t('organizations.routes.members'); }, protected: true },
   'your-pages': { screen: YourPagesScreen, get title() { return t('organizations.routes.yours'); }, protected: true },
+  events: { screen: EventsScreen, get title() { return t('events.routes.discover'); }, protected: true },
+  event: { screen: EventScreen, get title() { return t('events.routes.event'); }, protected: true },
+  'new-event': { screen: EventEditorScreen, get title() { return t('events.routes.create'); }, protected: true },
+  'edit-event': { screen: EventEditorScreen, get title() { return t('events.routes.edit'); }, protected: true },
+  'my-events': { screen: MyEventsScreen, get title() { return t('events.routes.mine'); }, protected: true },
 };
 
 function readRoute() {

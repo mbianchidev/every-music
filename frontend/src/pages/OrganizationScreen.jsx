@@ -21,6 +21,7 @@ import OrganizationPhotos from '../components/OrganizationPhotos.jsx';
 import SimilarBands from '../components/SimilarBands.jsx';
 import ClaimVenue from '../components/ClaimVenue.jsx';
 import PastAndNextEvents from '../components/PastAndNextEvents.jsx';
+import OrganizationVerificationRequest from '../components/OrganizationVerificationRequest.jsx';
 
 function Details({ organization }) {
   const { t, formatNumber } = useI18n();
@@ -125,6 +126,7 @@ export default function OrganizationScreen({ route }) {
         {organization.kind === 'band' && <SimilarBands organization={organization} onChanged={resource.reload} />}
         <OrganizationPhotos organization={organization} onChanged={resource.reload} />
         <PastAndNextEvents subject={{ type: 'organization', id: organization.id }} />
+        <OrganizationVerificationRequest organization={organization} />
       </>}
     </div>
   );

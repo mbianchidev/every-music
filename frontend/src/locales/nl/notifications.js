@@ -19,6 +19,10 @@ export default {
     come_back: { label: 'Herinnering na een lange pauze', title: 'We missen je op Every.music', detail: '' },
     app_update_minor: { label: 'Kleine app-updates', title: 'Er is een app-update beschikbaar', detail: '' },
     app_update_major: { label: 'Grote app-updates', title: 'Er is een grote app-update beschikbaar', detail: 'Werk bij om de nieuwste functies te blijven gebruiken.' },
+    event_published: { label: "Nieuwe evenementen van pagina's en artiesten die je volgt", title: 'Nieuw evenement: {title}', detail: '' },
+    event_lineup: { label: 'Je bent toegevoegd aan een line-up', title: 'Je staat in de line-up van {title}', detail: '' },
+    event_reminder: { label: 'Herinneringen voor evenementen', title: 'Herinnering: {title} begint binnenkort', detail: '' },
+    event_communication: { label: 'Officiële updates van evenementen waar je naartoe gaat', title: 'Officiële update over {title}', detail: '' },
   },
   groups: {
     messages: 'Berichten',
