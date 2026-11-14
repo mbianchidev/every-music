@@ -2,22 +2,23 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createRequire } from 'node:module';
 import { randomBytes, randomUUID } from 'node:crypto';
+import playwrightConfig from '../playwright.config.js';
+import { createRealmConfig } from '../../backend/config/realm.js';
+import { CipherEngine } from '../../backend/src/engines/cipher-engine.js';
 
 const requireBackend = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { Pool } = requireBackend('pg');
-const bcrypt = requireBackend('bcryptjs');
 const pool = new Pool({ connectionString: process.env.REALM_CONNECTION });
 const marker = `browser-${randomUUID().slice(0, 8)}`;
-const password = 'Synthetic1Password';
 const people = [];
+// Sessions are minted with the browser API's own signing settings so this spec
+// does not spend the per-IP sign-in budget used by other browser journeys.
+const apiCipher = new CipherEngine(createRealmConfig(playwrightConfig.webServer[0].env));
 
 test.beforeAll(async () => {
-  const hash = bcrypt.hashSync(password, 4);
   for (let i = 0; i < 2; i += 1) {
     const email = `${marker}-devices-${i}@example.test`;
-    const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash, email_verified) VALUES ($1, $2, TRUE) RETURNING id', [email, hash],
-    );
+    const { rows } = await pool.query('INSERT INTO users (email, email_verified) VALUES ($1, TRUE) RETURNING id', [email]);
     people.push({ id: rows[0].id, email });
     await pool.query('INSERT INTO profiles (user_id, artist_name, city) VALUES ($1, $2, $3)', [rows[0].id, `Demo Devices ${i}`, 'Synthetic City']);
   }
@@ -33,12 +34,14 @@ test.afterAll(async () => {
   await pool.end();
 });
 
-async function login(page, person) {
-  await page.goto('/#login');
-  await page.getByLabel(/^Email\b/).fill(person.email);
-  await page.getByLabel(/^Password\b/).fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Open calls', exact: true })).toBeVisible();
+async function openSettings(page, person) {
+  const session = {
+    persona: { userId: person.id, email: person.email, emailVerified: true },
+    keys: { accessToken: apiCipher.createAccessToken(person.id, person.email), refreshToken: 'synthetic-unused-refresh-token' },
+  };
+  await page.addInitScript(value => sessionStorage.setItem('everymusic.session.v1', value), JSON.stringify(session));
+  await page.goto('/#settings');
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
 }
 
 async function assertAccessible(page, label) {
@@ -49,8 +52,7 @@ async function assertAccessible(page, label) {
 }
 
 test('members review and remove phones registered for native push', async ({ page }) => {
-  await login(page, people[0]);
-  await page.goto('/#settings');
+  await openSettings(page, people[0]);
   const section = page.getByRole('region', { name: 'Mobile devices' });
   await expect(section).toBeVisible();
   await expect(section.getByText('Mobile push is not configured on this server.', { exact: false })).toBeVisible();
@@ -77,8 +79,7 @@ test('members review and remove phones registered for native push', async ({ pag
 });
 
 test('the mobile devices section stays hidden when push is unavailable and nothing is registered', async ({ page }) => {
-  await login(page, people[1]);
-  await page.goto('/#settings');
+  await openSettings(page, people[1]);
   await expect(page.getByRole('heading', { name: 'Browser push', exact: true })).toBeVisible();
   await expect(page.locator('.spinner')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Mobile devices' })).toHaveCount(0);
