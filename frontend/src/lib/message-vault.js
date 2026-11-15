@@ -150,7 +150,9 @@ export class MessageVault {
 }
 
 export const messageVault = new MessageVault();
-if (import.meta.hot) import.meta.hot.dispose(() => messageVault.dispose());
+// A statement starting with `import.meta` is misparsed as an import declaration by CodeQL.
+const hot = import.meta.hot;
+if (hot) hot.dispose(() => messageVault.dispose());
 export function useMessageVault() {
   const [snapshot, setSnapshot] = useState(messageVault.snapshot());
   useEffect(() => messageVault.subscribe(setSnapshot), []);
