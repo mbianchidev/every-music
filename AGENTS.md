@@ -22,7 +22,8 @@ From the repository root, after dependencies are installed:
 ```bash
 (cd backend && npm run verify)
 (cd frontend && npm run check)
-node --test scripts/test/release.test.mjs
+node scripts/check-lockfiles.mjs
+node --test scripts/test/release.test.mjs scripts/test/check-lockfiles.test.mjs
 (cd backend && npm audit --omit=dev --audit-level=high)
 (cd frontend && npm audit --omit=dev --audit-level=high)
 ```
