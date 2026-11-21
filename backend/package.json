@@ -31,7 +31,7 @@
   "author": "Every.music",
   "license": "Apache-2.0",
   "dependencies": {
-    "@fastify/cors": "^11.4.1",
+    "@fastify/cors": "^11.4.3",
     "@fastify/rate-limit": "^11.2.2",
     "aws4fetch": "^1.0.20",
     "bcryptjs": "^3.0.3",
