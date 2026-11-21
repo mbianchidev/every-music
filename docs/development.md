@@ -75,10 +75,17 @@ After installing dependencies, run from the repository root:
 ```bash
 (cd backend && npm run verify)
 (cd frontend && npm run check)
-node --test scripts/test/release.test.mjs
+node scripts/check-lockfiles.mjs
+node --test scripts/test/release.test.mjs scripts/test/check-lockfiles.test.mjs
 (cd backend && npm audit --omit=dev --audit-level=high)
 (cd frontend && npm audit --omit=dev --audit-level=high)
 ```
+
+`backend/.npmrc` and `frontend/.npmrc` pin the public npm registry, and
+`check-lockfiles.mjs` fails when a lockfile resolves a package elsewhere.
+Lockfiles that point at a private feed or mirror break CI and Dependabot,
+which cannot authenticate to it. If your environment sets `npm_config_registry`,
+unset it before `npm install`.
 
 Backend verification includes syntax checks and the Node test runner. Frontend
 checks run tests and the Vite production build. Tests cover native-fetch receiver

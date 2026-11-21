@@ -38,6 +38,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Check lockfiles use the public npm registry
+        run: node ../scripts/check-lockfiles.mjs
       - run: npm ci
       - run: npm run verify
       - run: npm audit --omit=dev --audit-level=high
@@ -58,8 +60,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run check
-      - name: Test desktop release verification
-        run: node --test ../scripts/test/release.test.mjs
+      - name: Test desktop release and lockfile scripts
+        run: node --test ../scripts/test/release.test.mjs ../scripts/test/check-lockfiles.test.mjs
       - run: npm audit --omit=dev --audit-level=high
 
   integration:
