@@ -22,11 +22,12 @@ Add the client origins to `PORTAL_ORIGINS` and keep the Tauri `connect-src` poli
 
 ## Brand assets
 
-The brand is the Every.music name with a purple dot, the wave emblem, the
+The brand is the Every.music name with a purple dot, the three-note emblem (three notes at
+different pitches joined by one beam), the
 purple palette in `frontend/src/lib/styles.js` (`--brand` `#6554c0` light,
 `#bcaff9` dark, on `#f6f7fb` / `#11131a` backgrounds), and the platform system
 font stack, so no font files are downloaded. The app icon source is
-`frontend/brand/app-icon.svg` (purple rounded square with the white wave emblem). Regenerate the desktop and Android launcher icons with
+`frontend/brand/app-icon.svg` (purple rounded square with the white three-note emblem). Regenerate the desktop and Android launcher icons with
 `npx tauri icon <1024px PNG rendered from that SVG>` from `frontend/`, then
 remove the iOS and adaptive-icon extras it creates unless you are changing those
 platform integrations. Web icons in `frontend/public/icons/` and

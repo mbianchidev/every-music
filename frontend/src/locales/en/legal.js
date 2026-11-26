@@ -30,7 +30,7 @@ export default {
         what: { heading: 'What Every.music does', body: 'Every.music connects musicians. Create a profile with your instruments, genres, and projects, publish open calls when you need someone, and talk privately with people you meet.' },
         how: { heading: 'How it works', body: '- The feed lists open calls from musicians and bands.\n- Musician search finds people by instrument, genre, and city.\n- Messages are end-to-end encrypted, so the server stores only encrypted content.\n- Analytics is optional and off until you opt in.' },
         who: { heading: 'Who runs this service', body: 'This Every.music service is operated by {name}. Contact: {email}.\n\nEvery.music is open-source software released under the Apache License 2.0. Anyone can run their own service; each operator is responsible for the service they run.' },
-        brand: { heading: 'Name and design', body: 'The name Every.music, the wave emblem, and the purple palette identify the app. The interface uses your device\'s system font, so no fonts are downloaded from third parties.' },
+        brand: { heading: 'Name and design', body: 'The name Every.music, the three-note emblem, and the purple palette identify the app. The interface uses your device\'s system font, so no fonts are downloaded from third parties.' },
       },
     },
     work: {
