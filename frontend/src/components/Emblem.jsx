@@ -1,0 +1,10 @@
+// Three notes joined by one beam. Keep in sync with frontend/brand/app-icon.svg and the index.html splash.
+const glyph = 'M7.89 19.18A3.16 2.45 -20 0 1 5.76 22.56A3.16 2.45 -20 0 1 1.95 21.34A3.16 2.45 -20 0 1 4.08 17.95A3.16 2.45 -20 0 1 7.89 19.18ZM6.21 19.93V3.68H8.01V19.93ZM14.97 16.73A3.16 2.45 -20 0 1 12.84 20.11A3.16 2.45 -20 0 1 9.03 18.89A3.16 2.45 -20 0 1 11.16 15.5A3.16 2.45 -20 0 1 14.97 16.73ZM13.29 17.48V2.71H15.08V17.48ZM22.05 14.28A3.16 2.45 -20 0 1 19.92 17.66A3.16 2.45 -20 0 1 16.11 16.44A3.16 2.45 -20 0 1 18.24 13.05A3.16 2.45 -20 0 1 22.05 14.28ZM20.37 15.03V1.74H22.16V15.03ZM6.21 3.38L22.16 1.2V4.25L6.21 6.43Z';
+
+export default function Emblem({ size = 20, className = '' }) {
+  return (
+    <svg className={`icon ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d={glyph} />
+    </svg>
+  );
+}

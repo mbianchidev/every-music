@@ -30,7 +30,7 @@ export default {
         what: { heading: 'Cosa fa Every.music', body: 'Every.music mette in contatto i musicisti. Crea un profilo con strumenti, generi e progetti, pubblica annunci quando cerchi qualcuno e parla in privato con le persone che incontri.' },
         how: { heading: 'Come funziona', body: '- Il feed mostra gli annunci di musicisti e band.\n- La ricerca dei musicisti trova persone per strumento, genere e città.\n- I messaggi sono cifrati end-to-end, quindi il server conserva solo contenuti cifrati.\n- Le statistiche sono facoltative e restano disattivate finché non le attivi.' },
         who: { heading: 'Chi gestisce questo servizio', body: 'Questo servizio Every.music è gestito da {name}. Contatto: {email}.\n\nEvery.music è software open source rilasciato con licenza Apache 2.0. Chiunque può gestire un proprio servizio; ogni gestore è responsabile del servizio che offre.' },
-        brand: { heading: 'Nome e design', body: 'Il nome Every.music, l\'emblema delle note unite e la palette viola identificano l\'app. L\'interfaccia usa il carattere di sistema del tuo dispositivo, quindi non vengono scaricati caratteri da terze parti.' },
+        brand: { heading: 'Nome e design', body: 'Il nome Every.music, l\'emblema delle tre note e la palette viola identificano l\'app. L\'interfaccia usa il carattere di sistema del tuo dispositivo, quindi non vengono scaricati caratteri da terze parti.' },
       },
     },
     work: {
